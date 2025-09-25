@@ -1,0 +1,235 @@
+
+Project: Job Tracker
+
+We are going to build a job tracking application that will be written in ReactJS for the web UI and make calls to a backend API written in Python, which will store and retrieve data from a PostgreSQL database.  
+
+
+# ReactJS frontend application
+
+The frontend application will be written using ReactJS and should use best practices for ReactJS code that utilizes components and classes as needed and organized into directories.  The application will consist of seven primary pages, each of which will have 1-2 additional pages.  The layout for the application will have a navigation menu located on the left side that is always present, and the main display area taking up the remaining area to the right.  The navigation menu will be comprised of the following entries, each displayed within it's own box with hover changing the look for visual feedback.
+
+    Home
+    Job Tracker
+    Contacts
+    Calendar
+    Notes
+    Documents
+    Resume
+    Cover Letter
+
+A note about the navigation menu, so if a job is currently being viewed, the calls made to the API will include the job_id.  This will change the results to be limited to entries associated with that job. If any entry in the menu is clicked and that page is already being displayed, then it drops including the job_id field, which changes the view to be a global scope.  Any duplicate click to the same page being displayed drops holding the job_id field until such a time that another job is the focus.  Don't worry about the home page right now, it can just be left blank for now.
+
+
+# ===== Job Tracker Page ===============================================================================================
+
+In the main display area for this page, it should have the page title at the top on the left, with a search box justified to the right and a button to it's right the says "+ Add Job".  Below that will be broken into 4 columns that span the total width of the page and at the top of each column will have the title for that column left justified and a total count for the column justified right that will display "xxx Jobs" (with xxx being the total count).  The titles for these 4 columns are: 'Applied', 'Interviewing', 'Rejected' and 'No Response'. In each column there will be summary job cards, which contain minimal job information formatted into three rows as follows:
+    Job Title (20% larger than normal font size and left justified)
+    Company Name (10% larger than normal font size and left justified)
+    calculated date span that is justified to the right
+    
+The 3rd row calculated date, will determine the date span based on these rules and using the "date_applied" field:
+    * if within 13 days of today, it will determine the number of days and display "Added xx days ago"
+    * if it falls within 7 weeks of today, it will determine the number of weeks and display "Added xx weeks ago"
+    * Everything else will be counted in months, rounding to floor, and display "Added x month ago" (if it's one month) and "Added xx months ago" for any number greater than one.
+    
+Each of these cards should be selectable and turn on a blue border for on hover. The cards can be dragged and dropped from one column to another, which when done should adjust the total count for the column accordingly. If the card is clicked on, then that will replace the main view area to contain the job details. The search box at the top right, should actively react to each character typed.  As each character is entered, it will match against the company name and hide any cards that don't match.  Cards should collapse upward, taking the place of hidden cards.  Each letter typed will remove more and more cards.  Also, once the search field begins having something typed in it, to the far right of that text area add an X icon, which will be used to clear the search and return the display to it's normal previous state.
+
+
+# Job Details
+
+The display of the job details marks that a job has been selected as the primary focus, so the job_id should be set and all calls executed by selecting main navigation entries will need to include the job_id in the calls that are done. The job details page will start with a clickable icon of an arrow pointing to the left "<-" and spaced 20px next to that the page name "Job Details", both justified to the left side of the display area and then justified to the right have the buttons "Delete" and "Edit" and a select drop list with options consisting of the job_status values, with the current status pre-selected.  If the arrow icon is clicked on, it will return to the previous page of Job Tracker.  If the "Delete" button is clicked, then the app will make the following call to the API service:
+
+    DELETE /v1/job/<job_id>
+    
+After which, if successful, it should revert to displaying the previous page.  If the select drop list changes value, the the app will send a job update request to the API using the value from the drop list for the field "job_status".
+
+POST /v1/job
+{
+    "company": "",
+    "job_title": "",
+    "salary": "",
+    "location": "",
+    "interest_level": 1,
+    "posting_url": "",
+    "apply_url": "",
+    "job_desc": "",
+    "job_status": "",
+    "date_applied": ""
+}
+
+Below the top page row, displays all the job details with labels in a blue color font (#0a16ff) and consisting of every field from the job table and presented in an easy to read layout. The job details information can be retrieved by making a call to the API service as follows:
+    GET /v1/job/<job_id>
+
+This will return the following payload in the response as application/json format:
+{
+    "job_id": "",
+    "company": "",
+    "job_title": "",
+    "salary": "",
+    "location": "",
+    "interest_level": 1,
+    "posting_url": "",
+    "apply_url": "",
+    "job_desc": "",
+    "job_status": "",
+    "date_applied": ""
+    "last_contact": "",
+    "resume_id": "",
+    "job_created": "",
+    "job_directory": ""
+}
+Don't include the "job_id" or "resume_id" or "cover_id" fields in the display. 
+
+# Add/Edit Job
+
+If the "Edit" button is selected, the main display area should be replaced with a form. This same form will be used for adding a new job when the "+ Add Job" button is selected from the main Job Tracker Page, so it serves a dual purpose for adding and editing jobs. First justified to the left, we have the page title of "Edit Job", which the word "Edit" will need to change to "Add New" when used to add a new job. Below are all the job form fields, which should include the following: 
+
+    company             text field
+    job_title           text field
+    salary              text field
+    location            text field
+    interest_level      select drop list (options: 1 - 10)
+    posting_url         text field
+    apply_url           text field
+    job_desc            textarea - this should be large, at least 50 rows
+    job_status          select drop list (options: 'applied', 'interviewing', 'rejected', 'no response')
+    date_applied        text field with today's date pre-selected and an calendar icon for a calendar popup to select the date
+    
+    job_id              hidden field
+    
+Some of the job fields are set automatically, like "job_created", "job_directory", "last_contact", etc - which is why they are excluded from the above description. On form submission, the app will make a call to the API which will handle saving the information to the DB, using the following endpoint:
+
+POST /v1/job
+application/json
+{
+    "job_id": "",
+    "company": "",
+    "job_title": "",
+    "salary": "",
+    "location": "",
+    "interest_level": 1,
+    "posting_url": "",
+    "apply_url": "",
+    "job_desc": "",
+    "job_status": "",
+    "date_applied": ""
+}
+
+# ===== Contacts =======================================================================================================
+
+The contacts section will have 3 related pages, the first is a spreadsheet like list of all contacts, the second is a detail view for the contact and finally a form page for adding/editing contacts.
+
+The contacts page is displayed when the "Contacts" main navigation menu entry is clicked and will replace the main display area with the following. If a job is currently selected as the focus, the page will start with the same arrow icon used on the Job Details page, which will behave in the same manner and return to the Job Details page if clicked - otherwise the arrow icon is omitted from the display. Following convention, this page starts with the page title of "Contacts" displayed justified to the left and then justified to the right will be a search box with a button to the right of that titled "+ Create Contact" following it. Just below this row will be a spreadsheet like view of all contacts.  To get all the contacts, the app will make a call to the API as:
+    GET /v1/contacts
+The response from this end point will be in the following format:
+[
+    {
+        "contact_id": "",
+        "first_name": "",
+        "last_name": "",
+        "job_title": "",
+        "email": "",
+        "phone": "",
+        "company": "",
+        "linkedin": ""
+    }
+    ...
+]
+
+The search text field should react with each character added, removing the rows that do not match what is being entered.  It should match against the first and last name fields for each contact.  When rows are hidden from view, matching rows should compress upward.  Again, the same as on the Job Tracker page, when the search field has a character entered in, it should display the X icon on the right end of the search text area, which if clicked will clear the search and return the view to display all entries.
+
+Start the first row with a heading for each column with the background blue (#1008ff) and text white.  Then create a row entry for each contact received.  The contact_id won't be displayed, but will need to be identified for the row and for the "linkedin" column, make it an anchor link with only the text "linkedin" showing for the link.  Each row must be selectable and highlight the row on hover.  
+
+
+# Contact Details
+
+Clicking on any contact row will change the main display area to show the details for that contact.  The contact details page will replace the main display area. Using the same format, we first display the page name of "Contact Details" and optionally if a job is selected, then display the arrow icon to return to the main Contacts page. Justified to the right will be the buttons, "Delete" and "Edit".  The "Delete" button will make the following API call when clicked.
+    
+    DELETE /v1/contact/<contact_id>
+    
+If successful, the main display will then return to the main Contacts page. The app will make a call to the API to get the contact detail information to display as follows:
+
+GET /v1/contact/<contact_id>
+{
+    "contact_id": "",
+    "first_name": "",
+    "last_name": "",
+    "job_title": "",
+    "email": "",
+    "phone": "",
+    "company": "",
+    "linkedin": "",
+    "contact_note": "",
+    "linked_to": [
+        {
+            "job_id": "",
+            "job_title": "",
+            "company": ""
+        }
+        ...
+    ]
+}
+
+For the field "linked_to", use an anchor link that displays <company> - <job_title> and point the link to load the Job Detail page with that job selected.
+
+# Add/Edit Contact
+
+Clicking on the "Edit" button on the Contact Details page or "+ Create Contact" button on the main Contacts page, will load up the add/edit contact page which will replace the main display area content.  Like the other pages, this starts with the page title of "Edit Contact" - with of course "Edit" being changed to "Add New" if adding a new contact. Below this there is the form to add a new contact with the following fields:
+
+    First Name      text input
+    Last_Name       text input
+    Job Title       text input
+    Email           text input
+    Phone number    text input - only allow numbers to be entered and automatically format with dashes for US phone numbers
+    Company Name    text input
+    Linkedin        text input
+    Note            textarea - make it 4 rows in height
+ 
+On submission the app will make a call to the API service as follows, after which it will return to the Contact Details page:
+POST /v1/contact
+{
+    "first_name": "",
+    "last_name": "",
+    "job_title": "",
+    "email": "",
+    "phone": "",
+    "company": "",
+    "linkedin": "",
+    "contact_note": ""
+}
+
+
+# ===== Calendar =======================================================================================================
+
+The calendar section consists of 3 page views, the month view, the week view and daily view and additionally will have an appointment details page and an add/edit appointment page, for a total of 5 pages. The calendar page is accessed by clicking on "Calendar" from the main navigation menu and will replace the main display area with it's default view of the current month.
+
+# Month view
+
+The month page starts like the rest, with the page title being "Calendar - month view" and the conditionally displayed arrow icon. Justified to the right is a button titled "+ Add Appointment". Directly below this row should have buttons for navigating through time, so a forward and back arrow button on each end for moving to the next or previous month.  Also have a button labeled "Week", which will switch to the week view calendar. Below the calendar navigation row it will display a grid for the current calendar month.  The current day should be highlighted with the background color of #fbffcd. Use a black color font to number each day of the month and use a light grey for days the bleed into the previous and next months.  The app will make a call to the API service to get scheduled appointments for the month
+
+
+
+# ===== Notes ==========================================================================================================
+# ===== Documents ======================================================================================================
+# ===== Resume =========================================================================================================
+# ===== Cover Letter ===================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

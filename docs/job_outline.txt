@@ -1,0 +1,219 @@
+
+
+Main page
+Job Tracker
+Contacts
+Calendar
+Notes
+
+
+# Job Form
+    company             text field
+    job_title           text field
+    salary              text field
+    location            text field
+    interest_level      select drop list (options: 1 - 10)
+    posting_url         text field
+    apply_url           text field
+    job_desc            textarea - this should be large, at least 50 rows
+    job_status          select drop list (options: 'applied', 'interviewing', 'rejected', 'no response')
+    date_applied        text field with today's date pre-selected and an calendar icon for a calendar popup to select the date
+
+# Contact Form
+    first_name          text field
+    last_name           text field
+    job_title           select drop list (options:  )
+    email               text field
+    phone               text field - this should only accept numbers and automatically format the dashes correctly for a US phone number
+    company             text field
+    linkedin            text field
+    note                textarea - about 5 rows in size
+
+
+
+
+
+
+
+# API Endpoint
+
+DELETE /v1/job/<job_id>
+
+
+GET /v1/job/<job_id>
+
+{
+    "job_id": "",
+    "company": "",
+    "job_title": "",
+    "salary": "",
+    "location": "",
+    "interest_level": 1,
+    "posting_url": "",
+    "apply_url": "",
+    "job_desc": "",
+    "job_status": "",
+    "date_applied": ""
+    "last_contact": "",
+    "resume_id": "",
+    "job_created": "",
+    "job_directory": "",
+}
+
+
+POST /v1/job
+{
+    "company": "",
+    "job_title": "",
+    "salary": "",
+    "location": "",
+    "interest_level": 1,
+    "posting_url": "",
+    "apply_url": "",
+    "job_desc": "",
+    "job_status": "",
+    "date_applied": ""
+}
+
+POST /v1/contact
+{
+    "first_name": "",
+    "last_name": "",
+    "job_title": "",
+    "email": "",
+    "phone": "",
+    "company": "",
+    "linkedin": "",
+    "contact_note": ""
+}
+
+DELETE /v1/contact/<contact_id>
+
+
+GET /v1/contact/<contact_id>
+{
+    "contact_id": "",
+    "first_name": "",
+    "last_name": "",
+    "job_title": "",
+    "email": "",
+    "phone": "",
+    "company": "",
+    "linkedin": "",
+    "contact_note": "",
+    "linked_to": [
+        {
+            "job_id": "",
+            "job_title": "",
+            "company": ""
+        }
+        ...
+    ]
+}
+
+GET /v1/contacts
+
+response:
+[
+    {
+        "contact_id": "",
+        "first_name": "",
+        "last_name": "",
+        "job_title": "",
+        "email": "",
+        "phone": "",
+        "company": "",
+        "linkedin": "" 
+    }
+    ...
+]
+
+GET /v1/calendar/month?date=<YYYY-MM>
+
+response:
+[
+    {
+        "calendar_id": "",
+        "company": "",
+        "calendar_type": "",
+        "start_date": "",
+        "start_time": "",
+        "duration_hour": "",
+        "calendar_desc": ""
+    }
+    ...
+]
+
+GET /v1/calendar/week?date=<YYYY-MM-DD>
+
+response:
+[
+    {
+        "calendar_id": "",
+        "company": "",
+        "calendar_type": "",
+        "start_date": "",
+        "start_time": "",
+        "duration_hour": "",
+        "calendar_desc": ""
+    }
+    ...
+]
+
+GET /v1/calendar/day?date=<YYYY-MM-DD>
+
+response:
+[
+    {
+        "calendar_id": "",
+        "company": "",
+        "calendar_type": "",
+        "start_date": "",
+        "start_time": "",
+        "duration_hour": "",
+        "calendar_desc": ""
+    }
+    ...
+]
+
+
+
+POST /v1/calendar
+{
+    "calendar_id": "",
+    
+    "calendar_type": "interview",
+    "start_date": "2025-09-15",
+    "start_time": "13:00",
+    "end_date": "2025-09-15",
+    "end_time": "14:15",
+    "duration_hour": 1.25,
+    "participant": [
+        "John Doe", "Mary Doe"
+    ],
+    "calendar_desc": "",
+    "calendar_note": "",
+    "outcome_score": 0,
+    "outcome_note": "",
+    "video": false,
+    "video_link": ""
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
