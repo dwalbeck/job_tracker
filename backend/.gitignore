@@ -1,0 +1,9 @@
+
+
+.idea
+.env
+
+build
+dist
+job_docs
+venv
