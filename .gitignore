@@ -10,6 +10,7 @@ backend/.env
 backend/build
 backend/dist
 backend/job_docs
+backend/node_modules
 backend/venv
 
 frontend/.env
