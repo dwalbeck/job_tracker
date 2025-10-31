@@ -1,0 +1,45 @@
+You are an expert resume analyst. Your task is to analyze the following resume in markdown format and extract specific information.
+
+RESUME CONTENT:
+{md_resume}
+
+PREVIOUS REJECTED JOB TITLES:
+{bad_list}
+
+INSTRUCTIONS:
+1. Identify the primary job title from the resume. This is typically the most recent or prominent position listed.
+   - Do NOT select any job titles that appear in the rejected list above
+   - If the most obvious job title is in the rejected list, select the next most appropriate one
+   - Include the exact line number where this job title appears in the markdown
+
+2. Extract all relevant keywords and skills from the resume including:
+   - Technical skills
+   - Software/tools
+   - Methodologies
+   - Certifications
+   - Industry-specific terms
+   - Soft skills
+
+3. Provide 3-5 specific, actionable suggestions for improving this resume:
+   - Focus on content, formatting, and presentation
+   - Highlight any missing critical information
+   - Suggest ways to make accomplishments more impactful
+   - Recommend improvements to clarity and readability
+
+RESPONSE FORMAT:
+Respond ONLY with valid JSON in the following structure (no additional text or explanation):
+
+{{
+    "job_title": {{
+        "job_title": "extracted job title here",
+        "line_number": 0
+    }},
+    "keywords": ["keyword1", "keyword2", "keyword3"],
+    "suggestions": [
+        "suggestion 1",
+        "suggestion 2",
+        "suggestion 3"
+    ]
+}}
+
+Ensure your response is valid JSON that can be parsed directly.

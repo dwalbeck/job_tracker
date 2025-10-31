@@ -1,0 +1,192 @@
+.cover-letter-container {
+  padding: 20px;
+  width: 100%;
+}
+
+.cover-letter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.cover-letter-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.cover-letter-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  width: 300px;
+  padding: 10px 35px 10px 35px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.1);
+}
+
+.search-container::before {
+  content: '🔍';
+  position: absolute;
+  left: 12px;
+  color: #999;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.clear-search-btn:hover {
+  color: #333;
+}
+
+.add-new-button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.add-new-button:hover {
+  background-color: #357abd;
+}
+
+.letters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.letter-card {
+  width: 280px;
+  height: 194px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.letter-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.letter-card-company {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+.letter-card-job-title {
+  font-size: 13px;
+  color: #000;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.letter-card-date {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 14px;
+}
+
+.letter-card-detail {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-weight: 500;
+  color: #333;
+  text-transform: capitalize;
+}
+
+.letter-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.letter-action-btn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.letter-action-btn.delete-btn:hover {
+  color: #e74c3c;
+}
+
+.letter-action-btn.download-btn:hover {
+  color: #4a90e2;
+}
+
+.letter-action-btn .icon {
+  font-size: 14px;
+}
+
+.no-letters {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-size: 16px;
+}

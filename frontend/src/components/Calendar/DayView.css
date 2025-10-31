@@ -1,0 +1,258 @@
+.day-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  padding: 15px 0;
+  position: relative;
+}
+
+.view-buttons {
+  display: flex;
+  gap: 10px;
+  position: absolute;
+  left: 0;
+}
+
+.view-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background-color: white;
+  color: #333;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.view-btn:hover {
+  background-color: #f8f9fa;
+}
+
+.view-btn.active {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.day-navigation-center {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-arrow {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #3498db;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.nav-arrow:hover {
+  background-color: #f0f8ff;
+}
+
+.day-navigation h2 {
+  margin: 0;
+  color: #333;
+  font-size: 22px;
+  min-width: 350px;
+  text-align: center;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 18px;
+  color: #666;
+}
+
+.day-grid-container {
+  flex: 1;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.day-grid {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  height: 100%;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.time-column {
+  background-color: #f8f9fa;
+  border-right: 1px solid #b4b4b4;
+}
+
+.time-slot {
+  height: 80px;
+  padding: 5px;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  border-bottom: 1px solid #b4b4b4;
+}
+
+.time-slot.non-business {
+  background-color: #ebebeb;
+  border-bottom: 1px solid white;
+}
+
+.schedule-column {
+  border-right: 1px solid #b4b4b4;
+}
+
+.hour-slot {
+  height: 80px;
+  border-bottom: 1px solid #b4b4b4;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  padding: 2px;
+}
+
+.hour-slot:hover {
+  background-color: #f8f9fa;
+}
+
+.hour-slot.non-business {
+  background-color: #ebebeb;
+  border-bottom: 1px solid white;
+}
+
+.hour-slot.non-business:hover {
+  background-color: #e0e0e0;
+}
+
+.day-appointment-box {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 4px;
+  background-color: #9cfffc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.day-appointment-box:hover {
+  background-color: #86f7f2;
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.day-appointment-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  height: 100%;
+}
+
+.day-appointment-details {
+  flex: 1;
+  overflow: hidden;
+}
+
+.day-appointment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.day-appointment-time {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.day-appointment-type {
+  font-weight: 500;
+  color: #34495e;
+  font-size: 11px;
+}
+
+.day-appointment-company {
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #2c3e50;
+}
+
+.day-appointment-desc {
+  font-size: 11px;
+  color: #555;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.day-score-indicator {
+  width: 12px;
+  height: 12px;
+  background-color: #00ff00;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.day-reminder-box {
+  position: relative;
+  background-color: #fff4cc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.3;
+  margin-top: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.day-reminder-box:hover {
+  background-color: #ffe999;
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.day-reminder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.day-reminder-time {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.day-reminder-icon {
+  font-size: 12px;
+}
+
+.day-reminder-message {
+  color: #2c3e50;
+}

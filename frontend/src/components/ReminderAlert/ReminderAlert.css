@@ -1,0 +1,96 @@
+.reminder-alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 2000;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 20px;
+  pointer-events: none;
+}
+
+.reminder-alert-content {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  width: 350px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.reminder-alert-title {
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20px;
+  color: #e74c3c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.reminder-alert-icon {
+  font-size: 24px;
+}
+
+.reminder-alert-details {
+  margin-bottom: 20px;
+}
+
+.reminder-alert-row {
+  margin-bottom: 12px;
+}
+
+.reminder-alert-label {
+  font-weight: 600;
+  color: #3498db;
+  margin-bottom: 4px;
+}
+
+.reminder-alert-value {
+  color: #2c3e50;
+  line-height: 1.4;
+}
+
+.reminder-alert-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.reminder-dismiss-button {
+  padding: 10px 30px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.reminder-dismiss-button:hover {
+  background-color: #2980b9;
+}
+
+.reminder-dismiss-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

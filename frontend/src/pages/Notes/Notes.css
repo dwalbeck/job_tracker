@@ -1,0 +1,212 @@
+.notes-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.notes-header h1 {
+  margin: 0;
+  color: #333;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 250px;
+}
+
+.clear-search {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.clear-search:hover {
+  color: #333;
+}
+
+.add-note-btn {
+  padding: 8px 16px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.add-note-btn:hover {
+  background-color: #2980b9;
+}
+
+.notes-container {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.no-notes {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 16px;
+  color: #666;
+}
+
+.notes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 180px 80px;
+  gap: 15px;
+  padding: 15px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-items: start;
+  min-height: 60px;
+}
+
+.note-row:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.note-row.expanded {
+  min-height: auto;
+}
+
+.note-company-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.company-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.job-title {
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.note-content-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.note-title {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.note-content {
+  color: #555;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.note-row:not(.expanded) .note-content {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-timestamp-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.note-created {
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.note-actions-cell {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.delete-button {
+  padding: 6px 12px;
+  background-color: #ff0000;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.delete-button:hover {
+  background-color: #cc0000;
+}
+
+@media (max-width: 768px) {
+  .note-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .note-timestamp-cell,
+  .note-actions-cell {
+    justify-content: flex-start;
+  }
+
+  .header-controls {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+}

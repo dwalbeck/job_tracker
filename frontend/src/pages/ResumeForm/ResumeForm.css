@@ -1,0 +1,259 @@
+.resume-form-page {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.resume-form-page h1 {
+  margin-bottom: 30px;
+  font-size: 28px;
+  color: #333;
+}
+
+.resume-form-container {
+  display: flex;
+  gap: 40px;
+  min-height: 600px;
+}
+
+/* Left Side - Form */
+.resume-form-left {
+  flex: 1;
+  background-color: #f9f9f9;
+  padding: 30px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.form-label {
+  min-width: 120px;
+  font-weight: 600;
+  color: #002efa;
+  font-size: 16px;
+  text-align: right;
+  padding-right: 6px;
+}
+
+.file-upload-wrapper {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+}
+
+.file-path-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #fff;
+}
+
+.browse-button {
+  padding: 8px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.browse-button:hover {
+  background-color: #45a049;
+}
+
+.form-select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #fff;
+}
+
+.form-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.form-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #ddd;
+}
+
+/* Right Side - Processing Display */
+.resume-form-right {
+  flex: 1;
+  padding: 30px;
+  background-color: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.processing-header {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 25px;
+  color: #333;
+}
+
+.processing-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.processing-step {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.step-text {
+  font-size: 16px;
+  color: #555;
+}
+
+.step-done {
+  font-weight: bold;
+  color: #4CAF50;
+  font-size: 16px;
+}
+
+/* Job Title Confirmation */
+.job-title-confirmation {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #fff;
+  border: 2px solid #002efa;
+  border-radius: 8px;
+}
+
+.confirm-question {
+  margin-left: 20px;
+  font-size: 16px;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+.job-title-display {
+  font-size: 22px;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+}
+
+.confirm-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.confirm-no-button,
+.confirm-yes-button {
+  padding: 10px 40px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.confirm-no-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.confirm-no-button:hover {
+  background-color: #d32f2f;
+}
+
+.confirm-yes-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.confirm-yes-button:hover {
+  background-color: #45a049;
+}
+
+/* Suggestions Section */
+.suggestions-section {
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 2px solid #ddd;
+}
+
+.suggestions-header {
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.suggestions-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0 0 30px 0;
+}
+
+.suggestion-item {
+  padding: 15px;
+  margin-bottom: 12px;
+  background-color: #fff;
+  border-left: 4px solid #002efa;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #555;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.done-button-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 30px;
+}
+
+.done-button {
+  padding: 12px 50px;
+  background-color: #002efa;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.done-button:hover {
+  background-color: #0026cc;
+}

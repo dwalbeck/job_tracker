@@ -1,0 +1,247 @@
+.resume-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.resume-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.resume-header h1 {
+  margin: 0;
+  color: #333;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  padding: 8px 32px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 250px;
+}
+
+.clear-search {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 4px;
+  line-height: 1;
+}
+
+.clear-search:hover {
+  color: #333;
+}
+
+.add-new-btn {
+  padding: 8px 16px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.add-new-btn:hover {
+  background-color: #2980b9;
+}
+
+.resume-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.resume-section {
+  margin-bottom: 40px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin: 0 0 12px 0;
+  color: #333;
+}
+
+.resume-cards-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.resume-card {
+  width: 271px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.resume-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.resume-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  word-wrap: break-word;
+}
+
+.resume-card-title.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.resume-card-title.clickable:hover {
+  color: #007bff;
+  text-decoration: underline;
+}
+
+.resume-card-last-edit {
+  font-size: 12px;
+  color: #636363;
+}
+
+.resume-card-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.resume-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.field-label {
+  font-size: 14px;
+  color: #333;
+}
+
+.field-value {
+  font-size: 16px;
+  color: #002efa;
+  font-weight: 600;
+}
+
+.resume-card-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  flex: 1;
+}
+
+.resume-card-action:hover {
+  background-color: #e0e0e0;
+}
+
+.action-icon {
+  font-size: 16px;
+}
+
+.action-label {
+  font-size: 13px;
+  color: #333;
+}
+
+.no-resumes {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-style: italic;
+  font-size: 16px;
+}
+
+.resume-card-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.resume-card-stats-row .stat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.resume-card .resume-card-stats-row .stat-label {
+  color: #666;
+  font-weight: normal;
+  white-space: nowrap;
+  min-width: auto !important;
+  text-align: left !important;
+}
+
+.resume-card-stats-row .stat-value {
+  color: #002efa;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.resume-card-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.stats-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.resume-card .stat-item .stat-label {
+  color: #666;
+  font-weight: normal;
+  white-space: nowrap;
+  min-width: auto !important;
+  text-align: left !important;
+}
+
+.stat-item .stat-value {
+  color: #002efa;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stat-item .stat-value.bold {
+  font-weight: 700;
+}

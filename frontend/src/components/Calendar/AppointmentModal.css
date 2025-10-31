@@ -1,0 +1,112 @@
+.appointment-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.appointment-modal {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.appt-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  background-color: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+}
+
+.appt-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-icon,
+.delete-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.edit-icon:hover {
+  background-color: #e9ecef;
+}
+
+.delete-icon:hover {
+  background-color: #ffe0e0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: #666;
+  padding: 5px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-button:hover {
+  background-color: #e9ecef;
+  color: #333;
+}
+
+.appt-modal-content {
+    background-color: #e0e0e0;
+    border: 1px solid black;
+    border-radius: 8px;
+    padding: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.appt-modal-field {
+  display: flex;
+  margin-bottom: 12px;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.appt-field-label {
+  font-weight: 600;
+  color: #3498db;
+  min-width: 120px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.appt-field-value {
+  color: #000000;
+  flex: 1;
+  word-break: break-word;
+}
+
+.appt-field-value a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.appt-field-value a:hover {
+  text-decoration: underline;
+}
