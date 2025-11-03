@@ -5,15 +5,15 @@ services:
     container_name: psql.jobtracker.com
     hostname: psql.jobtracker.com
     restart: always
-    env_file:
-      - ./backend/.env
+    environment:
+      POSTGRES_DB: jobtracker
+      POSTGRES_USER: apiuser
+      POSTGRES_PASSWORD: '@p!u$$3r70K3n'
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_HOST_AUTH_METHOD: password
     expose:
       - "5432"
     volumes:
-      - type: volume
-        name: postgres-data
-        source: /var/lib/postgresql-docker/12/main
-        target: /var/lib/postgresql/data
       - /var/lib/postgresql-docker/12/main:/var/lib/postgresql/data
       - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     networks:
@@ -35,9 +35,25 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://apiuser:%40p%21u%243r70K3n@psql.jobtracker.com:5432/jobtracker
+      DATABASE_HOST: psql.jobtracker.com
+      DATABASE_USER: apiuser
+      DATABASE_PASS: '@p!u$$3r70K3n'
+      DATABASE_DB: jobtracker
+      DATABASE_PORT: 5432
+      APP_NAME: Job Tracker API
+      APP_VERSION: 1.0.0
+      DEBUG: "true"
+      ALLOWED_ORIGINS: '["http://localhost:3000", "http://portal.jobtracker.com:3000", "http://portal.jobtracker.com", "http://localhost:80", "http://localhost"]'
+      RESUME_DIR: /app/job_docs/resumes
+      COVER_LETTER_DIR: /app/job_docs/cover_letters
     expose:
       - "8000"
       - "80"
+    ports:
+      - "8000:8000"
+      - "8080:80"
     depends_on:
       db:
         condition: service_healthy
@@ -45,7 +61,7 @@ services:
       job_tracker_network:
         ipv4_address: 172.20.0.10
     volumes:
-      - ./backend/job_docs:/app/job_docs
+      - job_docs:/app/job_docs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
@@ -57,13 +73,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      # args:
-      #  REACT_APP_API_BASE_URL: http://api.jobtracker.com
+      args:
+        REACT_APP_API_BASE_URL: http://api.jobtracker.com
     container_name: portal.jobtracker.com
     hostname: portal.jobtracker.com
     restart: unless-stopped
-    env_file:
-      - ./frontend/.env
+    environment:
+      NODE_ENV: production
     expose:
       - "3000"
       - "443"
@@ -84,10 +100,11 @@ services:
 
 # Named volumes for data persistence
 volumes:
-  main:
-  #postgres_data:
+  postgres_data:
     driver: local
   job_docs:
+    driver: local
+  backend:
     driver: local
 
 # Custom network for service communication
