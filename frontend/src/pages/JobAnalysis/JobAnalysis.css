@@ -91,6 +91,13 @@
   user-select: none;
 }
 
+.temp-highlight {
+  background-color: #ffca8c;
+  opacity: 0.7;
+  padding: 2px 0;
+  border-radius: 2px;
+}
+
 /* Keyword items */
 .keyword-item {
   display: flex;

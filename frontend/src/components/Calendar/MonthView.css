@@ -122,6 +122,8 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .calendar-day:hover {
@@ -156,6 +158,8 @@
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  min-width: 0;
+  width: 100%;
 }
 
 .month-appointment-box {
@@ -169,6 +173,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .month-appointment-box.past {
@@ -187,6 +193,10 @@
 
 .month-appointment-text {
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .month-score-indicator {
@@ -210,6 +220,8 @@
   gap: 4px;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .month-reminder-box:hover {
@@ -223,6 +235,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .reminder-icon {

@@ -1,11 +1,13 @@
 import os
 import json
 import sys
+import time
 from pathlib import Path
 from openai import OpenAI
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from ..core.config import settings
+from ..utils.logger import logger
 
 
 class AiAgent:
@@ -25,8 +27,12 @@ class AiAgent:
         self.model = settings.ai_model
         self.project = settings.openai_project
 
-        # Initialize OpenAI client
-        client_kwargs = {"api_key": self.api_key}
+        # Initialize OpenAI client with timeout
+        client_kwargs = {
+            "api_key": self.api_key,
+            "timeout": 180.0,  # 120 second timeout for API requests (resume rewrite can be large)
+            "max_retries": 0   # Don't retry - fail fast to avoid long waits
+        }
         if self.project:
             client_kwargs["project"] = self.project
 
@@ -306,7 +312,6 @@ class AiAgent:
         Returns:
             Dictionary containing:
                 - resume_md_rewrite: rewritten markdown resume
-                - suggestion: list of improvement suggestions
 
         Raises:
             ValueError: If AI response parsing fails
@@ -328,17 +333,57 @@ class AiAgent:
         prompt = prompt.replace('{position_title}', position_title or '')
         prompt = prompt.replace('{title_line_no}', str(title_line_no) if title_line_no is not None else '0')
 
-        # Make API call to OpenAI
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": "Expert resume writer and career consultant. You rewrite resumes to optimize for specific job opportunities while maintaining authenticity and providing structured output in JSON format."},
-                {"role": "user", "content": prompt}
-            ]
-        )
+        # Log prompt size for debugging
+        prompt_size = len(prompt)
+        logger.debug(f"Resume rewrite prompt analysis",
+                    prompt_size=prompt_size,
+                    resume_size=len(resume_markdown or ''),
+                    job_desc_size=len(job_desc or ''),
+                    keywords_count=len(keyword_final),
+                    focus_count=len(focus_final))
+
+        # Make API call to OpenAI with timing
+        start_time = time.time()
+        logger.debug(f"Starting OpenAI resume rewrite call", timestamp=start_time)
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "Expert resume writer and career consultant. You rewrite resumes to optimize for specific job opportunities while maintaining authenticity and providing structured output in JSON format."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+            end_time = time.time()
+            elapsed = end_time - start_time
+            logger.info(f"OpenAI resume rewrite completed", elapsed_seconds=f"{elapsed:.2f}")
+
+            # Log full OpenAI response details
+            logger.debug(f"OpenAI Response ID: {response.id}")
+            logger.debug(f"OpenAI Response Model: {response.model}")
+            logger.debug(f"OpenAI Response Created: {response.created}")
+            logger.debug(f"OpenAI Response Object: {response.object}")
+            logger.debug(f"OpenAI Response Choices Count: {len(response.choices)}")
+            if response.choices:
+                logger.debug(f"OpenAI Response First Choice Finish Reason: {response.choices[0].finish_reason}")
+                logger.debug(f"OpenAI Response First Choice Message Role: {response.choices[0].message.role}")
+            if hasattr(response, 'usage') and response.usage:
+                logger.debug(f"OpenAI Response Usage - Prompt Tokens: {response.usage.prompt_tokens}")
+                logger.debug(f"OpenAI Response Usage - Completion Tokens: {response.usage.completion_tokens}")
+                logger.debug(f"OpenAI Response Usage - Total Tokens: {response.usage.total_tokens}")
+            if hasattr(response, 'system_fingerprint') and response.system_fingerprint:
+                logger.debug(f"OpenAI Response System Fingerprint: {response.system_fingerprint}")
+
+        except Exception as e:
+            end_time = time.time()
+            elapsed = end_time - start_time
+            logger.error(f"OpenAI resume rewrite failed", elapsed_seconds=f"{elapsed:.2f}", error=str(e))
+            raise
 
         # Extract the response content
         response_text = response.choices[0].message.content
+        logger.debug(f"Resume rewrite response received", response_size=len(response_text))
 
         # Parse JSON response
         try:
@@ -549,3 +594,100 @@ class AiAgent:
             # Print debug info
             print(f"DEBUG write_cover_letter: Full response:\n{response_text[:2000]}", file=sys.stderr, flush=True)
             raise ValueError(f"Failed to parse AI response as JSON: {str(e)}")
+
+    def resume_suggestion(self, resume_markdown: str, resume_id: int) -> None:
+        """
+        Generate improvement suggestions for a resume using AI and update the database.
+        This method is designed to run in the background after the resume rewrite response.
+
+        Args:
+            resume_markdown: The markdown content of the resume to analyze
+            resume_id: The resume_id to update with suggestions
+
+        Returns:
+            None (updates database directly)
+        """
+        try:
+            # Load the prompt template
+            prompt_template = self._load_prompt('suggestion')
+
+            # Format the prompt with the resume markdown
+            prompt = prompt_template.replace('{resume_markdown}', resume_markdown)
+
+            # Make API call to OpenAI
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "Expert resume coach. You analyze resumes and provide actionable improvement suggestions in JSON format."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+            # Extract the response content
+            response_text = response.choices[0].message.content
+
+            if not response_text:
+                print(f"ERROR resume_suggestion: OpenAI returned empty response for resume_id {resume_id}", file=sys.stderr, flush=True)
+                return
+
+            # Parse JSON response (expecting an array of strings)
+            try:
+                response_text = response_text.strip()
+                suggestions = json.loads(response_text)
+
+                # Validate it's a list
+                if not isinstance(suggestions, list):
+                    print(f"ERROR resume_suggestion: Response is not a list for resume_id {resume_id}", file=sys.stderr, flush=True)
+                    return
+
+                # Update the resume_detail record with suggestions
+                update_query = text("""
+                    UPDATE resume_detail
+                    SET suggestion = :suggestion
+                    WHERE resume_id = :resume_id
+                """)
+
+                self.db.execute(update_query, {
+                    "resume_id": resume_id,
+                    "suggestion": suggestions
+                })
+                self.db.commit()
+
+                print(f"DEBUG resume_suggestion: Successfully updated {len(suggestions)} suggestions for resume_id {resume_id}", file=sys.stderr, flush=True)
+
+            except json.JSONDecodeError as e:
+                # Try to extract JSON from markdown code blocks
+                import re
+                json_match = re.search(r'```(?:json)?\s*(\[.*?\])\s*```', response_text, re.DOTALL)
+                if not json_match:
+                    # Try without code blocks
+                    json_match = re.search(r'(\[.*?\])', response_text, re.DOTALL)
+
+                if json_match:
+                    try:
+                        suggestions = json.loads(json_match.group(1))
+                        if isinstance(suggestions, list):
+                            # Update database
+                            update_query = text("""
+                                UPDATE resume_detail
+                                SET suggestion = :suggestion
+                                WHERE resume_id = :resume_id
+                            """)
+
+                            self.db.execute(update_query, {
+                                "resume_id": resume_id,
+                                "suggestion": suggestions
+                            })
+                            self.db.commit()
+
+                            print(f"DEBUG resume_suggestion: Successfully updated {len(suggestions)} suggestions (from markdown) for resume_id {resume_id}", file=sys.stderr, flush=True)
+                            return
+                    except json.JSONDecodeError:
+                        pass
+
+                print(f"ERROR resume_suggestion: Failed to parse AI response for resume_id {resume_id}: {str(e)}", file=sys.stderr, flush=True)
+                print(f"ERROR resume_suggestion: Response text: {response_text[:1000]}", file=sys.stderr, flush=True)
+
+        except Exception as e:
+            # Catch all exceptions to prevent background task from crashing
+            print(f"ERROR resume_suggestion: Unexpected error for resume_id {resume_id}: {str(e)}", file=sys.stderr, flush=True)

@@ -208,11 +208,11 @@ async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
 
         # Otherwise, perform the conversion from markdown to DOCX
         with open('/tmp/convert_debug.log', 'a') as f:
-            f.write(f"DEBUG ENDPOINT: About to call md2docx\n")
+            f.write(f"DEBUG ENDPOINT: About to call md2docx_from_job\n")
         logger.debug(f"Performing Markdown to DOCX conversion", job_id=job_id)
-        conversion_result = Conversion.md2docx(job_id, db)
+        conversion_result = Conversion.md2docx_from_job(job_id, db)
         with open('/tmp/convert_debug.log', 'a') as f:
-            f.write(f"DEBUG ENDPOINT: md2docx returned {conversion_result}\n")
+            f.write(f"DEBUG ENDPOINT: md2docx_from_job returned {conversion_result}\n")
 
         logger.log_database_operation("UPDATE", "resume_detail", result.resume_id)
         logger.info(f"Markdown to DOCX conversion completed", job_id=job_id, file_name=conversion_result['file_name'])
@@ -231,12 +231,16 @@ async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/file/download/resume/{file_name}")
-async def download_resume_file(file_name: str):
+async def download_resume_file(file_name: str, db: Session = Depends(get_db)):
     """
     Download a resume file from the resume directory.
 
+    The file is stored with company-jobtitle naming but downloaded as
+    resume-firstname_lastname.extension for consistency.
+
     Args:
         file_name: Name of the file to download
+        db: Database session
 
     Returns:
         FileResponse with the requested file
@@ -258,13 +262,36 @@ async def download_resume_file(file_name: str):
             logger.warning(f"Path is not a file", file_name=file_name, file_path=file_path)
             raise HTTPException(status_code=400, detail=f"Invalid file path: {file_name}")
 
-        logger.info(f"Serving resume file", file_name=file_name)
+        # Get personal info to create download filename
+        personal_query = text("SELECT first_name, last_name FROM personal LIMIT 1")
+        personal_result = db.execute(personal_query).first()
 
-        # Return the file
+        # Extract file extension
+        file_extension = file_name.rsplit('.', 1)[-1] if '.' in file_name else 'docx'
+
+        # Create download filename as resume-firstname_lastname.extension
+        if personal_result and personal_result.first_name and personal_result.last_name:
+            download_filename = f"resume-{personal_result.first_name}_{personal_result.last_name}.{file_extension}"
+        else:
+            # Fallback to original filename if personal info not available
+            download_filename = file_name
+
+        logger.info(f"Serving resume file", file_name=file_name, download_filename=download_filename)
+
+        # Determine media type based on extension
+        media_types = {
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'odt': 'application/vnd.oasis.opendocument.text',
+            'pdf': 'application/pdf',
+            'html': 'text/html'
+        }
+        media_type = media_types.get(file_extension.lower(), 'application/octet-stream')
+
+        # Return the file with renamed download filename
         return FileResponse(
             path=file_path,
-            filename=file_name,
-            media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            filename=download_filename,
+            media_type=media_type
         )
 
     except HTTPException:
@@ -298,9 +325,11 @@ async def convert_final(
 
     This endpoint:
     1. Retrieves the resume_md_rewrite content from resume_detail table
-    2. Converts it to the requested format (odt, docx, pdf, or html)
-    3. Saves the file with the same base name as the original but with new extension
-    4. Returns the new filename
+    2. Queries the baseline resume to get original format (for reference styling)
+    3. Converts to the requested format (odt, docx, pdf, or html)
+    4. Uses the original file as a reference if formats match
+    5. Saves the file with the same base name as the original but with new extension
+    6. Returns the new filename
 
     Args:
         request: ConvertFinalRequest with resume_id and output_format
@@ -317,9 +346,10 @@ async def convert_final(
 
         # Query to get resume data
         query = text("""
-            SELECT r.file_name, rd.resume_md_rewrite
+            SELECT r.file_name, rd.resume_md_rewrite, rr.file_name AS orig_file_name, rr.original_format
             FROM resume r
-            JOIN resume_detail rd ON (r.resume_id = rd.resume_id)
+            JOIN resume_detail rd ON (r.resume_id = rd.resume_id) 
+	            JOIN resume rr ON (r.baseline_resume_id = rr.resume_id) 
             WHERE r.resume_id = :resume_id
         """)
 
@@ -337,61 +367,41 @@ async def convert_final(
         original_file_name = result.file_name
         md_content = result.resume_md_rewrite
 
+        # Determine if we should use a reference file
+        reference_file = None
+        if result.original_format:
+            # Check if baseline format matches requested format
+            baseline_format = result.original_format.lower()
+            requested_format = request.output_format.value.lower()
+
+            if baseline_format == requested_format:
+                reference_file = result.orig_file_name
+                logger.debug(f"Using reference file for styling", reference_file=reference_file)
+
         # Generate new filename with requested extension
-        if '.' in original_file_name:
-            base_name = original_file_name.rsplit('.', 1)[0]
-        else:
-            base_name = original_file_name
+        new_file_name = Conversion.rename_file(original_file_name, request.output_format.value)
 
-        new_file_name = f"{base_name}.{request.output_format.value}"
-
-        logger.debug(f"Converting resume", original_file_name=original_file_name, new_file_name=new_file_name)
+        logger.debug(f"Converting resume", original_file_name=original_file_name, new_file_name=new_file_name, reference_file=reference_file)
 
         # Convert based on output format
         if request.output_format.value == "html":
             # For HTML, save the converted content directly
             html_content = Conversion.mdToHtml(md_content)
             output_path = Conversion._get_file_path(new_file_name)
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             logger.debug(f"HTML file created", file_path=str(output_path))
 
         elif request.output_format.value == "docx":
-            # For DOCX, use pandoc directly
-            import subprocess
-            import tempfile
-
-            # Create temporary markdown file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as temp_md:
-                temp_md.write(md_content)
-                temp_md_path = temp_md.name
-
-            # Output path for docx
-            output_path = Conversion._get_file_path(new_file_name)
-
-            try:
-                # Convert markdown to DOCX using pandoc
-                result = subprocess.run(
-                    ['pandoc', temp_md_path, '-f', 'markdown', '-t', 'docx', '-o', str(output_path)],
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-
-                # Clean up temporary file
-                os.unlink(temp_md_path)
-                logger.debug(f"DOCX file created", file_path=str(output_path))
-
-            except subprocess.CalledProcessError as e:
-                # Clean up temporary file on error
-                if os.path.exists(temp_md_path):
-                    os.unlink(temp_md_path)
-                logger.error(f"Pandoc conversion failed", error=e.stderr)
-                raise HTTPException(status_code=500, detail=f"Pandoc conversion failed: {e.stderr}")
+            # For DOCX, use the Conversion class method with optional reference
+            output_path = Conversion.md2docx(md_content, new_file_name, reference_file=reference_file)
+            logger.debug(f"DOCX file created", file_path=output_path)
 
         elif request.output_format.value == "odt":
-            # For ODT, use md2odt
-            output_path = Conversion.md2odt(md_content, new_file_name)
+            # For ODT, use md2odt with optional reference
+            output_path = Conversion.md2odt(md_content, new_file_name, reference_file=reference_file)
             logger.debug(f"ODT file created", file_path=output_path)
 
         elif request.output_format.value == "pdf":

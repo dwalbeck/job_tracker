@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Optional
 from ..core.config import settings
+from ..utils.logger import logger
 
 
 class Conversion:
@@ -11,7 +12,7 @@ class Conversion:
     """
 
     # Class variable for resume directory path
-    RESUME_DIR = os.path.join('/app', settings.base_job_file_path, 'resumes')
+    RESUME_DIR = settings.resume_dir
 
     @classmethod
     def _get_file_path(cls, file_name: str) -> Path:
@@ -25,6 +26,27 @@ class Conversion:
             Path object for the file
         """
         return Path(cls.RESUME_DIR) / file_name
+
+    @classmethod
+    def rename_file(cls, filename: str, mime_type: str) -> str:
+        """
+        Rename a file by replacing its extension with the specified mime_type.
+
+        Args:
+            filename: Original filename (e.g., "resume.pdf")
+            mime_type: Target mime type/extension (e.g., "docx", "odt", "pdf")
+
+        Returns:
+            New filename with updated extension (e.g., "resume.docx")
+        """
+        # Remove existing extension
+        if '.' in filename:
+            base_name = filename.rsplit('.', 1)[0]
+        else:
+            base_name = filename
+
+        # Add new extension
+        return f"{base_name}.{mime_type}"
 
     @classmethod
     def _markdown_to_html(cls, markdown_content: str) -> str:
@@ -325,9 +347,70 @@ class Conversion:
         except Exception as e:
             raise Exception(f"Error converting Markdown to HTML: {str(e)}")
 
+    @classmethod
+    def md2docx(cls, markdown_content: str, output_file_name: str, reference_file: Optional[str] = None) -> str:
+        """
+        Convert Markdown content to DOCX format.
+
+        Args:
+            markdown_content: Markdown text content
+            output_file_name: Name for the output DOCX file
+            reference_file: Optional reference DOCX file for styling (filename only, not full path)
+
+        Returns:
+            Path to the created DOCX file
+        """
+        try:
+            import subprocess
+            import tempfile
+
+            # Create temporary markdown file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as temp_md:
+                temp_md.write(markdown_content)
+                temp_md_path = temp_md.name
+
+            # Output path for docx
+            output_path = cls._get_file_path(output_file_name)
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            try:
+                # Build pandoc command
+                pandoc_cmd = ['pandoc', temp_md_path, '-f', 'markdown', '-t', 'docx', '-o', str(output_path)]
+
+                # Add reference doc if provided
+                if reference_file:
+                    logger.debug(f"Using reference file: {reference_file}")
+
+                    reference_path = cls._get_file_path(reference_file)
+                    if os.path.exists(reference_path):
+                        pandoc_cmd.extend(['--reference-doc', str(reference_path)])
+
+                # Convert markdown to DOCX using pandoc
+                result = subprocess.run(
+                    pandoc_cmd,
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+
+                # Clean up temporary file
+                os.unlink(temp_md_path)
+
+                return str(output_path)
+
+            except subprocess.CalledProcessError as e:
+                # Clean up temporary file on error
+                if os.path.exists(temp_md_path):
+                    os.unlink(temp_md_path)
+                raise Exception(f"Pandoc conversion to DOCX failed: {e.stderr}")
+
+        except Exception as e:
+            raise Exception(f"Error converting Markdown to DOCX: {str(e)}")
+
     # Markdown to DOCX conversion
     @classmethod
-    def md2docx(cls, job_id: int, db) -> dict:
+    def md2docx_from_job(cls, job_id: int, db) -> dict:
         """
         Convert resume markdown to DOCX format for a specific job.
 
@@ -441,13 +524,14 @@ class Conversion:
 
     # Markdown to ODT conversion
     @classmethod
-    def md2odt(cls, markdown_content: str, output_file_name: str) -> str:
+    def md2odt(cls, markdown_content: str, output_file_name: str, reference_file: Optional[str] = None) -> str:
         """
         Convert Markdown content to ODT format.
 
         Args:
             markdown_content: Markdown text content
             output_file_name: Name for the output ODT file
+            reference_file: Optional reference ODT file for styling (filename only, not full path)
 
         Returns:
             Path to the created ODT file
@@ -463,11 +547,22 @@ class Conversion:
 
             # Output path for odt
             output_path = cls._get_file_path(output_file_name)
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
             try:
+                # Build pandoc command
+                pandoc_cmd = ['pandoc', temp_md_path, '-f', 'markdown', '-t', 'odt', '-o', str(output_path)]
+
+                # Add reference doc if provided
+                if reference_file:
+                    reference_path = cls._get_file_path(reference_file)
+                    if os.path.exists(reference_path):
+                        pandoc_cmd.extend(['--reference-doc', str(reference_path)])
+
                 # Convert markdown to ODT using pandoc
                 result = subprocess.run(
-                    ['pandoc', temp_md_path, '-f', 'markdown', '-t', 'odt', '-o', str(output_path)],
+                    pandoc_cmd,
                     capture_output=True,
                     text=True,
                     check=True
@@ -517,6 +612,8 @@ class Conversion:
                 os.makedirs(output_dir, exist_ok=True)
             else:
                 output_path = cls._get_file_path(output_file_name)
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
             try:
                 # Convert markdown to PDF using pandoc

@@ -4,7 +4,7 @@ import shutil
 import difflib
 from pathlib import Path
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
@@ -929,6 +929,7 @@ async def extract_resume_data(
 @router.post("/resume/rewrite", response_model=ResumeRewriteResponse)
 async def rewrite_resume(
     rewrite_request: ResumeRewriteRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
@@ -994,7 +995,7 @@ async def rewrite_resume(
             logger.error(f"Job description is empty", job_id=rewrite_request.job_id)
             raise HTTPException(status_code=400, detail="Job description is required")
 
-        logger.debug(f"Retrieved job data", job_id=rewrite_request.job_id, company=job_result.company)
+        logger.debug(f"Retrieved job data", job_id=rewrite_request.job_id)
 
         # Step 2a: Check if a resume already exists for this job
         existing_resume_query = text("""
@@ -1008,6 +1009,8 @@ async def rewrite_resume(
             WHERE j.job_id = :job_id
         """)
         existing_resume = db.execute(existing_resume_query, {"job_id": rewrite_request.job_id}).first()
+
+        logger.debug(f"Retrieved job resume")
 
         # Check if this is a re-run (resume already exists for this job)
         if existing_resume and existing_resume.resume_id:
@@ -1037,7 +1040,7 @@ async def rewrite_resume(
                         resume_id=existing_resume.resume_id,
                         resume_html=existing_resume.resume_html,
                         resume_html_rewrite=existing_resume.resume_html_rewrite,
-                        suggestion=existing_resume.suggestion,
+                        suggestion=existing_resume.suggestion or [],
                         baseline_score=existing_resume.baseline_score,
                         rewrite_score=existing_resume.rewrite_score,
                         text_changes=text_changes
@@ -1048,6 +1051,8 @@ async def rewrite_resume(
 
                 # Initialize AI agent
                 ai_agent = AiAgent(db)
+
+                logger.debug(f"Calling AI rewrite")
 
                 # Call AI agent to rewrite using the previous rewrite as base
                 rewrite_result = ai_agent.resume_rewrite(
@@ -1077,11 +1082,15 @@ async def rewrite_resume(
 
                 resume_html = Conversion.mdToHtml(md_result.resume_markdown)
 
+                logger.debug(f"Generated HTML version")
+
                 # Generate text diff between baseline and new rewrite
                 text_changes = generate_text_diff(
                     md_result.resume_markdown if md_result.resume_markdown else "",
                     rewrite_result['resume_md_rewrite']
                 )
+
+                logger.debug(f"Generated text diff")
 
                 # Update the existing resume_detail record
                 update_query = text("""
@@ -1114,16 +1123,25 @@ async def rewrite_resume(
                 logger.log_database_operation("UPDATE", "resume_detail", existing_resume.resume_id)
                 logger.info(f"Updated existing resume successfully", resume_id=existing_resume.resume_id, rewrite_score=rewrite_score)
 
+                # Schedule background task to generate suggestions
+                background_tasks.add_task(
+                    ai_agent.resume_suggestion,
+                    rewrite_result['resume_md_rewrite'],
+                    existing_resume.resume_id
+                )
+
                 # Return updated response
                 return ResumeRewriteResponse(
                     resume_id=existing_resume.resume_id,
                     resume_html=resume_html,
                     resume_html_rewrite=resume_html_rewrite,
-                    suggestion=[],  # rewrite_result['suggestion'],
+                    suggestion=[],  # Will be populated by background task
                     baseline_score=existing_resume.baseline_score,
                     rewrite_score=rewrite_score,
                     text_changes=text_changes
                 )
+
+        logger.debug(f"Calling AI Agent to rewrite resume")
 
         # Step 3: Call AI agent to rewrite resume
         ai_agent = AiAgent(db)
@@ -1138,8 +1156,7 @@ async def rewrite_resume(
             title_line_no=resume_result.title_line_no
         )
 
-        # logger.debug(f"AI rewrite completed", suggestion_count=len(rewrite_result['suggestion']))
-        logger.debug(f"AI rewrite completed")
+        logger.debug(f"AI resume rewrite completed")
 
         # Step 4: Create filename for new resume
         company_part = clean_filename_part(job_result.company)
@@ -1157,7 +1174,7 @@ async def rewrite_resume(
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(rewrite_result['resume_md_rewrite'])
 
-        logger.debug(f"Wrote rewritten resume to file", file_name=file_name)
+        logger.debug(f"Wrote rewritten markdown resume to file", file_name=file_name)
 
         # Step 6: Insert new resume record
         # Ensure resume_title is unique
@@ -1259,12 +1276,19 @@ async def rewrite_resume(
         logger.log_database_operation("UPDATE", "job", rewrite_request.job_id)
         logger.info(f"Resume rewrite completed successfully", new_resume_id=new_resume.resume_id, job_id=rewrite_request.job_id, baseline_score=baseline_score, rewrite_score=rewrite_score)
 
+        # Schedule background task to generate suggestions
+        background_tasks.add_task(
+            ai_agent.resume_suggestion,
+            rewrite_result['resume_md_rewrite'],
+            new_resume.resume_id
+        )
+
         # Step 14: Return response
         return ResumeRewriteResponse(
             resume_id=new_resume.resume_id,
             resume_html=resume_html,
             resume_html_rewrite=resume_html_rewrite,
-            suggestion=[],  # rewrite_result['suggestion'],
+            suggestion=[],  # Will be populated by background task
             baseline_score=baseline_score,
             rewrite_score=rewrite_score,
             text_changes=text_changes

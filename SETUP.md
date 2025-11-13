@@ -75,6 +75,15 @@ Now that you have a copy of the codebase, you will need to create environment fi
 and the backend Python API server.  The code for both of these projects, as well as the Docker Compose script, expects 
 and relies on these files being present and configured.  Things are unlikely to start if this file is missing.  So let's 
 start with the frontend environment file first.  There should be an example environment file located in the **frontend** 
-directory named **.env.example**
+directory named **.env.example**, which you'll copy and name **.env** in the same directory.  You can also just copy 
+these commands, executed from a terminal in the top level directory.
+
+```bash
+cd ./frontend
+cp .env-example .env
+cd ../backend
+cp .env-example .env
+
+```
 
 

@@ -33,6 +33,7 @@ class JobUpdate(BaseModel):
     job_status: Optional[JobStatus] = None
     date_applied: Optional[date] = None
     average_score: Optional[float] = None
+    job_desc: Optional[str] = None
 
     @field_validator('job_id', 'interest_level', mode='before')
     @classmethod
@@ -41,7 +42,7 @@ class JobUpdate(BaseModel):
             return None
         return v
 
-    @field_validator('company', 'job_title', 'salary', 'location', 'posting_url', 'apply_url', mode='before')
+    @field_validator('company', 'job_title', 'salary', 'location', 'posting_url', 'apply_url', 'job_desc', mode='before')
     @classmethod
     def empty_str_to_none_str(cls, v):
         if v == '':

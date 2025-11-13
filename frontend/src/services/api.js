@@ -3,284 +3,325 @@ import logger from '../utils/logger';
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
 
 class ApiService {
-  get baseURL() {
-    return API_BASE_URL;
-  }
-
-  async request(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const method = options.method || 'GET';
-    const startTime = performance.now();
-
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    // Log the request
-    logger.logAPIRequest(method, endpoint, options.body);
-
-    try {
-      const response = await fetch(url, config);
-      const duration = performance.now() - startTime;
-
-      // Log the response
-      logger.logAPIResponse(method, endpoint, response.status, duration);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.detail || `HTTP error! status: ${response.status}`;
-        const error = new Error(errorMessage);
-        error.status = response.status;
-        error.detail = errorData.detail;
-        throw error;
-      }
-      return await response.json();
-    } catch (error) {
-      const duration = performance.now() - startTime;
-      logger.logAPIResponse(method, endpoint, 0, duration);
-      logger.logError(error, `API request to ${endpoint}`);
-      throw error;
+    get baseURL() {
+        return API_BASE_URL;
     }
-  }
 
-  async getAllJobs() {
-    return this.request('/v1/jobs');
-  }
+    async request(endpoint, options = {}) {
+        const url = `${API_BASE_URL}${endpoint}`;
+        const method = options.method || 'GET';
+        const startTime = performance.now();
 
-  async getJob(jobId) {
-    return this.request(`/v1/job/${jobId}`);
-  }
+        // Extract custom timeout (default: 30 seconds, or use options.timeout)
+        const timeout = options.timeout || 30000;
 
-  async createJob(jobData) {
-    return this.request('/v1/job', {
-      method: 'POST',
-      body: JSON.stringify(jobData),
-    });
-  }
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  async updateJob(jobData) {
-    return this.request('/v1/job', {
-      method: 'POST',
-      body: JSON.stringify(jobData),
-    });
-  }
+        const config = {
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers,
+            },
+            signal: controller.signal,
+            ...options,
+        };
 
-  async deleteJob(jobId) {
-    return this.request(`/v1/job/${jobId}`, {
-      method: 'DELETE',
-    });
-  }
+        // Remove timeout from options so it doesn't get passed to fetch
+        delete config.timeout;
 
-  async getAllContacts() {
-    return this.request('/v1/contacts');
-  }
+        // Log the request
+        if (endpoint !== '/health') {
+            logger.logAPIRequest(method, endpoint, options.body);
+        }
 
-  async getContact(contactId) {
-    return this.request(`/v1/contact/${contactId}`);
-  }
+        try {
+            const response = await fetch(url, config);
+            clearTimeout(timeoutId); // Clear timeout on successful response
+            const duration = performance.now() - startTime;
 
-  async createContact(contactData) {
-    return this.request('/v1/contact', {
-      method: 'POST',
-      body: JSON.stringify(contactData),
-    });
-  }
+            // Log the response
+            if (endpoint !== '/health') {
+                logger.logAPIResponse(method, endpoint, response.status, duration);
+            }
 
-  async updateContact(contactData) {
-    return this.request('/v1/contact', {
-      method: 'POST',
-      body: JSON.stringify(contactData),
-    });
-  }
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.detail || `HTTP error! status: ${response.status}`;
+                const error = new Error(errorMessage);
+                error.status = response.status;
+                error.detail = errorData.detail;
+                throw error;
+            }
+            return await response.json();
+        } catch (error) {
+            clearTimeout(timeoutId); // Clear timeout on error
+            const duration = performance.now() - startTime;
 
-  async deleteContact(contactId) {
-    return this.request(`/v1/contact/${contactId}`, {
-      method: 'DELETE',
-    });
-  }
+            // Handle timeout errors more clearly
+            if (error.name === 'AbortError') {
+                const timeoutError = new Error(`Request timeout after ${timeout}ms`);
+                timeoutError.isTimeout = true;
+                logger.logAPIResponse(method, endpoint, 0, duration);
+                logger.logError(timeoutError, `API request to ${endpoint}`);
+                throw timeoutError;
+            }
 
-  async getJobList() {
-    return this.request('/v1/job/list');
-  }
+            logger.logAPIResponse(method, endpoint, 0, duration);
+            logger.logError(error, `API request to ${endpoint}`);
+            throw error;
+        }
+    }
 
-  async getCalendarMonth(date) {
-    return this.request(`/v1/calendar/month?date=${date}`);
-  }
 
-  async getCalendarWeek(date) {
-    return this.request(`/v1/calendar/week?date=${date}`);
-  }
 
-  async getCalendarDay(date) {
-    return this.request(`/v1/calendar/day?date=${date}`);
-  }
+    // ***** calendar ***************************************************************************
+    async getCalendarMonth(date) {
+        return this.request(`/v1/calendar/month?date=${date}`);
+    }
 
-  async getCalendarEvent(calendarId) {
-    return this.request(`/v1/calendar/${calendarId}`);
-  }
+    async getCalendarWeek(date) {
+        return this.request(`/v1/calendar/week?date=${date}`);
+    }
 
-  async createCalendarEvent(eventData) {
-    return this.request('/v1/calendar', {
-      method: 'POST',
-      body: JSON.stringify(eventData),
-    });
-  }
+    async getCalendarDay(date) {
+        return this.request(`/v1/calendar/day?date=${date}`);
+    }
 
-  async updateCalendarEvent(eventData) {
-    return this.request('/v1/calendar', {
-      method: 'POST',
-      body: JSON.stringify(eventData),
-    });
-  }
+    async getCalendarEvent(calendarId) {
+        return this.request(`/v1/calendar/${calendarId}`);
+    }
 
-  async deleteCalendarEvent(calendarId) {
-    return this.request(`/v1/calendar/${calendarId}`, {
-      method: 'DELETE',
-    });
-  }
+    async createCalendarEvent(eventData) {
+        return this.request('/v1/calendar', {
+            method: 'POST',
+            body: JSON.stringify(eventData),
+        });
+    }
 
-  async deleteCalendarAppointment(appointmentId) {
-    return this.request(`/v1/calendar/appt?appointment_id=${appointmentId}`, {
-      method: 'DELETE',
-    });
-  }
+    async updateCalendarEvent(eventData) {
+        return this.request('/v1/calendar', {
+            method: 'POST',
+            body: JSON.stringify(eventData),
+        });
+    }
 
-  async getNotes(jobId = null) {
-    const queryParam = jobId ? `?job_id=${jobId}` : '';
-    return this.request(`/v1/notes${queryParam}`);
-  }
+    async deleteCalendarEvent(calendarId) {
+        return this.request(`/v1/calendar/${calendarId}`, {
+            method: 'DELETE',
+        });
+    }
 
-  async createNote(noteData) {
-    return this.request('/v1/notes', {
-      method: 'POST',
-      body: JSON.stringify(noteData),
-    });
-  }
+    async deleteCalendarAppointment(appointmentId) {
+        return this.request(`/v1/calendar/appt?appointment_id=${appointmentId}`, {
+            method: 'DELETE',
+        });
+    }
 
-  async updateNote(noteData) {
-    return this.request('/v1/notes', {
-      method: 'POST',
-      body: JSON.stringify(noteData),
-    });
-  }
+    // ----- reminder ----------------------------
+    async saveReminder(reminderData) {
+        return this.request('/v1/reminder', {
+            method: 'POST',
+            body: JSON.stringify(reminderData),
+        });
+    }
 
-  async deleteNote(noteId) {
-    return this.request(`/v1/note/${noteId}`, {
-      method: 'DELETE',
-    });
-  }
+    async deleteReminder(reminderId) {
+        return this.request(`/v1/reminder?reminder_id=${reminderId}`, {
+            method: 'DELETE',
+        });
+    }
 
-  async getBaselineResumeList() {
-    return this.request('/v1/resume/baseline/list');
-  }
+    async getReminderList(listRequest) {
+        return this.request('/v1/reminder/list', {
+            method: 'POST',
+            body: JSON.stringify(listRequest),
+        });
+    }
 
-  async getBaselineResumes() {
-    return this.request('/v1/resume/baseline');
-  }
+    // ***** contacts ***************************************************************************
+    async getAllContacts() {
+        return this.request('/v1/contacts');
+    }
 
-  async extractJobData(jobId) {
-    return this.request('/v1/job/extract', {
-      method: 'POST',
-      body: JSON.stringify({ job_id: jobId }),
-    });
-  }
+    async getContact(contactId) {
+        return this.request(`/v1/contact/${contactId}`);
+    }
 
-  async rewriteResume(jobId, resumeId, keywordFinal, focusFinal) {
-    return this.request('/v1/resume/rewrite', {
-      method: 'POST',
-      body: JSON.stringify({
-        job_id: jobId,
-        resume_id: resumeId,
-        keyword_final: keywordFinal,
-        focus_final: focusFinal,
-      }),
-    });
-  }
+    async createContact(contactData) {
+        return this.request('/v1/contact', {
+            method: 'POST',
+            body: JSON.stringify(contactData),
+        });
+    }
 
-  async updateResumeDetail(detailData) {
-    return this.request('/v1/resume/detail', {
-      method: 'POST',
-      body: JSON.stringify(detailData),
-    });
-  }
+    async updateContact(contactData) {
+        return this.request('/v1/contact', {
+            method: 'POST',
+            body: JSON.stringify(contactData),
+        });
+    }
 
-  async getResumeDetail(resumeId) {
-    return this.request(`/v1/resume/detail/${resumeId}`);
-  }
+    async deleteContact(contactId) {
+        return this.request(`/v1/contact/${contactId}`, {
+            method: 'DELETE',
+        });
+    }
 
-  async convertHtmlToDocx(jobId) {
-    return this.request(`/v1/convert/html2docx?job_id=${jobId}`);
-  }
+    // ***** cover letter ***********************************************************************
+    async getLetterList() {
+        return this.request('/v1/letter/list');
+    }
 
-  async getPersonalInfo() {
-    return this.request('/v1/personal');
-  }
+    async getLetter(coverId) {
+        return this.request(`/v1/letter?cover_id=${coverId}`);
+    }
 
-  async savePersonalInfo(personalData) {
-    return this.request('/v1/personal', {
-      method: 'POST',
-      body: JSON.stringify(personalData),
-    });
-  }
+    async saveLetter(letterData) {
+        return this.request('/v1/letter', {
+            method: 'POST',
+            body: JSON.stringify(letterData),
+        });
+    }
 
-  async getLetterList() {
-    return this.request('/v1/letter/list');
-  }
+    async deleteLetter(coverId) {
+        return this.request(`/v1/letter?cover_id=${coverId}`, {
+            method: 'DELETE',
+        });
+    }
 
-  async getLetter(coverId) {
-    return this.request(`/v1/letter?cover_id=${coverId}`);
-  }
+    async writeLetter(coverId) {
+        return this.request('/v1/letter/write', {
+            method: 'POST',
+            body: JSON.stringify({cover_id: coverId}),
+            timeout: 240000, // 4 minute timeout for AI letter writing (AI processing can take time)
+        });
+    }
 
-  async saveLetter(letterData) {
-    return this.request('/v1/letter', {
-      method: 'POST',
-      body: JSON.stringify(letterData),
-    });
-  }
+    async convertLetter(coverId, format) {
+        return this.request('/v1/letter/convert', {
+            method: 'POST',
+            body: JSON.stringify({cover_id: coverId, format: format}),
+        });
+    }
 
-  async deleteLetter(coverId) {
-    return this.request(`/v1/letter?cover_id=${coverId}`, {
-      method: 'DELETE',
-    });
-  }
 
-  async writeLetter(coverId) {
-    return this.request('/v1/letter/write', {
-      method: 'POST',
-      body: JSON.stringify({ cover_id: coverId }),
-    });
-  }
+    // ***** jobs ***************************************************************************
+    async getAllJobs() {
+        return this.request('/v1/jobs');
+    }
 
-  async convertLetter(coverId, format) {
-    return this.request('/v1/letter/convert', {
-      method: 'POST',
-      body: JSON.stringify({ cover_id: coverId, format: format }),
-    });
-  }
+    async getJob(jobId) {
+        return this.request(`/v1/job/${jobId}`);
+    }
 
-  async saveReminder(reminderData) {
-    return this.request('/v1/reminder', {
-      method: 'POST',
-      body: JSON.stringify(reminderData),
-    });
-  }
+    async createJob(jobData) {
+        return this.request('/v1/job', {
+            method: 'POST',
+            body: JSON.stringify(jobData),
+        });
+    }
 
-  async deleteReminder(reminderId) {
-    return this.request(`/v1/reminder?reminder_id=${reminderId}`, {
-      method: 'DELETE',
-    });
-  }
+    async updateJob(jobData) {
+        return this.request('/v1/job', {
+            method: 'POST',
+            body: JSON.stringify(jobData),
+        });
+    }
 
-  async getReminderList(listRequest) {
-    return this.request('/v1/reminder/list', {
-      method: 'POST',
-      body: JSON.stringify(listRequest),
-    });
-  }
+    async deleteJob(jobId) {
+        return this.request(`/v1/job/${jobId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async getJobList() {
+        return this.request('/v1/job/list');
+    }
+
+    async extractJobData(jobId) {
+        return this.request('/v1/job/extract', {
+            method: 'POST',
+            body: JSON.stringify({job_id: jobId}),
+            timeout: 240000, // 4 minute timeout for AI job extraction (AI processing can take time)
+        });
+    }
+
+    // ***** notes ***************************************************************************
+    async getNotes(jobId = null) {
+        const queryParam = jobId ? `?job_id=${jobId}` : '';
+        return this.request(`/v1/notes${queryParam}`);
+    }
+
+    async createNote(noteData) {
+        return this.request('/v1/notes', {
+            method: 'POST',
+            body: JSON.stringify(noteData),
+        });
+    }
+
+    async updateNote(noteData) {
+        return this.request('/v1/notes', {
+            method: 'POST',
+            body: JSON.stringify(noteData),
+        });
+    }
+
+    async deleteNote(noteId) {
+        return this.request(`/v1/note/${noteId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    // ***** personal ***************************************************************************
+    async getPersonalInfo() {
+        return this.request('/v1/personal');
+    }
+
+    async savePersonalInfo(personalData) {
+        return this.request('/v1/personal', {
+            method: 'POST',
+            body: JSON.stringify(personalData),
+        });
+    }
+
+    // ***** resume ***************************************************************************
+    async getBaselineResumeList() {
+        return this.request('/v1/resume/baseline/list');
+    }
+
+    async getBaselineResumes() {
+        return this.request('/v1/resume/baseline');
+    }
+
+    async rewriteResume(jobId, resumeId, keywordFinal, focusFinal) {
+        return this.request('/v1/resume/rewrite', {
+            method: 'POST',
+            body: JSON.stringify({
+                job_id: jobId,
+                resume_id: resumeId,
+                keyword_final: keywordFinal,
+                focus_final: focusFinal,
+            }),
+            timeout: 360000, // 6 minute timeout for resume rewrite (AI processing takes time)
+        });
+    }
+
+    async updateResumeDetail(detailData) {
+        return this.request('/v1/resume/detail', {
+            method: 'POST',
+            body: JSON.stringify(detailData),
+        });
+    }
+
+    async getResumeDetail(resumeId) {
+        return this.request(`/v1/resume/detail/${resumeId}`);
+    }
+
+    async convertHtmlToDocx(jobId) {
+        return this.request(`/v1/convert/html2docx?job_id=${jobId}`);
+    }
 }
 
 export default new ApiService();

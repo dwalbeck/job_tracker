@@ -10,10 +10,6 @@ services:
     expose:
       - "5432"
     volumes:
-      - type: volume
-        name: postgres-data
-        source: /var/lib/postgresql-docker/12/main
-        target: /var/lib/postgresql/data
       - /var/lib/postgresql-docker/12/main:/var/lib/postgresql/data
       - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     networks:
@@ -38,6 +34,8 @@ services:
     expose:
       - "8000"
       - "80"
+    ports:
+      - "8000:80"
     depends_on:
       db:
         condition: service_healthy
@@ -86,7 +84,7 @@ services:
 volumes:
   main:
   #postgres_data:
-    driver: local
+  #  driver: local
   job_docs:
     driver: local
 

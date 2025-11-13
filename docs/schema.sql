@@ -1,6 +1,16 @@
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
 
 
-CREATE DATABASE jobtracker;
+USE jobtracker;
 
 CREATE TYPE title AS ENUM ('recruiter', 'hiring manager', 'hr', 'engineer', 'vp', 'other');
 CREATE TYPE job_status AS ENUM ('applied', 'interviewing', 'rejected', 'no response');
@@ -9,6 +19,38 @@ CREATE TYPE comm AS ENUM ('phone', 'email', 'sms', 'message');
 CREATE TYPE file_fmt AS ENUM ('pdf', 'odt', 'md', 'html', 'docx');
 CREATE TYPE content_length AS ENUM ('short', 'medium', 'long');
 CREATE TYPE content_tone AS ENUM ('professional', 'casual', 'enthusiastic', 'informational');
+
+CREATE TABLE IF NOT EXISTS job (
+	job_id                  serial NOT NULL,
+	company                 varchar(64),
+    job_title               varchar(255),
+    salary                  varchar(92),
+    location                varchar(128),
+    interest_level          smallint NOT NULL DEFAULT 1,
+    average_score           numeric(4, 3) NOT NULL DEFAULT 5,
+    posting_url             text,
+    apply_url               text,
+    job_status              job_status NOT NULL DEFAULT 'applied',
+    date_applied            date DEFAULT NULL,
+    last_activity           date NOT NULL DEFAULT CURRENT_DATE,
+    job_active              boolean NOT NULL DEFAULT true,
+    resume_id               int DEFAULT NULL,
+    cover_id                int DEFAULT NULL,
+    job_created             timestamp(0) without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    job_directory           varchar(255),
+    CHECK (interest_level > 0 AND interest_level < 11),
+    PRIMARY KEY (job_id)
+);
+CREATE INDEX IF NOT EXISTS job_job_status_idx ON job (job_status);
+CREATE INDEX IF NOT EXISTS job_last_contact_idx ON job (last_activity);
+
+CREATE TABLE IF NOT EXISTS job_detail (
+	job_id                  int NOT NULL REFERENCES job (job_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    job_desc                text,
+    job_qualification       text,
+    job_keyword             varchar(128)[],
+    PRIMARY KEY (job_id)
+);
 
 CREATE TABLE IF NOT EXISTS resume (
     resume_id               serial NOT NULL,
@@ -59,38 +101,6 @@ CREATE TABLE IF NOT EXISTS cover_letter (
 	letter_active           boolean NOT NULL DEFAULT true,
     letter_created          timestamp(0) without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (cover_id)
-);
-
-CREATE TABLE IF NOT EXISTS job (
-    job_id                  serial NOT NULL,
-    company                 varchar(64),
-    job_title               varchar(255),
-    salary                  varchar(92),
-    location                varchar(128),
-    interest_level          smallint NOT NULL DEFAULT 1,
-	average_score           numeric(4, 3) NOT NULL DEFAULT 1,
-    posting_url             text,
-    apply_url               text,
-    job_status              job_status NOT NULL DEFAULT 'applied',
-    date_applied            date DEFAULT NULL,
-    last_activity           date NOT NULL DEFAULT CURRENT_DATE,
-    job_active              boolean NOT NULL DEFAULT true,
-    resume_id               int DEFAULT NULL REFERENCES resume (resume_id) ON DELETE SET NULL ON UPDATE CASCADE,
-    cover_id                int DEFAULT NULL REFERENCES cover_letter (cover_id) ON DELETE SET NULL ON UPDATE CASCADE,
-    job_created             timestamp(0) without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    job_directory           varchar(255),
-    CHECK (interest_level > 0 AND interest_level < 11),
-    PRIMARY KEY (job_id)
-);
-CREATE INDEX IF NOT EXISTS job_job_status_idx ON job (job_status);
-CREATE INDEX IF NOT EXISTS job_last_contact_idx ON job (last_contact);
-
-CREATE TABLE IF NOT EXISTS job_detail (
-	job_id                  int NOT NULL REFERENCES job (job_id) ON DELETE CASCADE ON UPDATE CASCADE,
-	job_desc                text,
-	job_qualification       text,
-	job_keyword             varchar(128)[],
-	PRIMARY KEY (job_id)
 );
 
 CREATE TABLE IF NOT EXISTS contact (
@@ -197,7 +207,9 @@ CREATE TABLE IF NOT EXISTS personal (
 	PRIMARY KEY (first_name, last_name)
 );
 
-
+ALTER TABLE job
+    ADD CONSTRAINT job_resume_fk FOREIGN KEY (resume_id) REFERENCES resume (resume_id) ON DELETE SET NULL ON UPDATE CASCADE,
+    ADD CONSTRAINT job_cover_fk FOREIGN KEY (cover_id) REFERENCES cover_letter (cover_id) ON DELETE SET NULL ON UPDATE CASCADE;
 
 
 

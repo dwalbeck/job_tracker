@@ -9,6 +9,7 @@ from ..schemas.job import Job as JobSchema, JobCreate, JobUpdate, JobList, JobEx
 from ..utils.directory import create_job_directory
 from ..utils.ai_agent import AiAgent
 from ..utils.logger import logger
+from ..utils.job_helpers import calc_avg_score
 
 router = APIRouter()
 
@@ -20,14 +21,21 @@ async def get_all_jobs(db: Session = Depends(get_db)):
     """
     logger.debug("Fetching all active jobs")
 
-    jobs = db.query(Job).filter(
-        Job.job_active == True
-    ).order_by(
-        Job.last_contact.desc()
-    ).all()
+    # Use raw SQL to include average_score column
+    query = text("""
+        SELECT *
+        FROM job
+        WHERE job_active = true
+        ORDER BY last_contact DESC
+    """)
+
+    result = db.execute(query).fetchall()
 
     logger.log_database_operation("SELECT", "job")
-    logger.debug(f"Retrieved all jobs", count=len(jobs))
+    logger.debug(f"Retrieved all jobs", count=len(result))
+
+    # Convert rows to dicts
+    jobs = [dict(row._mapping) for row in result]
     return jobs
 
 
@@ -109,6 +117,9 @@ async def create_or_update_job(job_data: JobUpdate, db: Session = Depends(get_db
 
     logger.info(f"Attempting to {action} job", job_id=job_data.job_id, company=job_data.company)
 
+    # Extract job_desc before processing (it belongs in job_detail table)
+    job_desc = job_data.job_desc
+
     # Validate required fields for new jobs
     if not job_data.job_id:
         if not job_data.company or not job_data.job_title or not job_data.job_status:
@@ -126,8 +137,8 @@ async def create_or_update_job(job_data: JobUpdate, db: Session = Depends(get_db
             raise HTTPException(status_code=404, detail="Job not found")
 
         logger.debug(f"Updating existing job", job_id=job_data.job_id)
-        # Update fields that are provided
-        update_data = job_data.dict(exclude_unset=True, exclude={'job_id'})
+        # Update fields that are provided (excluding job_desc and average_score which are managed separately)
+        update_data = job_data.dict(exclude_unset=True, exclude={'job_id', 'job_desc', 'average_score'})
         for field, value in update_data.items():
             setattr(job, field, value)
 
@@ -140,7 +151,7 @@ async def create_or_update_job(job_data: JobUpdate, db: Session = Depends(get_db
     else:
         # Create new job
         logger.debug(f"Creating new job", company=job_data.company, job_title=job_data.job_title)
-        job_dict = job_data.dict(exclude={'job_id'}, exclude_unset=True)
+        job_dict = job_data.dict(exclude={'job_id', 'job_desc', 'average_score'}, exclude_unset=True, exclude_none=True)
 
         # Create job directory
         job_directory = create_job_directory(job_dict['company'], job_dict['job_title'])
@@ -152,6 +163,25 @@ async def create_or_update_job(job_data: JobUpdate, db: Session = Depends(get_db
 
     db.commit()
     db.refresh(job)
+
+    # Handle job_desc in job_detail table
+    if job_desc is not None:
+        job_detail = db.query(JobDetail).filter(JobDetail.job_id == job.job_id).first()
+        if job_detail:
+            # Update existing job_detail
+            job_detail.job_desc = job_desc
+            logger.debug(f"Updated job_detail for job", job_id=job.job_id)
+        else:
+            # Create new job_detail
+            job_detail = JobDetail(job_id=job.job_id, job_desc=job_desc)
+            db.add(job_detail)
+            logger.debug(f"Created job_detail for job", job_id=job.job_id)
+        db.commit()
+
+    # Update average score if this is an update (interest_level may have changed)
+    if is_update:
+        calc_avg_score(db, job.job_id)
+        logger.debug(f"Recalculated average score for job", job_id=job.job_id)
 
     logger.log_database_operation("UPDATE" if is_update else "INSERT", "jobs", job.job_id)
     logger.info(f"Job {action}d successfully", job_id=job.job_id, company=job.company)

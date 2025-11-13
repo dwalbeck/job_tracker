@@ -1,3 +1,4 @@
+import os
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -480,6 +481,9 @@ async def convert_cover_letter(request_data: dict, db: Session = Depends(get_db)
         # Output path for docx
         output_path = Path(settings.cover_letter_dir) / file_name
 
+        # Ensure the cover letter directory exists
+        os.makedirs(settings.cover_letter_dir, exist_ok=True)
+
         try:
             # Convert markdown to DOCX using pandoc
             result = subprocess.run(
@@ -490,12 +494,10 @@ async def convert_cover_letter(request_data: dict, db: Session = Depends(get_db)
             )
 
             # Clean up temporary file
-            import os
             os.unlink(temp_md_path)
 
         except subprocess.CalledProcessError as e:
             # Clean up temporary file on error
-            import os
             if os.path.exists(temp_md_path):
                 os.unlink(temp_md_path)
             raise Exception(f"Pandoc conversion to DOCX failed: {e.stderr}")
