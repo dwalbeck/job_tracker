@@ -2,6 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {DragDropContext, Droppable} from 'react-beautiful-dnd';
 import JobCard from '../../components/JobCard/JobCard';
+import ExportMenu from '../../components/ExportMenu/ExportMenu';
 import apiService from '../../services/api';
 import {useJob} from '../../context/JobContext';
 import logger from '../../utils/logger';
@@ -149,6 +150,28 @@ const JobTracker = () => {
         setSearchTerm('');
     };
 
+    const handleExport = async () => {
+        try {
+            const response = await apiService.exportJobs();
+            const { job_export_dir, job_export_file } = response;
+
+            // Trigger file download
+            const fileUrl = `${apiService.baseURL}/v1/files/exports/${job_export_file}`;
+            const link = document.createElement('a');
+            link.href = fileUrl;
+            link.download = job_export_file;
+            link.setAttribute('target', '_blank');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            console.log(`Jobs exported to: ${job_export_dir}/${job_export_file}`);
+        } catch (error) {
+            console.error('Error exporting jobs:', error);
+            alert('Failed to export jobs');
+        }
+    };
+
     return (
         <div className="job-tracker">
             <div className="job-tracker-header">
@@ -171,6 +194,7 @@ const JobTracker = () => {
                     <button onClick={handleAddJob} className="add-job-btn">
                         + Add Job
                     </button>
+                    <ExportMenu label="Export Jobs" onExport={handleExport} />
                 </div>
             </div>
 

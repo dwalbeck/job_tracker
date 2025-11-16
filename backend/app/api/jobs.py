@@ -178,10 +178,9 @@ async def create_or_update_job(job_data: JobUpdate, db: Session = Depends(get_db
             logger.debug(f"Created job_detail for job", job_id=job.job_id)
         db.commit()
 
-    # Update average score if this is an update (interest_level may have changed)
-    if is_update:
-        calc_avg_score(db, job.job_id)
-        logger.debug(f"Recalculated average score for job", job_id=job.job_id)
+    # Update average score (for new jobs, sets it to interest_level; for updates, recalculates if interest_level changed)
+    calc_avg_score(db, job.job_id)
+    logger.debug(f"{'Recalculated' if is_update else 'Calculated'} average score for job", job_id=job.job_id)
 
     logger.log_database_operation("UPDATE" if is_update else "INSERT", "jobs", job.job_id)
     logger.info(f"Job {action}d successfully", job_id=job.job_id, company=job.company)

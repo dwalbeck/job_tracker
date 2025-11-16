@@ -195,7 +195,7 @@ class ApiService {
         return this.request('/v1/letter/write', {
             method: 'POST',
             body: JSON.stringify({cover_id: coverId}),
-            timeout: 240000, // 4 minute timeout for AI letter writing (AI processing can take time)
+            timeout: 90000, // 90 second timeout for AI letter writing
         });
     }
 
@@ -244,7 +244,7 @@ class ApiService {
         return this.request('/v1/job/extract', {
             method: 'POST',
             body: JSON.stringify({job_id: jobId}),
-            timeout: 240000, // 4 minute timeout for AI job extraction (AI processing can take time)
+            timeout: 90000, // 90 second timeout for AI job extraction
         });
     }
 
@@ -304,7 +304,7 @@ class ApiService {
                 keyword_final: keywordFinal,
                 focus_final: focusFinal,
             }),
-            timeout: 360000, // 6 minute timeout for resume rewrite (AI processing takes time)
+            timeout: 150000, // 150 second (2.5 minute) timeout for resume rewrite
         });
     }
 
@@ -321,6 +321,27 @@ class ApiService {
 
     async convertHtmlToDocx(jobId) {
         return this.request(`/v1/convert/html2docx?job_id=${jobId}`);
+    }
+
+    // ***** export ***************************************************************************
+    async exportJobs() {
+        return this.request('/v1/export/job');
+    }
+
+    async exportContacts() {
+        return this.request('/v1/export/contacts');
+    }
+
+    async exportNotes() {
+        return this.request('/v1/export/notes');
+    }
+
+    async exportCalendar() {
+        return this.request('/v1/export/calendar');
+    }
+
+    async exportResumes() {
+        return this.request('/v1/export/resumes');
     }
 }
 

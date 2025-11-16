@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useJob} from '../../context/JobContext';
+import ExportMenu from '../../components/ExportMenu/ExportMenu';
 import apiService from '../../services/api';
 import './Contacts.css';
 
@@ -58,6 +59,28 @@ const Contacts = () => {
         setSearchTerm('');
     };
 
+    const handleExport = async () => {
+        try {
+            const response = await apiService.exportContacts();
+            const { contact_export_dir, contact_export_file } = response;
+
+            // Trigger file download
+            const fileUrl = `${apiService.baseURL}/v1/files/exports/${contact_export_file}`;
+            const link = document.createElement('a');
+            link.href = fileUrl;
+            link.download = contact_export_file;
+            link.setAttribute('target', '_blank');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            console.log(`Contacts exported to: ${contact_export_dir}/${contact_export_file}`);
+        } catch (error) {
+            console.error('Error exporting contacts:', error);
+            alert('Failed to export contacts');
+        }
+    };
+
     return (
         <div className="contacts-page">
             <div className="contacts-header">
@@ -87,6 +110,7 @@ const Contacts = () => {
                     <button onClick={handleCreateContact} className="create-contact-btn">
                         + Create Contact
                     </button>
+                    <ExportMenu label="Export Contacts" onExport={handleExport} />
                 </div>
             </div>
 

@@ -1,4 +1,6 @@
 import React, {useState, useEffect} from 'react';
+import ExportMenu from '../../components/ExportMenu/ExportMenu';
+import apiService from '../../services/api';
 import './Resume.css';
 
 const Resume = () => {
@@ -155,6 +157,28 @@ const Resume = () => {
         setSearchTerm('');
     };
 
+    const handleExport = async () => {
+        try {
+            const response = await apiService.exportResumes();
+            const { resume_export_dir, resume_export_file } = response;
+
+            // Trigger file download
+            const fileUrl = `${apiService.baseURL}/v1/files/exports/${resume_export_file}`;
+            const link = document.createElement('a');
+            link.href = fileUrl;
+            link.download = resume_export_file;
+            link.setAttribute('target', '_blank');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            console.log(`Resumes exported to: ${resume_export_dir}/${resume_export_file}`);
+        } catch (error) {
+            console.error('Error exporting resumes:', error);
+            alert('Failed to export resumes');
+        }
+    };
+
     const calculateLastEdit = (resumeUpdated, resumeCreated) => {
         const dateToUse = resumeUpdated || resumeCreated;
         if (!dateToUse) return '';
@@ -207,6 +231,7 @@ const Resume = () => {
                     <button onClick={handleAddNew} className="add-new-btn">
                         Add New
                     </button>
+                    <ExportMenu label="Export Resumes" onExport={handleExport} />
                 </div>
             </div>
 

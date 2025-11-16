@@ -18,6 +18,12 @@
   color: #333;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 50px;
+}
+
 .search-container {
   position: relative;
   display: flex;

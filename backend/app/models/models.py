@@ -279,3 +279,6 @@ class Personal(Base):
     zip = Column(String(16))
     country = Column(String(64))
     no_response_week = Column(SmallInteger)
+    job_extract_llm = Column(String(32))
+    rewrite_llm = Column(String(32))
+    cover_llm = Column(String(32))

@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useJob} from '../../context/JobContext';
+import ExportMenu from '../../components/ExportMenu/ExportMenu';
 import apiService from '../../services/api';
 import {formatTimestamp} from '../../utils/dateUtils';
 import './Notes.css';
@@ -74,6 +75,28 @@ const Notes = () => {
         setSearchTerm('');
     };
 
+    const handleExport = async () => {
+        try {
+            const response = await apiService.exportNotes();
+            const { note_export_dir, note_export_file } = response;
+
+            // Trigger file download
+            const fileUrl = `${apiService.baseURL}/v1/files/exports/${note_export_file}`;
+            const link = document.createElement('a');
+            link.href = fileUrl;
+            link.download = note_export_file;
+            link.setAttribute('target', '_blank');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            console.log(`Notes exported to: ${note_export_dir}/${note_export_file}`);
+        } catch (error) {
+            console.error('Error exporting notes:', error);
+            alert('Failed to export notes');
+        }
+    };
+
     const truncateText = (text, maxLength = 100) => {
         if (!text) return '';
         if (text.length <= maxLength) return text;
@@ -109,6 +132,7 @@ const Notes = () => {
                     <button onClick={handleAddNote} className="add-note-btn">
                         + Add Note
                     </button>
+                    <ExportMenu label="Export Notes" onExport={handleExport} />
                 </div>
             </div>
 

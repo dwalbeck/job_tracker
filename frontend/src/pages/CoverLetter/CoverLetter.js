@@ -60,15 +60,15 @@ const CoverLetter = () => {
 
     const handleDownload = async (coverId) => {
         try {
-            // Convert the letter to PDF
-            const convertResponse = await apiService.convertLetter(coverId, 'pdf');
+            // Convert the letter to DOCX
+            const convertResponse = await apiService.convertLetter(coverId, 'docx');
             const serverFileName = convertResponse.file_name;
 
             // Get personal info for custom filename
             const personalInfo = await apiService.getPersonalInfo();
             const firstName = personalInfo.first_name || 'cover';
             const lastName = personalInfo.last_name || 'letter';
-            const downloadFileName = `${firstName}_${lastName}-cover_letter.pdf`.toLowerCase().replace(/ /g, '_');
+            const downloadFileName = `${firstName}_${lastName}-cover_letter.docx`.toLowerCase().replace(/ /g, '_');
 
             // Download the file with custom filename
             const fileUrl = `${apiService.baseURL}/v1/files/cover_letters/${serverFileName}`;

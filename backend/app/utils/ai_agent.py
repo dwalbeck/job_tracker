@@ -27,6 +27,14 @@ class AiAgent:
         self.model = settings.ai_model
         self.project = settings.openai_project
 
+        # Load LLM settings from database
+        settings.load_llm_settings_from_db(db)
+
+        # Set LLM models from config (these can be different for each AI operation)
+        self.job_extract_llm = settings.job_extract_llm
+        self.rewrite_llm = settings.rewrite_llm
+        self.cover_llm = settings.cover_llm
+
         # Initialize OpenAI client with timeout
         client_kwargs = {
             "api_key": self.api_key,
@@ -190,7 +198,7 @@ class AiAgent:
         # Make API call to OpenAI
         try:
             response = self.client.chat.completions.create(
-                model=self.model,
+                model=self.job_extract_llm,
                 messages=[
                     {"role": "system", "content": "Expert job analyst. You analyze job descriptions and extract qualifications and keywords in JSON format."},
                     {"role": "user", "content": prompt}
@@ -348,7 +356,7 @@ class AiAgent:
 
         try:
             response = self.client.chat.completions.create(
-                model=self.model,
+                model=self.rewrite_llm,
                 messages=[
                     {"role": "system", "content": "Expert resume writer and career consultant. You rewrite resumes to optimize for specific job opportunities while maintaining authenticity and providing structured output in JSON format."},
                     {"role": "user", "content": prompt}
@@ -551,7 +559,7 @@ class AiAgent:
 
         # Make API call to OpenAI
         response = self.client.chat.completions.create(
-            model=self.model,
+            model=self.cover_llm,
             messages=[
                 {"role": "system", "content": "You are a professional job finding coach that specializes in writing cover letters. You write personalized, compelling cover letters that highlight the candidate's strengths and match with the job requirements."},
                 {"role": "user", "content": prompt}

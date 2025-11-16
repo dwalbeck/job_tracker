@@ -50,7 +50,7 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf \
     && echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf \
     && echo '' >> /etc/supervisor/conf.d/supervisord.conf \
     && echo '[program:uvicorn]' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo 'command=python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --timeout-graceful-shutdown 180 --timeout-keep-alive 180' >> /etc/supervisor/conf.d/supervisord.conf \
+    && echo 'command=python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --timeout-graceful-shutdown 200 --timeout-keep-alive 200' >> /etc/supervisor/conf.d/supervisord.conf \
     && echo 'directory=/app' >> /etc/supervisor/conf.d/supervisord.conf \
     && echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf \
     && echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf

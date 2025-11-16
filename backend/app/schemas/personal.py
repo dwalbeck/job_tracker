@@ -18,7 +18,10 @@ class PersonalBase(BaseModel):
     state: Optional[str] = None
     zip: Optional[str] = None
     country: Optional[str] = None
-    no_response_week:  Optional[int] = None
+    no_response_week: Optional[int] = None
+    job_extract_llm: Optional[str] = None
+    rewrite_llm: Optional[str] = None
+    cover_llm: Optional[str] = None
 
     @field_validator('email')
     @classmethod

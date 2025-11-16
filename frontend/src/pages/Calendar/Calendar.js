@@ -1,10 +1,12 @@
 import React, {useState, useEffect} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {useJob} from '../../context/JobContext';
+import ExportMenu from '../../components/ExportMenu/ExportMenu';
 import MonthView from '../../components/Calendar/MonthView';
 import WeekView from '../../components/Calendar/WeekView';
 import DayView from '../../components/Calendar/DayView';
 import ReminderModal from '../../components/ReminderModal/ReminderModal';
+import apiService from '../../services/api';
 import './Calendar.css';
 
 const Calendar = () => {
@@ -63,6 +65,28 @@ const Calendar = () => {
         setShowReminderModal(true);
     };
 
+    const handleExport = async () => {
+        try {
+            const response = await apiService.exportCalendar();
+            const { calendar_export_dir, calendar_export_file } = response;
+
+            // Trigger file download
+            const fileUrl = `${apiService.baseURL}/v1/files/exports/${calendar_export_file}`;
+            const link = document.createElement('a');
+            link.href = fileUrl;
+            link.download = calendar_export_file;
+            link.setAttribute('target', '_blank');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            console.log(`Calendar exported to: ${calendar_export_dir}/${calendar_export_file}`);
+        } catch (error) {
+            console.error('Error exporting calendar:', error);
+            alert('Failed to export calendar');
+        }
+    };
+
     const renderView = () => {
         switch (view) {
             case 'week':
@@ -117,6 +141,7 @@ const Calendar = () => {
                     >
                         + Add Appointment
                     </button>
+                    <ExportMenu label="Export Calendar" onExport={handleExport} />
                 </div>
             </div>
 

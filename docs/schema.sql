@@ -204,6 +204,9 @@ CREATE TABLE IF NOT EXISTS personal (
 	zip                     varchar(10),
 	country                 varchar(2),
 	no_response_week        smallint NOT NULL DEFAULT 6,
+	job_extract_llm         varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
+	rewrite_llm             varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
+	cover_llm               varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
 	PRIMARY KEY (first_name, last_name)
 );
 
@@ -211,24 +214,13 @@ ALTER TABLE job
     ADD CONSTRAINT job_resume_fk FOREIGN KEY (resume_id) REFERENCES resume (resume_id) ON DELETE SET NULL ON UPDATE CASCADE,
     ADD CONSTRAINT job_cover_fk FOREIGN KEY (cover_id) REFERENCES cover_letter (cover_id) ON DELETE SET NULL ON UPDATE CASCADE;
 
+CREATE ROLE apiuser WITH LOGIN PASSWORD 'change_me';
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO apiuser;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO apiuser;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO apiuser;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO apiuser;
 
 
 
