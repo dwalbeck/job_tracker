@@ -14,6 +14,7 @@ const CreateCoverLetter = () => {
     const [length, setLength] = useState('medium');
     const [instruction, setInstruction] = useState('');
     const [letterContent, setLetterContent] = useState('');
+    const [originalLetterContent, setOriginalLetterContent] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -132,6 +133,16 @@ const CreateCoverLetter = () => {
         }
     };
 
+    const handleEditClick = () => {
+        setOriginalLetterContent(letterContent);
+        setIsEditing(true);
+    };
+
+    const handleCancelEdit = () => {
+        setLetterContent(originalLetterContent);
+        setIsEditing(false);
+    };
+
     const handleSaveEdit = async () => {
         if (!coverId) {
             alert('No cover letter to save');
@@ -150,6 +161,7 @@ const CreateCoverLetter = () => {
             });
 
             setIsEditing(false);
+            setOriginalLetterContent(letterContent);
         } catch (error) {
             console.error('Error saving cover letter:', error);
             alert('Failed to save cover letter. Please try again.');
@@ -344,12 +356,31 @@ const CreateCoverLetter = () => {
                     <div className="preview-header">
                         <h2 className="section-heading">Cover Letter Preview</h2>
                         {letterContent && (
-                            <button
-                                className="edit-button"
-                                onClick={() => isEditing ? handleSaveEdit() : setIsEditing(true)}
-                            >
-                                {isEditing ? 'Save' : 'Edit'}
-                            </button>
+                            <div className="preview-header-buttons">
+                                {isEditing ? (
+                                    <>
+                                        <button
+                                            className="cancel-button"
+                                            onClick={handleCancelEdit}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            className="save-button"
+                                            onClick={handleSaveEdit}
+                                        >
+                                            Save
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        className="edit-button"
+                                        onClick={handleEditClick}
+                                    >
+                                        Edit
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </div>
 

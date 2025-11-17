@@ -237,7 +237,7 @@ const Resume = () => {
 
             <div className="resume-content">
                 <div className="resume-section">
-                    <h2 className="section-title">Baseline</h2>
+                    <h2 className="resume-section-title">Baseline</h2>
                     <div className="resume-cards-grid">
                         {filteredBaselineResumes.length === 0 ? (
                             <div className="no-resumes">No baseline resumes found</div>
@@ -297,7 +297,7 @@ const Resume = () => {
                 </div>
 
                 <div className="resume-section">
-                    <h2 className="section-title">Customized for Jobs</h2>
+                    <h2 className="resume-section-title">Customized for Jobs</h2>
                     <div className="resume-cards-grid">
                         {filteredJobResumes.length === 0 ? (
                             <div className="no-resumes">No job-specific resumes found</div>

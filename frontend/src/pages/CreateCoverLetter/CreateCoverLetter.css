@@ -165,7 +165,13 @@
   align-items: center;
 }
 
-.edit-button {
+.preview-header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-button,
+.save-button {
   background-color: #4a90e2;
   color: white;
   border: none;
@@ -177,8 +183,25 @@
   transition: background-color 0.2s;
 }
 
-.edit-button:hover {
+.edit-button:hover,
+.save-button:hover {
   background-color: #357abd;
+}
+
+.cancel-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.cancel-button:hover {
+  background-color: #5a6268;
 }
 
 .preview-container {

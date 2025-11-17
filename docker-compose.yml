@@ -55,8 +55,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      # args:
-      #  REACT_APP_API_BASE_URL: http://api.jobtracker.com
+      args:
+        REACT_APP_API_BASE_URL: http://api.jobtracker.com
     container_name: portal.jobtracker.com
     hostname: portal.jobtracker.com
     restart: unless-stopped
