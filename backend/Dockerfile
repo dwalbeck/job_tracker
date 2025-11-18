@@ -60,7 +60,8 @@ RUN adduser --disabled-password --gecos '' --shell /bin/bash appuser \
     && chown -R appuser:appuser /app
 
 # Expose ports
-EXPOSE 8000 80
+EXPOSE 8000
+EXPOSE 80
 
 # Make wait script executable
 RUN chmod +x wait-for-db.py

@@ -1,16 +1,16 @@
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
+--SET statement_timeout = 0;
+--SET lock_timeout = 0;
+--SET idle_in_transaction_session_timeout = 0;
+--SET client_encoding = 'UTF8';
+--SET standard_conforming_strings = on;
+--SELECT pg_catalog.set_config('search_path', '', false);
+--SET check_function_bodies = false;
+--SET xmloption = content;
+--SET client_min_messages = warning;
+--SET row_security = off;
 
 
-USE jobtracker;
+--USE jobtracker;
 
 CREATE TYPE title AS ENUM ('recruiter', 'hiring manager', 'hr', 'engineer', 'vp', 'other');
 CREATE TYPE job_status AS ENUM ('applied', 'interviewing', 'rejected', 'no response');
@@ -214,7 +214,8 @@ ALTER TABLE job
     ADD CONSTRAINT job_resume_fk FOREIGN KEY (resume_id) REFERENCES resume (resume_id) ON DELETE SET NULL ON UPDATE CASCADE,
     ADD CONSTRAINT job_cover_fk FOREIGN KEY (cover_id) REFERENCES cover_letter (cover_id) ON DELETE SET NULL ON UPDATE CASCADE;
 
-CREATE ROLE apiuser WITH LOGIN PASSWORD 'change_me';
+--CREATE ROLE apiuser WITH LOGIN PASSWORD '@p!u$$3r70K3n';
+ALTER ROLE apiuser WITH PASSWORD 'change_me';
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO apiuser;
 GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO apiuser;

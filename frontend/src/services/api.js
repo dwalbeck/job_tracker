@@ -22,6 +22,7 @@ class ApiService {
         const config = {
             headers: {
                 'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
                 ...options.headers,
             },
             signal: controller.signal,

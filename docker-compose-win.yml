@@ -1,22 +1,19 @@
 services:
   # PostgreSQL Database Service
   db:
-    image: postgres:18
+    image: postgres:15.15-trixie
     container_name: psql.jobtracker.com
     hostname: psql.jobtracker.com
     restart: always
-    environment:
-      POSTGRES_DB: jobtracker
-      POSTGRES_USER: apiuser
-      POSTGRES_PASSWORD: '@p!u$$3r70K3n'
-      PGDATA: /var/lib/postgresql/18/data
-      POSTGRES_HOST_AUTH_METHOD: password
+    shm_size: 128mb
+    env_file:
+      - ./backend/.env
     expose:
       - "5432"
     ports:
       - "5432:5432"
     volumes:
-      - postgresql:/var/lib/postgresql/18/data
+      - postgresql:/var/lib/postgresql/15/data
       - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     networks:
       - job_network
@@ -40,7 +37,7 @@ services:
       - "8000"
       - "80"
     ports:
-      - "8000:8000"
+      - "8000:80"
     depends_on:
       db:
         condition: service_healthy
