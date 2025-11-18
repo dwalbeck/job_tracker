@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {useNavigate, useLocation} from 'react-router-dom';
+import {API_BASE_URL} from '../../config';
 import './ResumeForm.css';
 
 const ResumeForm = () => {
@@ -43,7 +44,7 @@ const ResumeForm = () => {
 
     const fetchJobList = async () => {
         try {
-            const response = await fetch('http://api.jobtracker.com/v1/job/list');
+            const response = await fetch(`${API_BASE_URL}/v1/job/list`);
             const data = await response.json();
             setJobList(data || []);
         } catch (error) {
@@ -53,7 +54,7 @@ const ResumeForm = () => {
 
     const loadResumeData = async () => {
         try {
-            const response = await fetch(`http://api.jobtracker.com/v1/resume/${resumeId}`);
+            const response = await fetch(`${API_BASE_URL}/v1/resume/${resumeId}`);
             const data = await response.json();
 
             setResumeTitle(data.resume_title || '');
@@ -144,7 +145,7 @@ const ResumeForm = () => {
                 formData.append('resume_id', resumeId);
             }
 
-            const resumeResponse = await fetch('http://api.jobtracker.com/v1/resume', {
+            const resumeResponse = await fetch(`${API_BASE_URL}/v1/resume`, {
                 method: 'POST',
                 body: formData,
             });
@@ -166,7 +167,7 @@ const ResumeForm = () => {
             setCurrentResumeId(newResumeId);
 
             // Fetch the resume record to get file details
-            const resumeDetailsResponse = await fetch(`http://api.jobtracker.com/v1/resume/${newResumeId}`);
+            const resumeDetailsResponse = await fetch(`${API_BASE_URL}/v1/resume/${newResumeId}`);
 
             if (!resumeDetailsResponse.ok) {
                 throw new Error(`Failed to fetch resume details: ${resumeDetailsResponse.status}`);
@@ -184,7 +185,7 @@ const ResumeForm = () => {
             addProcessingStep('Creating a Markdown version...', 'pending');
 
             // Convert to Markdown
-            const mdResponse = await fetch(`http://api.jobtracker.com/v1/convert/${fileFormat}2md`, {
+            const mdResponse = await fetch(`${API_BASE_URL}/v1/convert/${fileFormat}2md`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({file_name: resumeFileName}),
@@ -201,7 +202,7 @@ const ResumeForm = () => {
             // Step 3: Convert to HTML
             addProcessingStep('Creating an HTML version...', 'pending');
 
-            const htmlResponse = await fetch(`http://api.jobtracker.com/v1/convert/${fileFormat}2html`, {
+            const htmlResponse = await fetch(`${API_BASE_URL}/v1/convert/${fileFormat}2html`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({file_name: resumeFileName}),
@@ -216,7 +217,7 @@ const ResumeForm = () => {
             updateProcessingStep(1, 'done');
 
             // Step 4: Save partial resume_detail
-            await fetch('http://api.jobtracker.com/v1/resume/detail', {
+            await fetch(`${API_BASE_URL}/v1/resume/detail`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -240,7 +241,7 @@ const ResumeForm = () => {
 
     const extractJobTitleAndKeywords = async (resumeId, badTitles = []) => {
         try {
-            const extractResponse = await fetch('http://api.jobtracker.com/v1/resume/extract', {
+            const extractResponse = await fetch(`${API_BASE_URL}/v1/resume/extract`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -285,7 +286,7 @@ const ResumeForm = () => {
 
         // Save final data to database
         try {
-            await fetch('http://api.jobtracker.com/v1/resume/detail', {
+            await fetch(`${API_BASE_URL}/v1/resume/detail`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({

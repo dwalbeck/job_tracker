@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import ExportMenu from '../../components/ExportMenu/ExportMenu';
 import apiService from '../../services/api';
+import {API_BASE_URL} from '../../config';
 import './Resume.css';
 
 const Resume = () => {
@@ -17,7 +18,7 @@ const Resume = () => {
     const fetchBaselineResumes = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://api.jobtracker.com/v1/resume/baseline');
+            const response = await fetch(`${API_BASE_URL}/v1/resume/baseline`);
             const data = await response.json();
             setBaselineResumes(data || []);
         } catch (error) {
@@ -30,7 +31,7 @@ const Resume = () => {
 
     const fetchJobResumes = async () => {
         try {
-            const response = await fetch('http://api.jobtracker.com/v1/resume/job');
+            const response = await fetch(`${API_BASE_URL}/v1/resume/job`);
             const data = await response.json();
             setJobResumes(data || []);
         } catch (error) {
@@ -41,7 +42,7 @@ const Resume = () => {
 
     const handleClone = async (resumeId, isBaseline = true) => {
         try {
-            const response = await fetch('http://api.jobtracker.com/v1/resume/clone', {
+            const response = await fetch(`${API_BASE_URL}/v1/resume/clone`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ const Resume = () => {
         }
 
         try {
-            const response = await fetch(`http://api.jobtracker.com/v1/resume?resume_id=${resumeId}`, {
+            const response = await fetch(`${API_BASE_URL}/v1/resume?resume_id=${resumeId}`, {
                 method: 'DELETE',
             });
 
@@ -104,7 +105,7 @@ const Resume = () => {
             formData.append('is_default', 'true');
             formData.append('is_baseline', 'true');
 
-            const response = await fetch('http://api.jobtracker.com/v1/resume', {
+            const response = await fetch(`${API_BASE_URL}/v1/resume`, {
                 method: 'POST',
                 body: formData,
             });

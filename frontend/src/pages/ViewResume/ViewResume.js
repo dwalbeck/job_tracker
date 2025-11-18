@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {useParams, useNavigate, useSearchParams} from 'react-router-dom';
+import {API_BASE_URL} from '../../config';
 import './ViewResume.css';
 
 const ViewResume = () => {
@@ -24,7 +25,7 @@ const ViewResume = () => {
     const fetchResumeDetail = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`http://api.jobtracker.com/v1/resume/detail/${resumeId}`);
+            const response = await fetch(`${API_BASE_URL}/v1/resume/detail/${resumeId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch resume details');
             }
@@ -43,7 +44,7 @@ const ViewResume = () => {
             setDownloading(true);
 
             // Call convert/final endpoint to generate the file
-            const convertResponse = await fetch('http://api.jobtracker.com/v1/convert/final', {
+            const convertResponse = await fetch(`${API_BASE_URL}/v1/convert/final`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -61,7 +62,7 @@ const ViewResume = () => {
             const {file_name} = await convertResponse.json();
 
             // Get personal info for custom filename
-            const personalInfoResponse = await fetch('http://api.jobtracker.com/v1/personal');
+            const personalInfoResponse = await fetch(`${API_BASE_URL}/v1/personal`);
             const personalInfo = await personalInfoResponse.json();
             const firstName = personalInfo.first_name || 'resume';
             const lastName = personalInfo.last_name || '';
@@ -72,7 +73,7 @@ const ViewResume = () => {
                 : `resume-${firstName}.${format}`.toLowerCase().replace(/ /g, '_');
 
             // Download the file
-            const downloadUrl = `http://api.jobtracker.com/v1/file/download/resume/${file_name}`;
+            const downloadUrl = `${API_BASE_URL}/v1/file/download/resume/${file_name}`;
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = downloadFileName;

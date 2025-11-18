@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {useSearchParams, useNavigate} from 'react-router-dom';
+import {API_BASE_URL} from '../../config';
 import './EditResume.css';
 
 const EditResume = () => {
@@ -21,7 +22,7 @@ const EditResume = () => {
     const fetchResumeDetail = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`http://api.jobtracker.com/v1/resume/detail/${resumeId}`);
+            const response = await fetch(`${API_BASE_URL}/v1/resume/detail/${resumeId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch resume details');
             }
@@ -38,7 +39,7 @@ const EditResume = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            const response = await fetch('http://api.jobtracker.com/v1/resume/detail', {
+            const response = await fetch(`${API_BASE_URL}/v1/resume/detail`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
