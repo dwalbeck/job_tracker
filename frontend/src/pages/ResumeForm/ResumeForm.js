@@ -1,7 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {useNavigate, useLocation} from 'react-router-dom';
 import apiService from '../../services/api';
-import {API_BASE_URL} from '../../config';
 import './ResumeForm.css';
 
 const ResumeForm = () => {
@@ -146,11 +145,7 @@ const ResumeForm = () => {
                 formData.append('resume_id', resumeId);
             }
 
-            const resumeResponse = await fetch(`${API_BASE_URL}/v1/resume`, {
-                method: 'POST',
-                body: formData,
-            });
-
+            const resumeResponse = await apiService.updateResume(formData);
             if (!resumeResponse.ok) {
                 const errorText = await resumeResponse.text();
                 let errorMessage = `HTTP error ${resumeResponse.status}`;
@@ -168,8 +163,7 @@ const ResumeForm = () => {
             setCurrentResumeId(newResumeId);
 
             // Fetch the resume record to get file details
-            const resumeDetailsResponse = await fetch(`${API_BASE_URL}/v1/resume/${newResumeId}`);
-
+            const resumeDetailsResponse = await apiService.getResume(newResumeId);
             if (!resumeDetailsResponse.ok) {
                 throw new Error(`Failed to fetch resume details: ${resumeDetailsResponse.status}`);
             }
@@ -186,12 +180,7 @@ const ResumeForm = () => {
             addProcessingStep('Creating a Markdown version...', 'pending');
 
             // Convert to Markdown
-            const mdResponse = await fetch(`${API_BASE_URL}/v1/convert/${fileFormat}2md`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({file_name: resumeFileName}),
-            });
-
+            const mdResponse = await apiService.convertXxxToMarkdown(fileFormat, resumeFileName);
             if (!mdResponse.ok) {
                 throw new Error(`Failed to convert to Markdown: ${mdResponse.status}`);
             }
@@ -203,12 +192,7 @@ const ResumeForm = () => {
             // Step 3: Convert to HTML
             addProcessingStep('Creating an HTML version...', 'pending');
 
-            const htmlResponse = await fetch(`${API_BASE_URL}/v1/convert/${fileFormat}2html`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({file_name: resumeFileName}),
-            });
-
+            const htmlResponse = await apiService.convertXxxToHtml(fileFormat, resumeFileName)
             if (!htmlResponse.ok) {
                 throw new Error(`Failed to convert to HTML: ${htmlResponse.status}`);
             }
@@ -218,15 +202,11 @@ const ResumeForm = () => {
             updateProcessingStep(1, 'done');
 
             // Step 4: Save partial resume_detail
-            await fetch(`${API_BASE_URL}/v1/resume/detail`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
+            await apiService.updateResumeDetail({
                     resume_id: newResumeId,
                     resume_markdown: mdResult.file_content,
                     resume_html: htmlResult.file_content,
-                }),
-            });
+                })
 
             // Step 5: Extract job title and keywords
             addProcessingStep('Extracting job title and keywords...', 'pending');
@@ -242,15 +222,10 @@ const ResumeForm = () => {
 
     const extractJobTitleAndKeywords = async (resumeId, badTitles = []) => {
         try {
-            const extractResponse = await fetch(`${API_BASE_URL}/v1/resume/extract`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    resume_id: resumeId,
-                    bad_list: badTitles,
-                }),
+            const extractResponse = await apiService.extractResume({
+                resume_id: resumeId,
+                bad_list: badTitles,
             });
-
             if (!extractResponse.ok) {
                 throw new Error(`Failed to extract resume data: ${extractResponse.status}`);
             }
@@ -287,17 +262,13 @@ const ResumeForm = () => {
 
         // Save final data to database
         try {
-            await fetch(`${API_BASE_URL}/v1/resume/detail`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    resume_id: currentResumeId,
-                    position_title: currentJobTitle,
-                    title_line_no: currentLineNumber,
-                    resume_keyword: keywords,
-                    keyword_count: keywords.length,
-                    suggestion: suggestions,
-                }),
+            await apiService.updateResumeDetail({
+                resume_id: currentResumeId,
+                position_title: currentJobTitle,
+                title_line_no: currentLineNumber,
+                resume_keyword: keywords,
+                keyword_count: keywords.length,
+                suggestion: suggestions,
             });
 
             // Mark extraction step as done

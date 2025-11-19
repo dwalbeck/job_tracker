@@ -305,6 +305,13 @@ class ApiService {
         return this.request(`/v1/resume/${resumeId}`);
     }
 
+    async updateResume(resumeData) {
+        return this.request('/v1/resume', {
+            method: 'POST',
+            body: JSON.stringify(resumeData),
+        });
+    }
+
     async rewriteResume(jobId, resumeId, keywordFinal, focusFinal) {
         return this.request('/v1/resume/rewrite', {
             method: 'POST',
@@ -329,8 +336,31 @@ class ApiService {
         return this.request(`/v1/resume/detail/${resumeId}`);
     }
 
+    async extractResume(formData) {
+        return this.request('/v1/resume/extract', {
+            method: 'POST',
+            body: JSON.stringify(detailData),
+        });
+    }
+
+    // ***** convert **************************************************************************
+
     async convertHtmlToDocx(jobId) {
         return this.request(`/v1/convert/html2docx?job_id=${jobId}`);
+    }
+
+    async convertXxxToMarkdown(format, fileName) {
+        return this.request(`/v1/convert/${format}2md`, {
+            method: 'POST',
+            body: JSON.stringify({ file_name: fileName }),
+        });
+    }
+
+    async convertXxxToHtml(format, fileName) {
+        return this.request(`/v1/convert/${format}2html`, {
+            method: 'POST',
+            body: JSON.stringify({file_name: fileName})
+        });
     }
 
     // ***** export ***************************************************************************
