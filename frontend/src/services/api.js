@@ -94,6 +94,10 @@ class ApiService {
         return this.request(`/v1/calendar/${calendarId}`);
     }
 
+    async getAppointments(id) {
+        return this.request(`/v1/calendar/appt?job_id=${id}`)
+    }
+
     async createCalendarEvent(eventData) {
         return this.request('/v1/calendar', {
             method: 'POST',
@@ -142,8 +146,9 @@ class ApiService {
     }
 
     // ***** contacts ***************************************************************************
-    async getAllContacts() {
-        return this.request('/v1/contacts');
+    async getAllContacts(jobId = null) {
+        const queryParam = jobId ? `?job_id=${jobId}` : '';
+        return this.request(`/v1/contacts${queryParam}`);
     }
 
     async getContact(contactId) {
@@ -294,6 +299,10 @@ class ApiService {
 
     async getBaselineResumes() {
         return this.request('/v1/resume/baseline');
+    }
+
+    async getResume(resumeId) {
+        return this.request(`/v1/resume/${resumeId}`);
     }
 
     async rewriteResume(jobId, resumeId, keywordFinal, focusFinal) {

@@ -1,36 +1,33 @@
-FROM node:18-alpine as build
+# Development Dockerfile for React application
+FROM ubuntu/nginx:1.18-22.04_beta
 
-WORKDIR /app
+RUN mkdir /var/www/jobtracker
+
+# Set working directory
+WORKDIR /var/www/jobtracker
+
+RUN apt update && apt -y install curl \
+    nodejs \
+    npm \
+    vim && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
+COPY docker/portal.jobtracker.com.conf /etc/nginx/sites-available/portal.jobtracker.com.conf
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev dependencies)
+RUN npm install && \
+    ln -s /etc/nginx/sites-available/portal.jobtracker.com.conf /etc/nginx/sites-enabled/portal.jobtracker.com.conf && \
+    rm /etc/nginx/sites-enabled/default && \
+    service nginx restart
 
 # Copy source code
 COPY . .
 
-# Set build-time environment variables
-ARG REACT_APP_API_BASE_URL=http://api.jobtracker.com
-ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
-
-# Build the app
-RUN npm run build
-
-# Production stage
-FROM nginx:alpine
-
-# Create directory and copy built app
-RUN mkdir -p /var/www/jobtracker
-COPY --from=build /app/build /var/www/jobtracker
-
-# Copy nginx configuration
-COPY docker/portal.jobtracker.com.conf /etc/nginx/conf.d/default.conf
-
-# Expose ports
+# Expose port
 EXPOSE 3000
-EXPOSE 80
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start development server
+CMD ["npm", "start"]

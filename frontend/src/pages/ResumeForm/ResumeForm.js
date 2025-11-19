@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {useNavigate, useLocation} from 'react-router-dom';
+import apiService from '../../services/api';
 import {API_BASE_URL} from '../../config';
 import './ResumeForm.css';
 
@@ -44,7 +45,7 @@ const ResumeForm = () => {
 
     const fetchJobList = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/v1/job/list`);
+            const response = await apiService.getJobList();
             const data = await response.json();
             setJobList(data || []);
         } catch (error) {
@@ -54,7 +55,7 @@ const ResumeForm = () => {
 
     const loadResumeData = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/v1/resume/${resumeId}`);
+            const response = await apiService.getResume(resumeId);
             const data = await response.json();
 
             setResumeTitle(data.resume_title || '');

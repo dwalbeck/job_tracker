@@ -1,7 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {useParams, useNavigate} from 'react-router-dom';
 import apiService from '../../services/api';
-import {API_BASE_URL} from '../../config';
 import './JobDetails.css';
 
 const JobDetails = () => {
@@ -61,7 +60,7 @@ const JobDetails = () => {
 
     const fetchAppointments = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/v1/calendar/appt?job_id=${id}`);
+            const response = await apiService.getAppointments(id);
             const data = await response.json();
             setAppointments(data || []);
         } catch (error) {
@@ -87,7 +86,7 @@ const JobDetails = () => {
 
     const fetchNotes = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/v1/notes?job_id=${id}`);
+            const response = await apiService.getNotes(id);
             const data = await response.json();
             setNotes(data || []);
         } catch (error) {
@@ -98,7 +97,7 @@ const JobDetails = () => {
 
     const fetchContacts = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/v1/contacts?job_id=${id}`);
+            const response = await apiService.getAllContacts(id)
             const data = await response.json();
             setContacts(data || []);
         } catch (error) {

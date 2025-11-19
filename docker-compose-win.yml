@@ -55,7 +55,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-bak
     container_name: portal.jobtracker.com
     hostname: portal.jobtracker.com
     restart: unless-stopped
