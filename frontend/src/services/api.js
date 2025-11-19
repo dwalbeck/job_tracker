@@ -339,7 +339,7 @@ class ApiService {
     async extractResume(formData) {
         return this.request('/v1/resume/extract', {
             method: 'POST',
-            body: JSON.stringify(detailData),
+            body: JSON.stringify(formData),
         });
     }
 
@@ -360,6 +360,13 @@ class ApiService {
         return this.request(`/v1/convert/${format}2html`, {
             method: 'POST',
             body: JSON.stringify({file_name: fileName})
+        });
+    }
+
+    async convertFinal(body) {
+        return this.request(`/v1/convert/final`, {
+            method: 'POST',
+            body: JSON.stringify(body)
         });
     }
 

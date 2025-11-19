@@ -1,7 +1,9 @@
 import React, {useState, useEffect} from 'react';
 import {useParams, useNavigate, useSearchParams} from 'react-router-dom';
-import {API_BASE_URL} from '../../config';
+import apiService from '../../services/api';
 import './ViewResume.css';
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
 const ViewResume = () => {
     const {id} = useParams();
@@ -25,7 +27,7 @@ const ViewResume = () => {
     const fetchResumeDetail = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_BASE_URL}/v1/resume/detail/${resumeId}`);
+            const response = await apiService.getResumeDetail(resumeId);
             if (!response.ok) {
                 throw new Error('Failed to fetch resume details');
             }
@@ -44,17 +46,10 @@ const ViewResume = () => {
             setDownloading(true);
 
             // Call convert/final endpoint to generate the file
-            const convertResponse = await fetch(`${API_BASE_URL}/v1/convert/final`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    resume_id: parseInt(resumeId),
-                    output_format: format
-                }),
+            const convertResponse = await apiService.convertFinal({
+                resume_id: parseInt(resumeId),
+                output_format: format
             });
-
             if (!convertResponse.ok) {
                 throw new Error('Failed to convert resume');
             }
@@ -62,7 +57,7 @@ const ViewResume = () => {
             const {file_name} = await convertResponse.json();
 
             // Get personal info for custom filename
-            const personalInfoResponse = await fetch(`${API_BASE_URL}/v1/personal`);
+            const personalInfoResponse = await apiService.getPersonalInfo();
             const personalInfo = await personalInfoResponse.json();
             const firstName = personalInfo.first_name || 'resume';
             const lastName = personalInfo.last_name || '';
