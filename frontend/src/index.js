@@ -1,3 +1,5 @@
+// Load configuration first to initialize environment variables
+import './config';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles/index.css';

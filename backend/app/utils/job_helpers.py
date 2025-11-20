@@ -8,7 +8,7 @@ from .logger import logger
 
 def update_job_activity(db: Session, job_id: int) -> None:
     """
-    Update the last_contact field for a job to the current date.
+    Update the last_activity field for a job to the current date.
 
     This function should be called whenever there is activity related to a job,
     such as creating/updating resumes, cover letters, notes, calendar events, or contacts.
@@ -26,14 +26,14 @@ def update_job_activity(db: Session, job_id: int) -> None:
     try:
         query = text("""
             UPDATE job
-            SET last_contact = CURRENT_DATE
+            SET last_activity = CURRENT_DATE
             WHERE job_id = :job_id
         """)
 
         db.execute(query, {"job_id": job_id})
         db.commit()
 
-        logger.debug(f"Updated last_contact for job", job_id=job_id)
+        logger.debug(f"Updated last_activity for job", job_id=job_id)
 
     except Exception as e:
         db.rollback()

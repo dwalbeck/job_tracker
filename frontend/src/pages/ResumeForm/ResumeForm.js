@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import {useNavigate, useLocation} from 'react-router-dom';
 import apiService from '../../services/api';
+import {API_BASE_URL} from '../../config';
 import './ResumeForm.css';
 
 const ResumeForm = () => {
@@ -44,8 +45,7 @@ const ResumeForm = () => {
 
     const fetchJobList = async () => {
         try {
-            const response = await apiService.getJobList();
-            const data = await response.json();
+            const data = await apiService.getJobList();
             setJobList(data || []);
         } catch (error) {
             console.error('Error fetching job list:', error);
@@ -54,8 +54,7 @@ const ResumeForm = () => {
 
     const loadResumeData = async () => {
         try {
-            const response = await apiService.getResume(resumeId);
-            const data = await response.json();
+            const data = await apiService.getResume(resumeId);
 
             setResumeTitle(data.resume_title || '');
             setIsBaseline(data.is_baseline || false);
@@ -145,7 +144,11 @@ const ResumeForm = () => {
                 formData.append('resume_id', resumeId);
             }
 
-            const resumeResponse = await apiService.updateResume(formData);
+            //const resumeResponse = await apiService.updateResume(formData);
+            const resumeResponse = await fetch(`${API_BASE_URL}/v1/resume`, {
+                method: 'POST',
+                body: formData,
+            });
             if (!resumeResponse.ok) {
                 const errorText = await resumeResponse.text();
                 let errorMessage = `HTTP error ${resumeResponse.status}`;
@@ -163,12 +166,7 @@ const ResumeForm = () => {
             setCurrentResumeId(newResumeId);
 
             // Fetch the resume record to get file details
-            const resumeDetailsResponse = await apiService.getResume(newResumeId);
-            if (!resumeDetailsResponse.ok) {
-                throw new Error(`Failed to fetch resume details: ${resumeDetailsResponse.status}`);
-            }
-
-            const resumeDetails = await resumeDetailsResponse.json();
+            const resumeDetails = await apiService.getResume(newResumeId);
 
             const fileFormat = resumeDetails.original_format;
             const resumeFileName = resumeDetails.file_name;
@@ -180,24 +178,14 @@ const ResumeForm = () => {
             addProcessingStep('Creating a Markdown version...', 'pending');
 
             // Convert to Markdown
-            const mdResponse = await apiService.convertXxxToMarkdown(fileFormat, resumeFileName);
-            if (!mdResponse.ok) {
-                throw new Error(`Failed to convert to Markdown: ${mdResponse.status}`);
-            }
-
-            const mdResult = await mdResponse.json();
+            const mdResult = await apiService.convertXxxToMarkdown(fileFormat, resumeFileName);
             setMarkdownContent(mdResult.file_content);
             updateProcessingStep(0, 'done');
 
             // Step 3: Convert to HTML
             addProcessingStep('Creating an HTML version...', 'pending');
 
-            const htmlResponse = await apiService.convertXxxToHtml(fileFormat, resumeFileName)
-            if (!htmlResponse.ok) {
-                throw new Error(`Failed to convert to HTML: ${htmlResponse.status}`);
-            }
-
-            const htmlResult = await htmlResponse.json();
+            const htmlResult = await apiService.convertXxxToHtml(fileFormat, resumeFileName);
             setHtmlContent(htmlResult.file_content);
             updateProcessingStep(1, 'done');
 

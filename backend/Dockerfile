@@ -15,8 +15,6 @@ RUN apt-get update \
         build-essential \
         libpq-dev \
         curl \
-        nginx \
-        supervisor \
         pandoc \
         texlive-latex-base \
         texlive-latex-recommended \
@@ -35,36 +33,18 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy application code
 COPY . .
 
-# Copy nginx configuration
-COPY docker/api.jobtracker.com.conf /etc/nginx/sites-available/
-RUN ln -s /etc/nginx/sites-available/api.jobtracker.com.conf /etc/nginx/sites-enabled/ \
-    && rm /etc/nginx/sites-enabled/default
-
-# Create supervisord configuration
-RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf \
-    && echo 'nodaemon=true' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo '' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo '[program:nginx]' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo 'command=nginx -g "daemon off;"' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo '' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo '[program:uvicorn]' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo 'command=python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --timeout-graceful-shutdown 200 --timeout-keep-alive 200' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo 'directory=/app' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf \
-    && echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf
-
-# Create non-root user for security but keep root for nginx
+# Create non-root user for security
 RUN adduser --disabled-password --gecos '' --shell /bin/bash appuser \
     && chown -R appuser:appuser /app
 
-# Expose ports
+# Expose port
 EXPOSE 8000
-EXPOSE 80
 
 # Make wait script executable
 RUN chmod +x wait-for-db.py
 
-# Run supervisord to manage both nginx and uvicorn
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Switch to non-root user
+USER appuser
+
+# Run uvicorn directly
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "200", "--timeout-keep-alive", "200"]

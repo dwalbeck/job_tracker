@@ -17,7 +17,7 @@ router = APIRouter()
 @router.get("/jobs", response_model=List[JobSchema])
 async def get_all_jobs(db: Session = Depends(get_db)):
     """
-    Get all active jobs ordered by last contact (newest first).
+    Get all active jobs ordered by last activity (newest first).
     """
     logger.debug("Fetching all active jobs")
 
@@ -26,7 +26,7 @@ async def get_all_jobs(db: Session = Depends(get_db)):
         SELECT *
         FROM job
         WHERE job_active = true
-        ORDER BY last_contact DESC
+        ORDER BY last_activity DESC
     """)
 
     result = db.execute(query).fetchall()
@@ -69,7 +69,7 @@ async def get_job_list(db: Session = Depends(get_db)):
     jobs = db.query(Job.job_id, Job.company, Job.job_title).filter(
         Job.job_active == True
     ).order_by(
-        Job.last_contact.desc(),
+        Job.last_activity.desc(),
         Job.date_applied.desc()
     ).all()
 

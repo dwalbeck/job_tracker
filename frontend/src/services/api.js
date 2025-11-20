@@ -1,6 +1,5 @@
 import logger from '../utils/logger';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+import {API_BASE_URL} from '../config';
 
 class ApiService {
     get baseURL() {
@@ -306,6 +305,7 @@ class ApiService {
     }
 
     async updateResume(resumeData) {
+        console.log('RESUME_DATA', resumeData);
         return this.request('/v1/resume', {
             method: 'POST',
             body: JSON.stringify(resumeData),

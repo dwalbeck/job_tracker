@@ -431,6 +431,7 @@ async def create_or_update_resume(
     """
 
     is_update = bool(resume_id)
+    logger.info("starting POST resume", resume_title=resume_title)
 
     # Determine original_format from upload_file if present
     original_format = None

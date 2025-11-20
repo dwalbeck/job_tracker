@@ -2,8 +2,6 @@ services:
   # PostgreSQL Database Service
   db:
     image: postgres:15.15-trixie
-    container_name: psql.jobtracker.com
-    hostname: psql.jobtracker.com
     restart: always
     shm_size: 128mb
     env_file:
@@ -13,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgresql:/var/lib/postgresql/15/data
+      - ./postgresql:/var/lib/postgresql/15/data
       - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     networks:
       - job_network
@@ -28,16 +26,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: api.jobtracker.com
-    hostname: api.jobtracker.com
     restart: unless-stopped
     env_file:
       - ./backend/.env
     expose:
       - "8000"
-      - "80"
     ports:
-      - "8000:80"
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -46,7 +41,7 @@ services:
     volumes:
       - job_docs:/app/job_docs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -56,8 +51,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile-bak
-    container_name: portal.jobtracker.com
-    hostname: portal.jobtracker.com
     restart: unless-stopped
     env_file:
       - ./frontend/.env
@@ -67,6 +60,7 @@ services:
       - "80"
     ports:
       - "80:80"
+      - "3000:3000"
     depends_on:
       - backend
       - db
@@ -80,8 +74,6 @@ services:
 
 # Named volumes for data persistence
 volumes:
-  postgresql:
-    driver: local
   job_docs:
     driver: local
 

@@ -63,7 +63,7 @@ class Job(JobBase):
     cover_id: Optional[int] = None
     job_created: datetime
     job_directory: Optional[str] = None
-    last_contact: Optional[date] = None
+    last_activity: Optional[date] = None
 
     class Config:
         from_attributes = True

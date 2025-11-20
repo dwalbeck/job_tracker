@@ -1,40 +1,45 @@
 from typing import List, Union
-from pydantic_settings import BaseSettings
-from dotenv import load_dotenv
-import os
-load_dotenv()
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    # Pydantic v2 configuration
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding='utf-8',
+        case_sensitive=False,
+        extra='ignore'  # Allow extra fields from .env without raising errors
+    )
+
     # Application Configuration
-    app_name: str = os.getenv("APP_NAME", "Job Tracker")
-    app_version: str = os.getenv("APP_VERSION")
-    debug: bool = os.getenv("DEBUG", False)
+    app_name: str = "Job Tracker"
+    app_version: str = "1.0.0"
+    debug: bool = False
 
     # Database configuration
-    database_url: str = os.getenv("DATABASE_URL")
-    database_host: str = os.getenv("POSTGRES_HOST")
-    database_user: str = os.getenv("POSTGRES_USER")
-    database_pass: str = os.getenv("POSTGRES_PASSWORD")
-    database_db: str = os.getenv("POSTGRES_DB")
-    database_port: int = os.getenv("POSTGRES_PORT")
+    database_url: str
+    postgres_host: str
+    postgres_user: str
+    postgres_password: str
+    postgres_db: str
+    postgres_port: int = 5432
 
     # File storage configuration
-    base_job_file_path: str = os.getenv("BASE_JOB_FILE_PATH")
-    resume_dir: str = os.getenv("RESUME_DIR")
-    cover_letter_dir: str = os.getenv("COVER_LETTER_DIR")
-    export_dir: str = os.getenv("EXPORT_DIR")
+    base_job_file_path: str
+    resume_dir: str
+    cover_letter_dir: str
+    export_dir: str
 
     # Logging configuration
-    log_level: str = os.getenv("LOG_LEVEL", "INFO")
-    log_file: str = os.getenv("LOG_FILE", "app.log")
+    log_level: str = "INFO"
+    log_file: str = "app.log"
 
     # CORS - Handle both string and list formats
-    allowed_origins: Union[List[str], str] = os.getenv("ALLOWED_ORIGINS", "*")
+    allowed_origins: Union[List[str], str] = "*"
 
     # AI Configuration
-    ai_model: str = os.getenv("AI_MODEL", "gpt-4o-mini")
-    openai_api_key: str = os.getenv("OPENAI_API_KEY")
-    openai_project: str = os.getenv("OPENAI_PROJECT")
+    ai_model: str = "gpt-4o-mini"
+    openai_api_key: str
+    openai_project: str
 
     # LLM Settings from database (defaults)
     job_extract_llm: str = "gpt-4o-mini"
@@ -76,10 +81,6 @@ class Settings(BaseSettings):
         except Exception:
             # If there's an error querying the DB, use defaults
             pass
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
 
 settings = Settings()
