@@ -49,34 +49,57 @@ The Job Tracker is built as a **3-tier containerized application**:
    cp ./frontend/.env.example ./frontend/.env
    # Edit .env files with the settings you want
    ```
+3. **Customize Configuration**
+    ```bash
+   # Use your preferred editor to add/change settings
+   vim ./backend/.env
+   
+   # Windows and MacOS users need to change to the following:
+   DATABASE_URL=postgresql://apiuser:change_me@db:5432/jobtracker
+   POSTGRES_HOST=db 
+   
+   # Make sure to add your OpenAI API key
+   OPENAI_API_KEY=change_this_to_your_key
+   
+   vim ./frontend/.env
+   
+   # Windows and MacOS users make the following change:
+   REACT_APP_API_BASE_URL=http://localhost:8000
+   ```
 
-3. **Build and Start All Services**
+4. **Build and Start All Services**
    ```bash
-   # Production setup (recommended)
+   # Linux production setup
    docker compose up --build -d
 
    # Or for Windows OS and MacOS
    docker compose -f docker-compose-win.yml up --build
    ```
-4. **Edit DNS Routing**
+5. **Edit DNS Routing**
     ```bash
+   # Skip this step for Windows and MacOS
    echo "172.20.0.5      portal.jobtracker.com
    172.20.0.10     api.jobtracker.com
    172.20.0.15     psql.jobtracker.com" >> /etc/hosts
-
-    # Skip this step for Windows and use "localhost" to access services
     ```
 
-5. **Verify Services are Running**
+6. **Verify Services are Running**
    ```bash
    docker compose ps
    ```
 
-6. **Access the Application**
-   - **Frontend**: http://portal.jobtracker.com or http://localhost
-   - **Backend API**: http://api.jobtracker.com or  http://localhost:8000
-   - **API Documentation**: http://api.jobtracker.com/docs or http://localhost:8000/docs
-   - **Database**: http://psql.jobtracker.com:5432 localhost:5432 (for external connections)
+7. **Access the Application**
+   - **Frontend**: http://portal.jobtracker.com
+   - **Backend API**: http://api.jobtracker.com
+   - **API Documentation**: http://api.jobtracker.com/docs
+   - **Database**: postgresql://apiuser:change_me@psql.jobtracker.com:5432/jobtracker
+
+    or for Windows and MacOS use:
+   - **Frontend**: http://localhost (preferred) or http://localhost:3000
+   - **Backend API**: http://localhost:8000
+   - **API Documentation**: http://localhost:8000/docs
+   - **Database**: postgresql://apiuser:change_me@db:5432/jobtracker
+   
 
 NOTE: For **Windows** and **Mac** users, network interfaces work a bit differently then they do on Linux, and as such are not 
 able to do aliasing or virtual addressing, which is used by Docker for some networking capabilities.  The short version 
@@ -324,44 +347,85 @@ docker compose exec -T db psql -U apiuser job_tracker < backup.sql
 ## 🚨 Troubleshooting
 
 ### Common Issues
-
-1. **Port Conflicts**  Insure that you don't have a locally installed version of PostgreSQL or another container 
+* **Port Conflicts**  Insure that you don't have a locally installed version of PostgreSQL or another container 
     running with PostgreSQL installed on it.  Also make sure that you don't have a local install of Apache2 or Nginx 
     running, as by default they both bind to port 80 and likely other additional ports.
    ```bash
-   # Check what's using ports
+   # Check what's using ports (Linux and MacOS)
    lsof -i :80
    lsof -i :8000
+   lsof -i :3000
    lsof -i :5432
+  
+   # On Windows you can execute the following from terminal or powershell
+   netstat -aon | findstr :80
+   netstat -aon | findstr :8000
+   netstat -aon | findstr :3000
+   netstat -aon | findstr :5432
+   # The last column displayed should be the process ID number or PID. Execute the following to find the program:
+   tasklist | findstr <PID>
    ```
+* **Database apiuser can't authenticate** If you wisely decided to change the default password to use 
+    your own given password, it was the smart thing to do, however the Docker PostgreSQL image didn't 
+    seem to always set the apiuser password correctly.  This being the case, I added setting the password 
+    directly to the DB schema SQL that gets executed on creation.  So it's quite likely that the apiuser 
+    got set with the password of "change_me", but since you changed the password, it's trying to connect 
+    with a different value. I apologize for not flushing that out more, but it's an easy fix. Execute 
+    the following from a terminal, which will shell into the DB container, where you can change the password.
+    ```bash
+    # first we need to get some information.  Make sure your Docker stack is currently running, and from a terminal type this:
+    docker ps
+    # Note the first column displayed CONTAINER ID - You'll need this value for the container with the 
+    # IMAGE set as "postgres:15.15-trixie".  Now with this value we can shell into the container with the following:
+    docker exec -it <container_id> bash
+    # Now your in the database container with a terminal, so we'll need to connect to the PostgreSQL service 
+    psql -U apiuser jobtracker
+    # That connects to PostgreSQL using their console.  No password is needed because the image sets local connections to "trust".
+    # So now you'll simply change the password for that role to whatever you have configured in the backend/.env file
+    jobtracker=# ALTER ROLE apiuser WITH PASSWORD '<your_password>';
+    ```
 
-2. **Database Connection Issues**
+* **Database Connection Issues**
    ```bash
-   # Check database logs
+   # First check if the Database is running
+   docker compose ps
+   # Look at the STATUS column, and make sure it says "Up"
+  
+   # Check database logs for some type of error that is happening
    docker compose logs db
+   # correct the error. with so many possible issues, it's impossible to list them all here, but google is your friend
 
    # Restart database
    docker compose restart db
    ```
-
-3. **Frontend Build Issues**
+* **Frontend Build Issues** You can force a complete rebuilding of every layer, which can overwrite some problems encountered
    ```bash
    # Rebuild frontend
    docker compose build --no-cache frontend
+  
+   # For Windows and MacOS users, do the following
+   docker compose -f docker-compose-win.yml build --no-cache frontend
    ```
 
-### Reset Everything
+* **Backend Build Issues** You can force a complete rebuilding of every layer, which can overwrite some problems encountered
+   ```bash
+   # Rebuild backend
+   docker compose build --no-cache backend
+  
+   # For Windows and MacOS users, do the following
+   docker compose -f docker-compose-win.yml build --no-cache backend
 
-```bash
-# Stop all services
-docker compose down
-
-# Remove volumes (WARNING: This deletes all data)
-docker compose down -v
-
-# Rebuild from scratch
-docker compose up --build
-```
+* **Reset Everything**
+    ```bash
+    # Stop all services
+    docker compose down
+    
+    # Remove volumes (WARNING: This deletes all data)
+    docker compose down -v
+    
+    # Rebuild from scratch
+    docker compose up --build
+    ```
 
 ## 🎯 Tips
 
