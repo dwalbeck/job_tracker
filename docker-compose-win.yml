@@ -11,8 +11,12 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./postgresql:/var/lib/postgresql/15/data
-      - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - type: bind
+        source: /var/lib/postgresql-jobtracker
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: ./docs/schema.sql
+        target: /docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - job_network
     healthcheck:
@@ -76,6 +80,9 @@ services:
 volumes:
   job_docs:
     driver: local
+  postgresql:
+    driver: local
+
 
 networks:
   job_network:

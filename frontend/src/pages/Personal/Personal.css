@@ -101,6 +101,10 @@
   max-width: 150px;
 }
 
+.personal-input-wrapper .personal-input-wide {
+  max-width: 300px;
+}
+
 .personal-input:focus {
   outline: none;
   border-color: #4a90e2;

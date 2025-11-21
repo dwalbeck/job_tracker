@@ -7,6 +7,7 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from ..core.config import settings
+from ..core.database import SessionLocal
 from ..utils.logger import logger
 
 
@@ -615,6 +616,9 @@ class AiAgent:
         Returns:
             None (updates database directly)
         """
+        # Create a new database session for background task
+        # (the request session is closed by the time this runs)
+        db = SessionLocal()
         try:
             # Load the prompt template
             prompt_template = self._load_prompt('suggestion')
@@ -655,11 +659,11 @@ class AiAgent:
                     WHERE resume_id = :resume_id
                 """)
 
-                self.db.execute(update_query, {
+                db.execute(update_query, {
                     "resume_id": resume_id,
                     "suggestion": suggestions
                 })
-                self.db.commit()
+                db.commit()
 
                 print(f"DEBUG resume_suggestion: Successfully updated {len(suggestions)} suggestions for resume_id {resume_id}", file=sys.stderr, flush=True)
 
@@ -682,11 +686,11 @@ class AiAgent:
                                 WHERE resume_id = :resume_id
                             """)
 
-                            self.db.execute(update_query, {
+                            db.execute(update_query, {
                                 "resume_id": resume_id,
                                 "suggestion": suggestions
                             })
-                            self.db.commit()
+                            db.commit()
 
                             print(f"DEBUG resume_suggestion: Successfully updated {len(suggestions)} suggestions (from markdown) for resume_id {resume_id}", file=sys.stderr, flush=True)
                             return
@@ -699,3 +703,5 @@ class AiAgent:
         except Exception as e:
             # Catch all exceptions to prevent background task from crashing
             print(f"ERROR resume_suggestion: Unexpected error for resume_id {resume_id}: {str(e)}", file=sys.stderr, flush=True)
+        finally:
+            db.close()

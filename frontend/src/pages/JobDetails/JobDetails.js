@@ -60,8 +60,7 @@ const JobDetails = () => {
 
     const fetchAppointments = async () => {
         try {
-            const response = await apiService.getAppointments(id);
-            const data = await response.json();
+            const data = await apiService.getAppointments(id);
             setAppointments(data || []);
         } catch (error) {
             console.error('Error fetching appointments:', error);
@@ -86,8 +85,7 @@ const JobDetails = () => {
 
     const fetchNotes = async () => {
         try {
-            const response = await apiService.getNotes(id);
-            const data = await response.json();
+            const data = await apiService.getNotes(id);
             setNotes(data || []);
         } catch (error) {
             console.error('Error fetching notes:', error);
@@ -97,8 +95,7 @@ const JobDetails = () => {
 
     const fetchContacts = async () => {
         try {
-            const response = await apiService.getAllContacts(id)
-            const data = await response.json();
+            const data = await apiService.getAllContacts(id);
             setContacts(data || []);
         } catch (error) {
             console.error('Error fetching contacts:', error);

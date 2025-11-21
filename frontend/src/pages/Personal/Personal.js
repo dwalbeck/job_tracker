@@ -19,10 +19,10 @@ const Personal = () => {
         state: '',
         zip: '',
         country: '',
-        no_response_week: '',
-        job_extract_llm: '',
-        rewrite_llm: '',
-        cover_llm: ''
+        no_response_week: 4,
+        job_extract_llm: 'gpt-4.1-mini',
+        rewrite_llm: 'gpt-4.1-mini',
+        cover_llm: 'gpt-4.1-mini'
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -162,7 +162,14 @@ const Personal = () => {
         setError(null);
         try {
             const data = await apiService.getPersonalInfo();
-            setPersonalData(data);
+            // Apply defaults for fields that may be null/empty
+            setPersonalData({
+                ...data,
+                no_response_week: data.no_response_week || 4,
+                job_extract_llm: data.job_extract_llm || 'gpt-4.1-mini',
+                rewrite_llm: data.rewrite_llm || 'gpt-4.1-mini',
+                cover_llm: data.cover_llm || 'gpt-4.1-mini'
+            });
         } catch (err) {
             setError(err.message);
             console.error('Error fetching personal info:', err);
@@ -207,6 +214,10 @@ const Personal = () => {
         return ['job_extract_llm', 'rewrite_llm', 'cover_llm'].includes(fieldName);
     };
 
+    const isWideField = (fieldName) => {
+        return ['email', 'linkedin_url', 'github_url', 'website_url', 'portfolio_url', 'address_1'].includes(fieldName);
+    };
+
     return (
         <div className="personal-container">
             <div className="personal-header">
@@ -249,7 +260,7 @@ const Personal = () => {
                                             name={fieldName}
                                             value={personalData[fieldName] || ''}
                                             onChange={handleChange}
-                                            className="personal-input"
+                                            className={isWideField(fieldName) ? 'personal-input personal-input-wide' : 'personal-input'}
                                             min={fieldName === 'no_response_week' ? '1' : undefined}
                                             max={fieldName === 'no_response_week' ? '52' : undefined}
                                         />

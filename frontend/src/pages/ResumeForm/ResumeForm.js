@@ -102,8 +102,8 @@ const ResumeForm = () => {
         }
     };
 
-    const addProcessingStep = (text, status = 'pending') => {
-        setProcessingSteps(prev => [...prev, {text, status}]);
+    const addProcessingStep = (text, status = 'pending', subtext = null) => {
+        setProcessingSteps(prev => [...prev, {text, status, subtext}]);
     };
 
     const updateProcessingStep = (index, status) => {
@@ -197,7 +197,7 @@ const ResumeForm = () => {
                 })
 
             // Step 5: Extract job title and keywords
-            addProcessingStep('Extracting job title and keywords...', 'pending');
+            addProcessingStep('Extracting job title and keywords...', 'pending', 'This process could take up to a couple minutes.');
 
             await extractJobTitleAndKeywords(newResumeId);
 
@@ -210,15 +210,10 @@ const ResumeForm = () => {
 
     const extractJobTitleAndKeywords = async (resumeId, badTitles = []) => {
         try {
-            const extractResponse = await apiService.extractResume({
+            const extractResult = await apiService.extractResume({
                 resume_id: resumeId,
                 bad_list: badTitles,
             });
-            if (!extractResponse.ok) {
-                throw new Error(`Failed to extract resume data: ${extractResponse.status}`);
-            }
-
-            const extractResult = await extractResponse.json();
 
             setExtractedData(extractResult);
             setCurrentJobTitle(extractResult.job_title.job_title);
@@ -385,6 +380,9 @@ const ResumeForm = () => {
                                     <div key={index} className="processing-step">
                                         <span className="step-text">{step.text}</span>
                                         {step.status === 'done' && <span className="step-done">Done</span>}
+                                        {step.subtext && step.status !== 'done' && (
+                                            <div className="step-subtext">{step.subtext}</div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

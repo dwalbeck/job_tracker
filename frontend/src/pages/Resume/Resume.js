@@ -18,8 +18,7 @@ const Resume = () => {
     const fetchBaselineResumes = async () => {
         try {
             setLoading(true);
-            const response = await apiService.getBaselineResumes()
-            const data = await response.json();
+            const data = await apiService.getBaselineResumes();
             setBaselineResumes(data || []);
         } catch (error) {
             console.error('Error fetching baseline resumes:', error);

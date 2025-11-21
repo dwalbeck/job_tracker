@@ -340,6 +340,7 @@ class ApiService {
         return this.request('/v1/resume/extract', {
             method: 'POST',
             body: JSON.stringify(formData),
+            timeout: 150000, // 150 second (2.5 min) timeout for AI resume extraction
         });
     }
 

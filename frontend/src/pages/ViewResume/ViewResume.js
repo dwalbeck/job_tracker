@@ -26,11 +26,7 @@ const ViewResume = () => {
     const fetchResumeDetail = async () => {
         try {
             setLoading(true);
-            const response = await apiService.getResumeDetail(resumeId);
-            if (!response.ok) {
-                throw new Error('Failed to fetch resume details');
-            }
-            const data = await response.json();
+            const data = await apiService.getResumeDetail(resumeId);
             setResumeDetail(data);
         } catch (error) {
             console.error('Error fetching resume detail:', error);
@@ -45,19 +41,15 @@ const ViewResume = () => {
             setDownloading(true);
 
             // Call convert/final endpoint to generate the file
-            const convertResponse = await apiService.convertFinal({
+            const convertResult = await apiService.convertFinal({
                 resume_id: parseInt(resumeId),
                 output_format: format
             });
-            if (!convertResponse.ok) {
-                throw new Error('Failed to convert resume');
-            }
 
-            const {file_name} = await convertResponse.json();
+            const {file_name} = convertResult;
 
             // Get personal info for custom filename
-            const personalInfoResponse = await apiService.getPersonalInfo();
-            const personalInfo = await personalInfoResponse.json();
+            const personalInfo = await apiService.getPersonalInfo();
             const firstName = personalInfo.first_name || 'resume';
             const lastName = personalInfo.last_name || '';
 
@@ -97,45 +89,53 @@ const ViewResume = () => {
     const renderKeywords = () => {
         if (!resumeDetail) return null;
 
-        const keywords = resumeDetail.keyword_final || [];
+        // Use final keywords if available, otherwise fall back to baseline resume_keyword
+        const keywords = resumeDetail.keyword_final || resumeDetail.resume_keyword || [];
         const focusKeywords = resumeDetail.focus_final || [];
 
         // Split into columns to avoid excessive scrolling
-        const midpoint = Math.ceil(Math.max(keywords.length, focusKeywords.length) / 2);
+        const keywordMidpoint = Math.ceil(keywords.length / 2);
+        const focusMidpoint = Math.ceil(focusKeywords.length / 2);
 
         return (
             <div className="keywords-container">
                 <div className="keywords-section">
                     <h3 className="keywords-heading">Keywords</h3>
-                    <div className="keywords-columns">
-                        <div className="keywords-column">
-                            {keywords.slice(0, midpoint).map((keyword, index) => (
-                                <div key={index} className="keyword-item">{keyword}</div>
-                            ))}
+                    {keywords.length === 0 ? (
+                        <div className="no-content">No keywords available</div>
+                    ) : (
+                        <div className="keywords-columns">
+                            <div className="keywords-column">
+                                {keywords.slice(0, keywordMidpoint).map((keyword, index) => (
+                                    <div key={index} className="keyword-item">{keyword}</div>
+                                ))}
+                            </div>
+                            <div className="keywords-column">
+                                {keywords.slice(keywordMidpoint).map((keyword, index) => (
+                                    <div key={index + keywordMidpoint} className="keyword-item">{keyword}</div>
+                                ))}
+                            </div>
                         </div>
-                        <div className="keywords-column">
-                            {keywords.slice(midpoint).map((keyword, index) => (
-                                <div key={index + midpoint} className="keyword-item">{keyword}</div>
-                            ))}
-                        </div>
-                    </div>
+                    )}
                 </div>
 
-                <div className="keywords-section">
-                    <h3 className="keywords-heading">Focused Keywords</h3>
-                    <div className="keywords-columns">
-                        <div className="keywords-column">
-                            {focusKeywords.slice(0, midpoint).map((keyword, index) => (
-                                <div key={index} className="keyword-item">{keyword}</div>
-                            ))}
-                        </div>
-                        <div className="keywords-column">
-                            {focusKeywords.slice(midpoint).map((keyword, index) => (
-                                <div key={index + midpoint} className="keyword-item">{keyword}</div>
-                            ))}
+                {focusKeywords.length > 0 && (
+                    <div className="keywords-section">
+                        <h3 className="keywords-heading">Focused Keywords</h3>
+                        <div className="keywords-columns">
+                            <div className="keywords-column">
+                                {focusKeywords.slice(0, focusMidpoint).map((keyword, index) => (
+                                    <div key={index} className="keyword-item">{keyword}</div>
+                                ))}
+                            </div>
+                            <div className="keywords-column">
+                                {focusKeywords.slice(focusMidpoint).map((keyword, index) => (
+                                    <div key={index + focusMidpoint} className="keyword-item">{keyword}</div>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         );
     };
@@ -162,13 +162,15 @@ const ViewResume = () => {
 
     const renderContent = () => {
         if (activeTab === 'resume') {
-            if (!resumeDetail || !resumeDetail.resume_html_rewrite) {
+            // Use rewritten HTML if available, otherwise fall back to baseline HTML
+            const htmlContent = resumeDetail?.resume_html_rewrite || resumeDetail?.resume_html;
+            if (!htmlContent) {
                 return <div className="no-content">No resume content available</div>;
             }
             return (
                 <iframe
                     className="resume-iframe"
-                    srcDoc={resumeDetail.resume_html_rewrite}
+                    srcDoc={htmlContent}
                     title="Resume Preview"
                     sandbox="allow-same-origin"
                 />
