@@ -80,7 +80,8 @@ async def get_letter_list(db: Session = Depends(get_db)):
     try:
         query = text("""
             SELECT cl.letter_tone, cl.letter_length, cl.letter_created,
-                   cl.cover_id, cl.file_name, j.company, j.job_title
+                   cl.cover_id, cl.file_name, cl.job_id, cl.resume_id,
+                   j.company, j.job_title
             FROM cover_letter cl
             JOIN job j ON (cl.job_id = j.job_id)
             WHERE cl.cover_id > 0 AND cl.letter_active = true
@@ -96,6 +97,8 @@ async def get_letter_list(db: Session = Depends(get_db)):
                 "file_name": row.file_name or "",
                 "letter_created": row.letter_created,
                 "cover_id": row.cover_id,
+                "job_id": row.job_id,
+                "resume_id": row.resume_id,
                 "company": row.company or "",
                 "job_title": row.job_title or ""
             }
@@ -409,7 +412,7 @@ async def write_cover_letter(request_data: dict, db: Session = Depends(get_db)):
 @router.post("/letter/convert", status_code=status.HTTP_200_OK)
 async def convert_cover_letter(request_data: dict, db: Session = Depends(get_db)):
     """
-    Convert a cover letter to DOCX format.
+    Convert a cover letter (HTML format) to DOCX format.
 
     Args:
         request_data: Dictionary containing cover_id and format
@@ -463,20 +466,25 @@ async def convert_cover_letter(request_data: dict, db: Session = Depends(get_db)
             )
 
         # Create filename: <company>-<job_title>.docx with spaces replaced by underscores, lowercase
+        # Remove invalid filesystem characters
+        import re
         file_name = f"{company}-{job_title}.docx"
+        # Replace invalid characters with underscore
+        file_name = re.sub(r'[/\\:*?"<>|]', '_', file_name)
+        # Replace spaces with underscores and convert to lowercase
         file_name = file_name.replace(" ", "_").lower()
 
         logger.info(f"Converting cover letter to DOCX", cover_id=cover_id, file_name=file_name)
 
-        # Convert markdown to DOCX using a new standalone method
+        # Convert HTML to DOCX using a new standalone method
         import subprocess
         import tempfile
         from pathlib import Path
 
-        # Create temporary markdown file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as temp_md:
-            temp_md.write(letter_content)
-            temp_md_path = temp_md.name
+        # Create temporary HTML file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as temp_html:
+            temp_html.write(letter_content)
+            temp_html_path = temp_html.name
 
         # Output path for docx
         output_path = Path(settings.cover_letter_dir) / file_name
@@ -485,21 +493,21 @@ async def convert_cover_letter(request_data: dict, db: Session = Depends(get_db)
         os.makedirs(settings.cover_letter_dir, exist_ok=True)
 
         try:
-            # Convert markdown to DOCX using pandoc
+            # Convert HTML to DOCX using pandoc
             result = subprocess.run(
-                ['pandoc', temp_md_path, '-f', 'markdown', '-t', 'docx', '-o', str(output_path)],
+                ['pandoc', temp_html_path, '-f', 'html', '-t', 'docx', '-o', str(output_path)],
                 capture_output=True,
                 text=True,
                 check=True
             )
 
             # Clean up temporary file
-            os.unlink(temp_md_path)
+            os.unlink(temp_html_path)
 
         except subprocess.CalledProcessError as e:
             # Clean up temporary file on error
-            if os.path.exists(temp_md_path):
-                os.unlink(temp_md_path)
+            if os.path.exists(temp_html_path):
+                os.unlink(temp_html_path)
             raise Exception(f"Pandoc conversion to DOCX failed: {e.stderr}")
 
         # Update the cover_letter record with the filename

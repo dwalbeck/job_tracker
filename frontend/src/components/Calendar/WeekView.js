@@ -25,6 +25,7 @@ const WeekView = ({currentDate, onDateChange, onReminderClick}) => {
     useEffect(() => {
         fetchAppointments();
         fetchReminders();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentDate]);
 
     // Auto-scroll to 8am on component mount and when date changes

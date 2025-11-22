@@ -39,6 +39,7 @@ const JobForm = () => {
         if (isEdit) {
             fetchJobData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const fetchJobData = async () => {

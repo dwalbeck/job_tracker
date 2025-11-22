@@ -1,11 +1,10 @@
 import React, {useState, useEffect} from 'react';
-import {useParams, useNavigate, useSearchParams} from 'react-router-dom';
+import {useNavigate, useSearchParams} from 'react-router-dom';
 import apiService from '../../services/api';
 import {API_BASE_URL} from '../../config';
 import './ViewResume.css';
 
 const ViewResume = () => {
-    const {id} = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const resumeId = searchParams.get('resume_id');
@@ -21,6 +20,7 @@ const ViewResume = () => {
         if (resumeId) {
             fetchResumeDetail();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [resumeId]);
 
     const fetchResumeDetail = async () => {

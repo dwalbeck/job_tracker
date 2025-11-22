@@ -10,7 +10,7 @@ const Contacts = () => {
     const [filteredContacts, setFilteredContacts] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
-    const {selectedJobId, clearSelection} = useJob();
+    const {selectedJobId} = useJob();
     const navigate = useNavigate();
 
     useEffect(() => {

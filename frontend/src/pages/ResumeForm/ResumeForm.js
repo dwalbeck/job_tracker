@@ -23,9 +23,6 @@ const ResumeForm = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [processingSteps, setProcessingSteps] = useState([]);
     const [currentResumeId, setCurrentResumeId] = useState(resumeId || null);
-    const [markdownContent, setMarkdownContent] = useState('');
-    const [htmlContent, setHtmlContent] = useState('');
-    const [extractedData, setExtractedData] = useState(null);
     const [badList, setBadList] = useState([]);
     const [showJobTitleConfirm, setShowJobTitleConfirm] = useState(false);
     const [currentJobTitle, setCurrentJobTitle] = useState('');
@@ -33,14 +30,13 @@ const ResumeForm = () => {
     const [keywords, setKeywords] = useState([]);
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [originalFormat, setOriginalFormat] = useState('');
-    const [fileName, setFileName] = useState('');
 
     useEffect(() => {
         fetchJobList();
         if (isEdit && resumeId) {
             loadResumeData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isEdit, resumeId]);
 
     const fetchJobList = async () => {
@@ -60,8 +56,6 @@ const ResumeForm = () => {
             setIsBaseline(data.is_baseline || false);
             setIsDefault(data.is_default || false);
             setSelectedJob(data.job_id || '');
-            setFileName(data.file_name || '');
-            setOriginalFormat(data.original_format || '');
         } catch (error) {
             console.error('Error loading resume:', error);
         }
@@ -72,10 +66,6 @@ const ResumeForm = () => {
         if (file) {
             setSelectedFile(file);
             setFilePath(file.name);
-
-            // Extract file extension
-            const ext = file.name.split('.').pop().toLowerCase();
-            setOriginalFormat(ext);
         }
     };
 
@@ -171,22 +161,17 @@ const ResumeForm = () => {
             const fileFormat = resumeDetails.original_format;
             const resumeFileName = resumeDetails.file_name;
 
-            setFileName(resumeFileName);
-            setOriginalFormat(fileFormat);
-
             // Step 2: Start Processing
             addProcessingStep('Creating a Markdown version...', 'pending');
 
             // Convert to Markdown
             const mdResult = await apiService.convertXxxToMarkdown(fileFormat, resumeFileName);
-            setMarkdownContent(mdResult.file_content);
             updateProcessingStep(0, 'done');
 
             // Step 3: Convert to HTML
             addProcessingStep('Creating an HTML version...', 'pending');
 
             const htmlResult = await apiService.convertXxxToHtml(fileFormat, resumeFileName);
-            setHtmlContent(htmlResult.file_content);
             updateProcessingStep(1, 'done');
 
             // Step 4: Save partial resume_detail
@@ -215,7 +200,6 @@ const ResumeForm = () => {
                 bad_list: badTitles,
             });
 
-            setExtractedData(extractResult);
             setCurrentJobTitle(extractResult.job_title.job_title);
             setCurrentLineNumber(extractResult.job_title.line_number);
             setKeywords(extractResult.keywords);

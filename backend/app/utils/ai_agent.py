@@ -32,6 +32,7 @@ class AiAgent:
         settings.load_llm_settings_from_db(db)
 
         # Set LLM models from config (these can be different for each AI operation)
+        self.resume_extract_llm = settings.resume_extract_llm
         self.job_extract_llm = settings.job_extract_llm
         self.rewrite_llm = settings.rewrite_llm
         self.cover_llm = settings.cover_llm
@@ -119,7 +120,7 @@ class AiAgent:
 
         # Make API call to OpenAI
         response = self.client.chat.completions.create(
-            model=self.model,
+            model=self.resume_extract_llm,
             messages=[
                 {"role": "system", "content": "Expert resume writer and analyst. You analyze resumes and provide structured data in JSON format."},
                 {"role": "user", "content": prompt}

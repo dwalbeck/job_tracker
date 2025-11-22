@@ -89,6 +89,10 @@ const CoverLetter = () => {
         }
     };
 
+    const handleEditCoverLetter = (jobId, resumeId) => {
+        navigate(`/create-cover-letter?job_id=${jobId}&resume_id=${resumeId}`);
+    };
+
     const clearSearch = () => {
         setSearchTerm('');
     };
@@ -149,8 +153,18 @@ const CoverLetter = () => {
                 ) : (
                     filteredLetters.map((letter) => (
                         <div key={letter.cover_id} className="letter-card">
-                            <div className="letter-card-company">{letter.company}</div>
-                            <div className="letter-card-job-title">{letter.job_title}</div>
+                            <div
+                                className="letter-card-company clickable"
+                                onClick={() => handleEditCoverLetter(letter.job_id, letter.resume_id)}
+                            >
+                                {letter.company}
+                            </div>
+                            <div
+                                className="letter-card-job-title clickable"
+                                onClick={() => handleEditCoverLetter(letter.job_id, letter.resume_id)}
+                            >
+                                {letter.job_title}
+                            </div>
                             <div className="letter-card-date">
                                 {getTimeSinceCreation(letter.letter_created)}
                             </div>

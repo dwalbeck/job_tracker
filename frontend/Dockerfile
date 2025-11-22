@@ -26,8 +26,12 @@ RUN npm install && \
 # Copy source code
 COPY . .
 
-# Expose port
-EXPOSE 3000
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Start development server
-CMD ["npm", "start"]
+# Expose ports
+EXPOSE 80 3000
+
+# Use entrypoint script
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

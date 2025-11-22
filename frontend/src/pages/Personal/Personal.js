@@ -20,6 +20,7 @@ const Personal = () => {
         zip: '',
         country: '',
         no_response_week: 4,
+        resume_extract_llm: 'gpt-4.1-mini',
         job_extract_llm: 'gpt-4.1-mini',
         rewrite_llm: 'gpt-4.1-mini',
         cover_llm: 'gpt-4.1-mini'
@@ -148,6 +149,7 @@ const Personal = () => {
         zip: 'Zip Code',
         country: 'Country',
         no_response_week: 'Auto Status Change',
+        resume_extract_llm: 'Resume Extract LLM',
         job_extract_llm: 'Job Extraction LLM',
         rewrite_llm: 'Resume Rewrite LLM',
         cover_llm: 'Cover Letter LLM'
@@ -166,6 +168,7 @@ const Personal = () => {
             setPersonalData({
                 ...data,
                 no_response_week: data.no_response_week || 4,
+                resume_extract_llm: data.resume_extract_llm || 'gpt-4.1-mini',
                 job_extract_llm: data.job_extract_llm || 'gpt-4.1-mini',
                 rewrite_llm: data.rewrite_llm || 'gpt-4.1-mini',
                 cover_llm: data.cover_llm || 'gpt-4.1-mini'
@@ -211,7 +214,7 @@ const Personal = () => {
     }
 
     const isLlmField = (fieldName) => {
-        return ['job_extract_llm', 'rewrite_llm', 'cover_llm'].includes(fieldName);
+        return ['resume_extract_llm', 'job_extract_llm', 'rewrite_llm', 'cover_llm'].includes(fieldName);
     };
 
     const isWideField = (fieldName) => {

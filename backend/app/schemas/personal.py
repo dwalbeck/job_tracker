@@ -19,6 +19,7 @@ class PersonalBase(BaseModel):
     zip: Optional[str] = None
     country: Optional[str] = None
     no_response_week: Optional[int] = None
+    resume_extract_llm: Optional[str] = None
     job_extract_llm: Optional[str] = None
     rewrite_llm: Optional[str] = None
     cover_llm: Optional[str] = None

@@ -15,6 +15,7 @@ const MonthView = ({currentDate, onDateChange, onViewChange, onReminderClick}) =
     useEffect(() => {
         fetchAppointments();
         fetchReminders();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentDate]);
 
     const fetchAppointments = async () => {

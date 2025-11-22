@@ -7,19 +7,19 @@ const JobAnalysis = () => {
     const {id} = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const [resumeId, setResumeId] = useState(searchParams.get('resume_id'));
+    const resumeId = searchParams.get('resume_id');
 
     const [qualificationText, setQualificationText] = useState('');
     const [keywords, setKeywords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [selection, setSelection] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('Analyzing job description...');
     const qualificationRef = useRef(null);
 
     useEffect(() => {
         fetchJobData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const fetchJobData = async () => {
@@ -98,8 +98,6 @@ const JobAnalysis = () => {
 
         // Find all keyword matches
         keywordList.forEach(keyword => {
-            const regex = new RegExp(`\\b${escapeRegex(keyword)}\\b`, 'gi');
-            let match;
             const lowerText = text.toLowerCase();
             const lowerKeyword = keyword.toLowerCase();
 
@@ -108,6 +106,7 @@ const JobAnalysis = () => {
                 const endIndex = startIndex + keyword.length;
 
                 // Check if this position overlaps with existing positions
+                // eslint-disable-next-line no-loop-func
                 const overlaps = positions.some(pos =>
                     (startIndex >= pos.start && startIndex < pos.end) ||
                     (endIndex > pos.start && endIndex <= pos.end)
@@ -200,10 +199,6 @@ const JobAnalysis = () => {
 
         // Update keyword counts
         updateKeywordCounts();
-    };
-
-    const escapeRegex = (str) => {
-        return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     };
 
     const handleHighlightClick = (e) => {

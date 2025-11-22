@@ -7,13 +7,14 @@ import './ContactDetails.css';
 const ContactDetails = () => {
     const {id} = useParams();
     const navigate = useNavigate();
-    const {selectedJobId, selectJob} = useJob();
+    const {selectJob} = useJob();
     const [contact, setContact] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchContactDetails();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const fetchContactDetails = async () => {

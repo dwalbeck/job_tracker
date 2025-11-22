@@ -3,7 +3,6 @@ import {useNavigate} from 'react-router-dom';
 import {useJob} from '../../context/JobContext';
 import ExportMenu from '../../components/ExportMenu/ExportMenu';
 import apiService from '../../services/api';
-import {formatTimestamp} from '../../utils/dateUtils';
 import './Notes.css';
 
 const Notes = () => {
@@ -17,6 +16,7 @@ const Notes = () => {
 
     useEffect(() => {
         fetchNotes();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedJobId]);
 
     useEffect(() => {

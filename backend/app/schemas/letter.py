@@ -35,6 +35,8 @@ class LetterListItem(BaseModel):
     file_name: Optional[str] = None
     letter_created: Optional[datetime] = None
     cover_id: int
+    job_id: int
+    resume_id: int
     company: Optional[str] = None
     job_title: Optional[str] = None
 

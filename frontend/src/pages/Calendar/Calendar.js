@@ -30,6 +30,7 @@ const Calendar = () => {
             newParams.delete('open_reminder');
             setSearchParams(newParams);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleViewChange = (newView) => {

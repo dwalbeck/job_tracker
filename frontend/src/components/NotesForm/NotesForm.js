@@ -31,6 +31,7 @@ const NotesForm = () => {
                 setFormData(prev => ({...prev, job_id: jobIdParam}));
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, searchParams]);
 
     const fetchJobs = async () => {

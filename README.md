@@ -81,11 +81,18 @@ The Job Tracker is built as a **3-tier containerized application**:
    echo "172.20.0.5      portal.jobtracker.com
    172.20.0.10     api.jobtracker.com
    172.20.0.15     psql.jobtracker.com" >> /etc/hosts
+   
+   # this will effectively return these values upon DNS request for the sub-domains defined
     ```
 
 6. **Verify Services are Running**
    ```bash
    docker compose ps
+   
+   # You should see the following:
+   api.jobtracker.com      job_tracker-backend    "python -m uvicorn a…"   backend    18 minutes ago   Up 18 minutes (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+   portal.jobtracker.com   job_tracker-frontend   "/usr/local/bin/dock…"   frontend   18 minutes ago   Up 18 minutes (healthy)   443/tcp, 0.0.0.0:80->80/tcp, [::]:80->80/tcp, 3000/tcp
+   psql.jobtracker.com     postgres:12            "docker-entrypoint.s…"   db         18 minutes ago   Up 18 minutes (healthy)   5432/tcp
    ```
 
 7. **Access the Application**
@@ -98,7 +105,7 @@ The Job Tracker is built as a **3-tier containerized application**:
    - **Frontend**: http://localhost (preferred) or http://localhost:3000
    - **Backend API**: http://localhost:8000
    - **API Documentation**: http://localhost:8000/docs
-   - **Database**: postgresql://apiuser:change_me@db:5432/jobtracker
+   - **Database**: postgresql://apiuser:change_me@localhost:5432/jobtracker
    
 
 NOTE: For **Windows** and **Mac** users, network interfaces work a bit differently then they do on Linux, and as such are not 
@@ -243,45 +250,6 @@ to use for that action.
 See flow chart in located in **docs/job_tracker-communication_flow.pdf**
 
 
-## 🛠️ Development Workflow
-
-### For Frontend Development
-
-```bash
-# Start with hot reload
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up frontend
-
-# Or develop locally
-cd frontend
-npm install
-npm start
-```
-
-### For Backend Development
-
-```bash
-# Start with code reload
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up backend
-
-# Or develop locally
-cd backend
-pip install -r requirements.txt
-python run.py
-```
-
-### Database Access
-
-```bash
-# Connect to database container
-docker-compose exec db psql -U apiuser -d job_tracker
-
-# View logs
-docker-compose logs db
-
-# Backup database
-docker-compose exec db pg_dump -U apiuser job_tracker > backup.sql
-```
-
 ## 📊 Monitoring and Health Checks
 
 ### Service Health
@@ -309,23 +277,59 @@ docker-compose logs -f
 
 ## 🔧 Configuration Options
 
-### Environment Variables
+### Backend Environment Variables
 
 Create a `.env` file to customize:
 
 ```bash
 # Database Configuration
-POSTGRES_DB=job_tracker
+DATABASE_URL=postgresql://apiuser:change_me@psql.jobtracker.com:5432/jobtracker
+POSTGRES_HOST=psql.jobtracker.com
+POSTGRES_PASSWORD=change_me
 POSTGRES_USER=apiuser
-POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=jobtracker
+POSTGRES_PORT=5432
+PGDATA=/var/lib/postgresql/data
+POSTGRES_HOST_AUTH_METHOD=password
 
-# Backend Configuration
-DEBUG=true
-ALLOWED_ORIGINS=["http://localhost:3000"]
+# Application Configuration
+APP_NAME=Job Tracker API
+APP_VERSION=1.0.0
+DEBUG=True
 
-# Frontend Configuration
-REACT_APP_API_URL=http://localhost:8000
+# File Storage Configuration
+BASE_JOB_FILE_PATH=/app/job_docs
+RESUME_DIR=/app/job_docs/resumes
+COVER_LETTER_DIR=/app/job_docs/cover_letters
+EXPORT_DIR=/app/job_docs/export
+
+# Logging Configuration
+LOG_LEVEL=DEBUG
+LOG_FILE=api.log
+
+# CORS Configuration
+ALLOWED_ORIGINS=["http://localhost:3000", "http://portal.jobtracker.com:3000"]
+
+# AI Configuration
+AI_MODEL=gpt-4o-mini
+OPENAI_API_KEY=<open_ai_api_key>
+OPENAI_PROJECT=<open_ai_project_name>
 ```
+
+### Frontend Environment Variables
+
+```bash
+# API Configuration
+REACT_APP_API_BASE_URL=http://api.jobtracker.com
+
+# Logging Configuration
+REACT_APP_LOG_LEVEL=DEBUG
+REACT_APP_LOG_FILE=portal.log
+REACT_APP_ENABLE_CONSOLE_LOGGING=true
+
+NODE_ENV=production
+```
+
 
 ## 🗂️ Data Persistence
 
@@ -344,9 +348,95 @@ docker compose exec db pg_dump -U apiuser job_tracker > backup.sql
 docker compose exec -T db psql -U apiuser job_tracker < backup.sql
 ```
 
+## 🛠️ Logging
+
+### Docker
+
+So you are able to view the Docker logs using your terminal as follows:
+
+```bash
+# View logs from all services
+docker compose logs
+
+# Continual log output
+docker compose logs -f
+
+# Show only frontend service logs
+docker compose logs frontend
+
+# Show only backend service logs
+docker compose logs backend
+
+# Show only database logs
+docker compose logs db
+```
+
+
+### Back-end API
+
+The Python application is using a logger package to ouput logs to a log file that is written locally within the container.  You 
+can access this log file by opening a terminal session into the container, where you can then view a file however you like. After 
+the shell connection is established, you should be placed in the document root for the service, which is **/app**. The log 
+file is named **api.log**
+
+```bash
+docker exec -it api.jobtracker.com bash
+
+# You shouldn't need to do this, but in case wondered off and got lost
+cd /app
+
+# View last 30 lines
+tail -n 30 api.log
+
+# Continually view log file
+tail -f api.log
+
+# Open the log file in a text editor
+vim api.log 
+```
+
+### Front-end Application
+
+The React application also is setup to log things, but uses the browsers local storage to write the logs to.  You can access 
+the logs using your browser's inspect tool.  For Firefox and Chrome, right-click anywhere on the page, then select "Inspect(Q)". 
+This will open the developer tools and on the top tab navigation select the "Console" tab. At the bottom of the displayed output, 
+you'll see either a ">" or ">>", which when you click there, it then allows you to execute any javascript.
+
+```console
+// View all logs
+logger.getLogs()
+
+// Download logs as a text file
+logger.exportLogs()
+
+// Clear all logs
+logger.clearLogs()
+
+// Log a test message
+logger.debug('Test message')
+
+    Or Use Direct localStorage Access (Works Immediately)
+
+// View logs
+JSON.parse(localStorage.getItem('portal.log'))
+
+// Clear logs
+localStorage.removeItem('portal.log')
+```
+
+
 ## 🚨 Troubleshooting
 
 ### Common Issues
+* **Page not found** or just won't load. So I didn't want to mess around with SSL certificates, which self-signed certs still 
+    have to be manually added or accepted in order to work.  This application doesn't store anything secret, so there isn't any 
+    need to do big security implementations.  This being the case, access to the services uses standard non-encrypted HTTP. You 
+    may find that your browser has automatically added the "S", which won't work, as the application isn't configured to use 
+    SSL.  So verify that your using **http://** and NOT **https://**
+
+    If you still are having issues, verify that all 3 services are actively running.  More than likely you'll find that one failed to start. Still 
+    can't pull up the page?  Try looking at the logs files, they can provide some insight.
+
 * **Port Conflicts**  Insure that you don't have a locally installed version of PostgreSQL or another container 
     running with PostgreSQL installed on it.  Also make sure that you don't have a local install of Apache2 or Nginx 
     running, as by default they both bind to port 80 and likely other additional ports.

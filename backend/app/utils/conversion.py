@@ -1,4 +1,7 @@
 import os
+from docx import Document
+from docx.shared import Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from pathlib import Path
 from typing import Optional
 from ..core.config import settings
@@ -47,6 +50,52 @@ class Conversion:
 
         # Add new extension
         return f"{base_name}.{mime_type}"
+
+    @classmethod
+    def pageFormatting(cls, filename: str, name: str) -> bool:
+        """
+        Do final formatting on docx file
+        - changes page margins to 1/2"
+        - center justifies text using Heading 1, Heading 2 or Heading 3 (with name being excluded)
+        - changes the font to use Liberation Sans
+
+        Returns:
+            boolean - true for success and false for failure
+        """
+        target_styles = ['Heading 1', 'Heading 2', 'Heading 3']
+        margin = 1.3
+        document = Document(str(cls._get_file_path(filename)))
+
+        try:
+            # change document default font
+            style = document.styles['Normal']
+            font = style.font
+            font.name = 'Liberation Sans'
+
+            # changing the page margins
+            sections = document.sections
+            for section in sections:
+                section.top_margin = Cm(margin)
+                section.bottom_margin = Cm(margin)
+                section.left_margin = Cm(margin)
+                section.right_margin = Cm(margin)
+
+            for paragraph in document.paragraphs:
+                if paragraph.text == name:
+                    print(f"Matched name: {paragraph.text}")
+
+                elif paragraph.style.name in target_styles:
+                    # If it is, set the alignment to center
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    print(f"Centered paragraph with style: {paragraph.style.name}")
+
+            document.save(str(cls._get_file_path(filename)))
+            return True
+
+        except Exception as e:
+            print(f"Error while editing file: {e}")
+            return False
+
 
     @classmethod
     def _markdown_to_html(cls, markdown_content: str) -> str:

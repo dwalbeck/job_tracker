@@ -60,12 +60,14 @@ const CalendarForm = () => {
             }
             calculateAndSetDuration();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     useEffect(() => {
         if (!isEdit) {
             calculateAndSetDuration();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [formData.start_date, formData.start_time, formData.end_date, formData.end_time]);
 
     const fetchJobs = async () => {

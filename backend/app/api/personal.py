@@ -75,6 +75,7 @@ async def get_personal_info(db: Session = Depends(get_db)):
                 "zip": result.zip or "",
                 "country": result.country or "",
                 "no_response_week": result.no_response_week,
+	            "resume_extract_llm": result.resume_extract_llm or "",
                 "job_extract_llm": result.job_extract_llm or "",
                 "rewrite_llm": result.rewrite_llm or "",
                 "cover_llm": result.cover_llm or ""
@@ -96,10 +97,11 @@ async def get_personal_info(db: Session = Depends(get_db)):
                 "state": "",
                 "zip": "",
                 "country": "",
-                "no_response_week": None,
-                "job_extract_llm": "",
-                "rewrite_llm": "",
-                "cover_llm": ""
+                "no_response_week": 4,
+	            "resume_extract_llm": "gpt-4.1-mini",
+                "job_extract_llm": "gpt-4.1-mini",
+                "rewrite_llm": "gpt-4.1-mini",
+                "cover_llm": "gpt-4.1-mini"
             }
 
     except Exception as e:
@@ -150,6 +152,7 @@ async def save_personal_info(personal_data: PersonalCreate, db: Session = Depend
                     zip = :zip,
                     country = :country,
                     no_response_week = :no_response_week,
+	                resume_extract_llm = :resume_extract_llm,
                     job_extract_llm = :job_extract_llm,
                     rewrite_llm = :rewrite_llm,
                     cover_llm = :cover_llm
@@ -174,6 +177,7 @@ async def save_personal_info(personal_data: PersonalCreate, db: Session = Depend
                 "zip": personal_data.zip,
                 "country": personal_data.country,
                 "no_response_week": personal_data.no_response_week,
+	            "resume_extract_llm": personal_data.resume_extract_llm,
                 "job_extract_llm": personal_data.job_extract_llm,
                 "rewrite_llm": personal_data.rewrite_llm,
                 "cover_llm": personal_data.cover_llm
@@ -189,12 +193,12 @@ async def save_personal_info(personal_data: PersonalCreate, db: Session = Depend
                     first_name, last_name, email, phone,
                     linkedin_url, github_url, website_url, portfolio_url,
                     address_1, address_2, city, state, zip, country, no_response_week,
-                    job_extract_llm, rewrite_llm, cover_llm
+                    resume_extract_llm, job_extract_llm, rewrite_llm, cover_llm
                 ) VALUES (
                     :first_name, :last_name, :email, :phone,
                     :linkedin_url, :github_url, :website_url, :portfolio_url,
                     :address_1, :address_2, :city, :state, :zip, :country, :no_response_week,
-                    :job_extract_llm, :rewrite_llm, :cover_llm
+                    :resume_extract_llm, :job_extract_llm, :rewrite_llm, :cover_llm
                 )
             """)
 
@@ -214,6 +218,7 @@ async def save_personal_info(personal_data: PersonalCreate, db: Session = Depend
                 "zip": personal_data.zip,
                 "country": personal_data.country,
                 "no_response_week": personal_data.no_response_week,
+	            "resume_extract_llm": personal_data.resume_extract_llm,
                 "job_extract_llm": personal_data.job_extract_llm,
                 "rewrite_llm": personal_data.rewrite_llm,
                 "cover_llm": personal_data.cover_llm

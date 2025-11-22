@@ -13,8 +13,6 @@ const OptimizedResume = () => {
     const [baselineScore, setBaselineScore] = useState(0);
     const [rewriteScore, setRewriteScore] = useState(0);
     const [originalHtml, setOriginalHtml] = useState('');
-    const [rewrittenHtml, setRewrittenHtml] = useState('');
-    const [textChanges, setTextChanges] = useState([]);
     const [jobId, setJobId] = useState(null);
     const [editedRewrittenHtml, setEditedRewrittenHtml] = useState('');
     const [removedAdditions, setRemovedAdditions] = useState([]);
@@ -30,11 +28,9 @@ const OptimizedResume = () => {
             console.log('rewriteScore:', location.state.rewriteScore);
 
             setOriginalHtml(location.state.resumeHtml || '');
-            setRewrittenHtml(location.state.resumeHtmlRewrite || '');
             setEditedRewrittenHtml(location.state.resumeHtmlRewrite || '');
             setBaselineScore(location.state.baselineScore || 0);
             setRewriteScore(location.state.rewriteScore || 0);
-            setTextChanges(location.state.textChanges || []);
             setJobId(location.state.jobId || null);
         } else {
             console.log('No location.state received!');
@@ -64,6 +60,7 @@ const OptimizedResume = () => {
             iframeDoc.write(highlightAdditions(originalHtml, editedRewrittenHtml));
             iframeDoc.close();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [originalHtml, editedRewrittenHtml, removedAdditions, restoredRemovals]);
 
     useEffect(() => {
@@ -78,6 +75,7 @@ const OptimizedResume = () => {
 
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [editedRewrittenHtml, originalHtml]);
 
     const handleRemoveAddition = (text) => {
@@ -86,11 +84,6 @@ const OptimizedResume = () => {
         // Find the text in editedRewrittenHtml and remove it, replacing with original version
         const parser = new DOMParser();
         const doc = parser.parseFromString(editedRewrittenHtml, 'text/html');
-        const originalDoc = parser.parseFromString(originalHtml, 'text/html');
-
-        // Get text content from both
-        const editedText = extractTextContent(editedRewrittenHtml);
-        const originalText = extractTextContent(originalHtml);
 
         // Simple approach: replace the addition text with empty string or find corresponding original text
         const normalizedRemovalText = normalizeText(text);
@@ -196,7 +189,6 @@ const OptimizedResume = () => {
 
         // Normalize for comparison
         const originalNormalized = normalizeText(originalText);
-        const rewrittenNormalized = normalizeText(rewrittenText);
 
         // Split into sentences for better comparison
         const originalSentences = splitIntoSentences(originalText);
@@ -342,6 +334,7 @@ const OptimizedResume = () => {
                                 const parts = text.split(regex);
                                 const fragment = document.createDocumentFragment();
 
+                                // eslint-disable-next-line no-loop-func
                                 parts.forEach((part, index) => {
                                     if (index % 2 === 0) {
                                         // Regular text
@@ -463,6 +456,7 @@ const OptimizedResume = () => {
                                 const parts = text.split(regex);
                                 const fragment = document.createDocumentFragment();
 
+                                // eslint-disable-next-line no-loop-func
                                 parts.forEach((part, index) => {
                                     if (index % 2 === 0) {
                                         // Regular text

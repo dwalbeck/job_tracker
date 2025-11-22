@@ -391,9 +391,16 @@ const CreateCoverLetter = () => {
                                 value={letterContent}
                                 onChange={(e) => setLetterContent(e.target.value)}
                             />
+                        ) : letterContent ? (
+                            <iframe
+                                className="preview-iframe"
+                                srcDoc={letterContent}
+                                title="Cover Letter Preview"
+                                sandbox="allow-same-origin"
+                            />
                         ) : (
                             <div className="preview-content">
-                                {letterContent || 'Your cover letter will appear here after generation...'}
+                                Your cover letter will appear here after generation...
                             </div>
                         )}
                     </div>

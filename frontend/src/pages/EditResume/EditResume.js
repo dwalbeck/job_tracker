@@ -17,6 +17,7 @@ const EditResume = () => {
         if (resumeId) {
             fetchResumeDetail();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [resumeId]);
 
     const fetchResumeDetail = async () => {

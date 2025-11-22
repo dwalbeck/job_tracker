@@ -33,6 +33,7 @@ const JobTracker = () => {
         if (noResponseWeeks !== null) {
             fetchJobs();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [noResponseWeeks]);
 
     useEffect(() => {
