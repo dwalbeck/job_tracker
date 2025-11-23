@@ -1,0 +1,80 @@
+
+On Job Details page, the "Download Resume" button clicked, results in error pop-up stating
+    "Failed to download resume. Please ensure a resume has been created for this job."
+
+Backend log entries are:
+
+2025-11-23 03:57:39 - INFO - job_tracker_api - API Request: OPTIONS /v1/convert/html2docx (IP: 172.18.0.1)
+2025-11-23 03:57:39 - DEBUG - job_tracker_api - Query parameters: {'job_id': '1'}
+2025-11-23 03:57:39 - INFO - job_tracker_api - API Response: OPTIONS /v1/convert/html2docx - 200 (0.53ms)
+2025-11-23 03:57:39 - INFO - job_tracker_api - API Request: GET /v1/convert/html2docx (IP: 172.18.0.1)
+2025-11-23 03:57:39 - DEBUG - job_tracker_api - Query parameters: {'job_id': '1'}
+2025-11-23 03:57:39 - INFO - job_tracker_api - Markdown to DOCX conversion requested | job_id=1
+2025-11-23 03:57:39 - ERROR - job_tracker_api - Exception occurred: 'CursorResult' object has no attribute 'first_name' - Context: GET /v1/convert/html2docx (2.73ms) | exc_info=True
+
+
+From View Resume page, click on "Download docx" button show the following page content:
+
+500 Server Error
+AttributeError: 'CursorResult' object has no attribute 'first_name'
+
+Traceback
+File /app/app/api/convert.py, line 278, in download_resume_file ‒
+
+275. logger.error("Failed to retrieve first_name and last_name from personal")
+276. raise HTTPException(status_code=404, detail="Failed to retrieve first_name and last_name from personal")
+277.
+278. full_name = personal_result.first_name + " " + personal_result.last_name
+279.
+280. try:
+281. # Construct the full file path
+
+File /usr/local/lib/python3.11/site-packages/fastapi/routing.py, line 191, in run_endpoint_function +
+File /usr/local/lib/python3.11/site-packages/fastapi/routing.py, line 274, in app +
+File /usr/local/lib/python3.11/site-packages/starlette/routing.py, line 66, in app +
+File /usr/local/lib/python3.11/site-packages/starlette/routing.py, line 276, in handle +
+File /usr/local/lib/python3.11/site-packages/starlette/routing.py, line 718, in __call__ +
+File /usr/local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py, line 17, in __call__ +
+File /usr/local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py, line 20, in __call__ +
+File /usr/local/lib/python3.11/site-packages/starlette/middleware/exceptions.py, line 68, in __call__ +
+File /usr/local/lib/python3.11/site-packages/starlette/middleware/exceptions.py, line 79, in __call__ +
+File /usr/local/lib/python3.11/site-packages/starlette/middleware/cors.py, line 83, in __call__ +
+File /usr/local/lib/python3.11/site-packages/starlette/middleware/base.py, line 70, in coro +
+File /usr/local/lib/python3.11/site-packages/starlette/middleware/base.py, line 84, in call_next +
+File /app/app/middleware/logging_middleware.py, line 30, in dispatch +
+File /usr/local/lib/python3.11/site-packages/starlette/middleware/base.py, line 108, in __call__ +
+File /usr/local/lib/python3.11/site-packages/starlette/middleware/errors.py, line 162, in __call__
+
+Backend log file entries:
+
+2025-11-23 03:50:17 - INFO - job_tracker_api - API Request: OPTIONS /v1/convert/html2docx (IP: 172.18.0.1)
+2025-11-23 03:50:17 - DEBUG - job_tracker_api - Query parameters: {'job_id': '1'}
+2025-11-23 03:50:17 - INFO - job_tracker_api - API Response: OPTIONS /v1/convert/html2docx - 200 (0.63ms)
+2025-11-23 03:50:17 - INFO - job_tracker_api - API Request: GET /v1/convert/html2docx (IP: 172.18.0.1)
+2025-11-23 03:50:17 - DEBUG - job_tracker_api - Query parameters: {'job_id': '1'}
+2025-11-23 03:50:17 - INFO - job_tracker_api - Markdown to DOCX conversion requested | job_id=1
+2025-11-23 03:50:17 - ERROR - job_tracker_api - Exception occurred: 'CursorResult' object has no attribute 'first_name' - Context: GET /v1/convert/html2docx (2.45ms) | exc_info=True
+2025-11-23 03:50:32 - INFO - job_tracker_api - API Request: GET /v1/resume/detail/2 (IP: 172.18.0.1)
+2025-11-23 03:50:32 - INFO - job_tracker_api - API Response: GET /v1/resume/detail/2 - 200 (4.16ms)
+2025-11-23 03:50:38 - INFO - job_tracker_api - API Request: OPTIONS /v1/convert/final (IP: 172.18.0.1)
+2025-11-23 03:50:38 - INFO - job_tracker_api - API Response: OPTIONS /v1/convert/final - 200 (0.84ms)
+2025-11-23 03:50:38 - INFO - job_tracker_api - API Request: POST /v1/convert/final (IP: 172.18.0.1)
+2025-11-23 03:50:38 - INFO - job_tracker_api - Converting final resume | resume_id=2, output_format=OutputFormat.docx
+2025-11-23 03:50:38 - DEBUG - job_tracker_api - Using reference file for styling | reference_file=current_docx.docx
+2025-11-23 03:50:38 - DEBUG - job_tracker_api - Converting resume | original_file_name=huge-solutions_architect.md, new_file_name=huge-solutions_architect.docx, reference_file=current_docx.docx
+2025-11-23 03:50:38 - DEBUG - job_tracker_api - Using reference file: current_docx.docx
+2025-11-23 03:50:39 - DEBUG - job_tracker_api - DOCX file created | file_path=/app/job_docs/resumes/huge-solutions_architect.docx
+2025-11-23 03:50:39 - INFO - job_tracker_api - Resume conversion completed successfully | resume_id=2, output_file=huge-solutions_architect.docx
+2025-11-23 03:50:39 - INFO - job_tracker_api - API Response: POST /v1/convert/final - 200 (1150.17ms)
+2025-11-23 03:50:39 - INFO - job_tracker_api - API Request: GET /v1/personal (IP: 172.18.0.1)
+2025-11-23 03:50:39 - INFO - job_tracker_api - API Response: GET /v1/personal - 200 (2.15ms)
+2025-11-23 03:50:39 - INFO - job_tracker_api - API Request: GET /v1/file/download/resume/huge-solutions_architect.docx (IP: 172.18.0.1)
+2025-11-23 03:50:39 - INFO - job_tracker_api - Resume file download requested | file_name=huge-solutions_architect.docx
+2025-11-23 03:50:39 - ERROR - job_tracker_api - Exception occurred: 'CursorResult' object has no attribute 'first_name' - Context: GET /v1/file/download/resume/huge-solutions_architect.docx (3.61ms) | exc_info=True
+2025-11-23 03:50:39 - INFO - job_tracker_api - API Request: GET /favicon.ico (IP: 172.18.0.1)
+2025-11-23 03:50:39 - ERROR - job_tracker_api - HTTP 404 error | method=GET, path=/favicon.ico, status_code=404, detail=Not Found
+2025-11-23 03:50:39 - INFO - job_tracker_api - API Response: GET /favicon.ico - 404 (5.67ms)
+
+I checked the "backend/job_docs" directory on the host machine and it is empty.  When I shell into the backend container I can see that files are being saved as expected.
+This is still kind of odd though, since I look at the "postgresql" directory on the host machine, and I can see all the DB files for PostgreSQL.
+

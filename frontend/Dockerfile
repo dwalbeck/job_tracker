@@ -6,10 +6,13 @@ RUN mkdir /var/www/jobtracker
 # Set working directory
 WORKDIR /var/www/jobtracker
 
-RUN apt update && apt -y install curl \
-    nodejs \
-    npm \
-    vim && \
+RUN apt update && apt install -y curl vim
+#    nodejs \
+#    npm \
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh && \
+    bash /tmp/nodesource_setup.sh && \
+    apt update && \
+    apt install -y nodejs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -21,17 +24,20 @@ COPY docker/portal.jobtracker.com.conf /etc/nginx/sites-available/portal.jobtrac
 RUN npm install && \
     ln -s /etc/nginx/sites-available/portal.jobtracker.com.conf /etc/nginx/sites-enabled/portal.jobtracker.com.conf && \
     rm /etc/nginx/sites-enabled/default && \
-    service nginx restart
+    service nginx stop
 
 # Copy source code
 COPY . .
 
 # Copy entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+#COPY docker-entrypoint.sh /usr/local/bin/
+#RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN npm run build
+#RUN npm run start
 
 # Expose ports
 EXPOSE 80 3000
 
+CMD ["nginx", "-g", "daemon off;"]
 # Use entrypoint script
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+#ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
