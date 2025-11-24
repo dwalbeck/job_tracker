@@ -178,7 +178,7 @@ async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
 					FROM personal
 					WHERE first_name IS NOT NULL
 					LIMIT 1""")
-	personal_result = db.execute(query)
+	personal_result = db.execute(query).first()
 	if not personal_result:
 		logger.error("Failed to retrieve first_name and last_name from personal")
 		raise HTTPException(status_code=404, detail="Failed to retrieve first_name and last_name from personal")
@@ -270,7 +270,7 @@ async def download_resume_file(file_name: str, db: Session = Depends(get_db)):
                     FROM personal
                     WHERE first_name IS NOT NULL
                     LIMIT 1""")
-	personal_result = db.execute(query)
+	personal_result = db.execute(query).first()
 	if not personal_result:
 		logger.error("Failed to retrieve first_name and last_name from personal")
 		raise HTTPException(status_code=404, detail="Failed to retrieve first_name and last_name from personal")

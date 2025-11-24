@@ -402,7 +402,7 @@ const JobAnalysis = () => {
         }
 
         setIsProcessing(true);
-        setLoadingMessage('Examining and rewriting resume with AI (this may take up to 6 minutes)...');
+        setLoadingMessage('Examining and rewriting resume with AI (this may take up to 3 minutes)...');
 
         try {
             const response = await apiService.rewriteResume(id, resumeId, keywordFinal, focusFinal);

@@ -13,7 +13,7 @@ services:
     volumes:
       - type: bind
         source: ./postgresql
-        target: /var/lib/postgresql/15/data
+        target: /var/lib/postgresql/data
       - type: bind
         source: ./docs/schema.sql
         target: /docker-entrypoint-initdb.d/01-schema.sql
