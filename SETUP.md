@@ -86,4 +86,72 @@ cp .env-example .env
 
 ```
 
+This will give you a solid starting point and your welcome to leave and use the pre-populated values.  There are however 
+a couple settings that you will need to provide in order for everything to work as designed. The most important variable to 
+define is the OPENAI_API_KEY variable.  This will require you to get an account with OpenAI, which you can pay whatever 
+amount you want and use it until it's depleted, which is quite a while. [Click here](https://platform.openai.com/docs/quickstart) 
+to for instructions on where to get your OpenAI API Key and sign-up.
 
+If you want to change the DB credentials or database name, you are certainly welcome to. Any change to the credentials, you 
+will want to insure that you change the DATABASE_URL, POSTGRES_USER and POSTGRES_PASSWORD fields. Also note that during the 
+initial DB setup, a SQL script is executed that includes GRANT permissions and also manually sets the password.  This can be 
+found in the **docs/schema.sql** file on lines 218 - 224, which you'll also want to have match your choosen values.
+
+Some values you won't want to change, and if you did change, could very likely break things from working.  For example, don't 
+change the PGDATA path, as this is the standard expeced by PostgreSQL and is also configured to work with how the containers 
+are configured.  I would also recommend keeping the file storage directory paths the same.  These are path that operate 
+within the backend container, so there isn't really any advantage to changing them.  Also, the database host is very important 
+to have set correctly and will depend entirely on the Docker setup used.  Networking is very different for Linux users, 
+which Docker has great capabilities that allow for static IP assigning.  On Windows and MacOS however, these same capabilities 
+are not possible, so things are setup differently using port mappings.  In a nutshell, if you using Linux, then the host 
+should be set to **psql.jobtracker.com** and for Windows and MacOS it would be simply **db**.
+
+Linux users will want to additionally make an entry to your **/etc/hosts** file to override DNS.  This will allow you to use 
+the fake domain naming used for the services.
+```bash
+echo "172.20.0.5      portal.jobtracker.com
+172.20.0.10     api.jobtracker.com
+172.20.0.15     psql.jobtracker.com" >> /etc/hosts
+```
+
+#### Building the Containers
+
+With the environment variables all configured, you are now ready to build and run the containers configured in the Docker stack. 
+This is a very simple and straight forward process, but will require that you have Docker Desktop or docker-compose installed 
+on your machine.  First, open a terminal and navigate to the document root of the project (top level directory).  Then execute 
+the following:
+```bash
+# For Linux users use the following
+docker compose up --build -d
+
+# For Windows and MacOS users, do the following
+docker compose -f docker-compose-win.yml up --build -d
+
+# You can also build each service separately
+docker compose build backend
+docker compose build frontend
+docker compose build db
+
+docker compose -f docker-compose-win.yml build backend
+docker compose -f docker-compose-win.yml build frontend
+docker compose -f docker-compose-win.yml build db
+```
+
+If there is any problem that occurs while building the containers, Docker will fail and exit the process.  It will also output 
+details on why it failed in the content printed to the console.  This can be the result of a lot of possible things and is 
+beyond the scope of this document, but there is a troubleshooting section in the main README.md and Google is a great resource 
+to fix failed builds.  The Docker stack to start all the services once it has built each of the containers.
+
+### Accessing the Application
+
+For Linux:
+- **Frontend**: http://portal.jobtracker.com
+- **Backend API**: http://api.jobtracker.com
+- **API Documentation**: http://api.jobtracker.com/docs
+- **Database**: postgresql://apiuser:change_me@psql.jobtracker.com:5432/jobtracker
+
+or for Windows and MacOS use:
+- **Frontend**: http://localhost (preferred) or http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **Database**: postgresql://apiuser:change_me@localhost:5432/jobtracker

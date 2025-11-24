@@ -2,6 +2,7 @@ services:
   # PostgreSQL Database Service
   db:
     image: postgres:15.15-trixie
+    container_name: psql.jobtracker.com
     restart: always
     shm_size: 128mb
     env_file:

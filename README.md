@@ -465,14 +465,35 @@ localStorage.removeItem('portal.log')
     ```bash
     # first we need to get some information.  Make sure your Docker stack is currently running, and from a terminal type this:
     docker ps
+  
     # Note the first column displayed CONTAINER ID - You'll need this value for the container with the 
     # IMAGE set as "postgres:15.15-trixie".  Now with this value we can shell into the container with the following:
     docker exec -it <container_id> bash
+    
     # Now your in the database container with a terminal, so we'll need to connect to the PostgreSQL service 
     psql -U apiuser jobtracker
+    
     # That connects to PostgreSQL using their console.  No password is needed because the image sets local connections to "trust".
     # So now you'll simply change the password for that role to whatever you have configured in the backend/.env file
     jobtracker=# ALTER ROLE apiuser WITH PASSWORD '<your_password>';
+    ```
+* **Database - User authentication fails** If you find that the credentials are failing to authenticate, then you can reset 
+    them pretty easily (if the DB container is able to run).  Start up the Docker stack and then we'll shell into the database 
+    container and execute the SQL to set the credentials.
+    ```bash
+    # First let's shell into the PostgreSQL database container
+    docker exec -it psql.jobtracker.com bash
+  
+    # Next we'll login to the database using the PostgreSQL console
+    # NOTE: no password is needed, as the DB is configured to trust local connections.
+    psql -U apiuser jobtracker
+  
+    # Now we'll simply overwrite any existing password with a new value
+    ALTER ROLE apiuser WITH PASSWORD '<password>';
+  
+    # If the apiuser account didn't get created, then you can try to login as root
+    psql -U root jobtracker
+    CREATE ROLE apiuser LOGIN INHERIT PASSWORD '<password>';
     ```
 
 * **Database Connection Issues**
