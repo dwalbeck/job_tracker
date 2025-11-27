@@ -20,6 +20,7 @@ import Resume from './pages/Resume/Resume';
 import ResumeForm from './pages/ResumeForm/ResumeForm';
 import ViewResume from './pages/ViewResume/ViewResume';
 import EditResume from './pages/EditResume/EditResume';
+import ManuallyEditResume from './pages/ManuallyEditResume/ManuallyEditResume';
 import CoverLetter from './pages/CoverLetter/CoverLetter';
 import CreateCoverLetter from './pages/CreateCoverLetter/CreateCoverLetter';
 import Personal from './pages/Personal/Personal';
@@ -58,6 +59,7 @@ const AppContent = () => {
                         <Route path="/resume-form/:id" element={<ResumeForm/>}/>
                         <Route path="/view-resume" element={<ViewResume/>}/>
                         <Route path="/edit-resume" element={<EditResume/>}/>
+                        <Route path="/manually-edit-resume" element={<ManuallyEditResume/>}/>
                         <Route path="/cover-letter" element={<CoverLetter/>}/>
                         <Route path="/create-cover-letter" element={<CreateCoverLetter/>}/>
                         <Route path="/personal" element={<Personal/>}/>

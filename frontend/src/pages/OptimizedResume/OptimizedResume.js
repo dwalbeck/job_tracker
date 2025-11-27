@@ -17,6 +17,7 @@ const OptimizedResume = () => {
     const [editedRewrittenHtml, setEditedRewrittenHtml] = useState('');
     const [removedAdditions, setRemovedAdditions] = useState([]);
     const [restoredRemovals, setRestoredRemovals] = useState([]);
+    const [fromViewResume, setFromViewResume] = useState(false);
 
     useEffect(() => {
         console.log('=== OptimizedResume: Received location.state ===');
@@ -26,12 +27,14 @@ const OptimizedResume = () => {
             console.log('resumeHtmlRewrite length:', (location.state.resumeHtmlRewrite || '').length);
             console.log('baselineScore:', location.state.baselineScore);
             console.log('rewriteScore:', location.state.rewriteScore);
+            console.log('fromViewResume:', location.state.fromViewResume);
 
             setOriginalHtml(location.state.resumeHtml || '');
             setEditedRewrittenHtml(location.state.resumeHtmlRewrite || '');
             setBaselineScore(location.state.baselineScore || 0);
             setRewriteScore(location.state.rewriteScore || 0);
             setJobId(location.state.jobId || null);
+            setFromViewResume(location.state.fromViewResume || false);
         } else {
             console.log('No location.state received!');
         }
@@ -77,6 +80,200 @@ const OptimizedResume = () => {
         return () => window.removeEventListener('message', handleMessage);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [editedRewrittenHtml, originalHtml]);
+
+    // Synchronized scrolling effect
+    useEffect(() => {
+        if (!baselineIframeRef.current || !rewriteIframeRef.current) return;
+        if (!originalHtml || !editedRewrittenHtml) return;
+
+        // Wait for iframes to fully load
+        const setupSyncScroll = () => {
+            try {
+                const baselineDoc = baselineIframeRef.current?.contentDocument;
+                const rewriteDoc = rewriteIframeRef.current?.contentDocument;
+
+                if (!baselineDoc?.body || !rewriteDoc?.body) {
+                    console.log('Documents not ready yet, retrying...');
+                    setTimeout(setupSyncScroll, 100);
+                    return;
+                }
+
+                console.log('Setting up synchronized scrolling...');
+
+                // Extract anchor points (headings) from both documents
+                const getAnchorPoints = (doc) => {
+                    const anchors = [];
+                    const headingTags = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
+
+                    // Get all headings
+                    headingTags.forEach(tag => {
+                        const elements = doc.getElementsByTagName(tag);
+                        for (let elem of elements) {
+                            const text = elem.textContent.trim().toLowerCase();
+                            const rect = elem.getBoundingClientRect();
+                            const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+
+                            anchors.push({
+                                text: text,
+                                offset: rect.top + scrollTop,
+                                element: elem
+                            });
+                        }
+                    });
+
+                    // Sort by offset
+                    anchors.sort((a, b) => a.offset - b.offset);
+
+                    return anchors;
+                };
+
+                const baselineAnchors = getAnchorPoints(baselineDoc);
+                const rewriteAnchors = getAnchorPoints(rewriteDoc);
+
+                console.log('Baseline anchors found:', baselineAnchors.length);
+                console.log('Rewrite anchors found:', rewriteAnchors.length);
+
+                // Match anchors between documents
+                const matchedAnchors = [];
+                baselineAnchors.forEach(baseAnchor => {
+                    // Find matching anchor in rewrite document
+                    const match = rewriteAnchors.find(rewAnchor => {
+                        // Match by text similarity
+                        return rewAnchor.text === baseAnchor.text ||
+                               rewAnchor.text.includes(baseAnchor.text) ||
+                               baseAnchor.text.includes(rewAnchor.text);
+                    });
+
+                    if (match) {
+                        matchedAnchors.push({
+                            baseline: baseAnchor,
+                            rewrite: match
+                        });
+                    }
+                });
+
+                console.log('Matched anchors:', matchedAnchors.length);
+
+                // Calculate synchronized scroll position
+                const getSyncedScrollPosition = (sourceScrollTop, sourceAnchors, targetAnchors, sourceMaxScroll, targetMaxScroll) => {
+                    if (matchedAnchors.length === 0) {
+                        // No anchors, use proportional scrolling
+                        const ratio = sourceScrollTop / sourceMaxScroll;
+                        return ratio * targetMaxScroll;
+                    }
+
+                    // Find which anchor section we're in
+                    let anchorIndex = 0;
+                    for (let i = 0; i < matchedAnchors.length; i++) {
+                        if (sourceScrollTop >= sourceAnchors[i].offset) {
+                            anchorIndex = i;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    // Calculate position within this section
+                    if (anchorIndex < matchedAnchors.length - 1) {
+                        // Between two anchors
+                        const currentAnchor = sourceAnchors[anchorIndex];
+                        const nextAnchor = sourceAnchors[anchorIndex + 1];
+                        const sectionHeight = nextAnchor.offset - currentAnchor.offset;
+                        const positionInSection = sourceScrollTop - currentAnchor.offset;
+                        const ratio = sectionHeight > 0 ? positionInSection / sectionHeight : 0;
+
+                        // Apply same ratio to target section
+                        const targetCurrentAnchor = targetAnchors[anchorIndex];
+                        const targetNextAnchor = targetAnchors[anchorIndex + 1];
+                        const targetSectionHeight = targetNextAnchor.offset - targetCurrentAnchor.offset;
+
+                        return targetCurrentAnchor.offset + (ratio * targetSectionHeight);
+                    } else {
+                        // After last anchor, use proportional scrolling
+                        const lastSourceAnchor = sourceAnchors[anchorIndex];
+                        const lastTargetAnchor = targetAnchors[anchorIndex];
+                        const remainingSource = sourceMaxScroll - lastSourceAnchor.offset;
+                        const remainingTarget = targetMaxScroll - lastTargetAnchor.offset;
+                        const positionAfterAnchor = sourceScrollTop - lastSourceAnchor.offset;
+                        const ratio = remainingSource > 0 ? positionAfterAnchor / remainingSource : 0;
+
+                        return lastTargetAnchor.offset + (ratio * remainingTarget);
+                    }
+                };
+
+                let isScrolling = false;
+
+                // Baseline iframe scroll handler
+                const handleBaselineScroll = () => {
+                    if (isScrolling) return;
+
+                    const scrollTop = baselineDoc.documentElement.scrollTop || baselineDoc.body.scrollTop;
+                    const baselineMaxScroll = baselineDoc.documentElement.scrollHeight - baselineDoc.documentElement.clientHeight;
+                    const rewriteMaxScroll = rewriteDoc.documentElement.scrollHeight - rewriteDoc.documentElement.clientHeight;
+
+                    const baselineAnchorOffsets = matchedAnchors.map(a => a.baseline);
+                    const rewriteAnchorOffsets = matchedAnchors.map(a => a.rewrite);
+
+                    const syncedPosition = getSyncedScrollPosition(
+                        scrollTop,
+                        baselineAnchorOffsets,
+                        rewriteAnchorOffsets,
+                        baselineMaxScroll,
+                        rewriteMaxScroll
+                    );
+
+                    isScrolling = true;
+                    rewriteDoc.documentElement.scrollTop = syncedPosition;
+                    rewriteDoc.body.scrollTop = syncedPosition;
+
+                    setTimeout(() => { isScrolling = false; }, 50);
+                };
+
+                // Rewrite iframe scroll handler
+                const handleRewriteScroll = () => {
+                    if (isScrolling) return;
+
+                    const scrollTop = rewriteDoc.documentElement.scrollTop || rewriteDoc.body.scrollTop;
+                    const rewriteMaxScroll = rewriteDoc.documentElement.scrollHeight - rewriteDoc.documentElement.clientHeight;
+                    const baselineMaxScroll = baselineDoc.documentElement.scrollHeight - baselineDoc.documentElement.clientHeight;
+
+                    const baselineAnchorOffsets = matchedAnchors.map(a => a.baseline);
+                    const rewriteAnchorOffsets = matchedAnchors.map(a => a.rewrite);
+
+                    const syncedPosition = getSyncedScrollPosition(
+                        scrollTop,
+                        rewriteAnchorOffsets,
+                        baselineAnchorOffsets,
+                        rewriteMaxScroll,
+                        baselineMaxScroll
+                    );
+
+                    isScrolling = true;
+                    baselineDoc.documentElement.scrollTop = syncedPosition;
+                    baselineDoc.body.scrollTop = syncedPosition;
+
+                    setTimeout(() => { isScrolling = false; }, 50);
+                };
+
+                // Add scroll listeners
+                baselineDoc.addEventListener('scroll', handleBaselineScroll);
+                rewriteDoc.addEventListener('scroll', handleRewriteScroll);
+
+                // Cleanup
+                return () => {
+                    baselineDoc.removeEventListener('scroll', handleBaselineScroll);
+                    rewriteDoc.removeEventListener('scroll', handleRewriteScroll);
+                };
+            } catch (error) {
+                console.error('Error setting up synchronized scrolling:', error);
+            }
+        };
+
+        // Start setup after a short delay to ensure iframes are fully loaded
+        const timeoutId = setTimeout(setupSyncScroll, 500);
+
+        return () => clearTimeout(timeoutId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [originalHtml, editedRewrittenHtml]);
 
     const handleRemoveAddition = (text) => {
         console.log('Removing addition:', text);
@@ -171,90 +368,150 @@ const OptimizedResume = () => {
         return withoutMarkdown.toLowerCase().replace(/\s+/g, ' ').trim();
     };
 
-    const splitIntoSentences = (text) => {
-        // Split text into sentences and clean them
-        return text
-            .split(/[.!?]+/)
-            .map(s => normalizeText(s))
-            .filter(s => s.length > 20); // Filter out very short fragments
+    // Extract words from text, preserving original form and position
+    const extractWords = (text) => {
+        // Split by whitespace and punctuation, but keep everything
+        return text.split(/(\s+)/).filter(part => part.trim().length > 0);
+    };
+
+    // Longest Common Subsequence algorithm for finding matching sequences
+    const computeLCS = (arr1, arr2, compareFunc) => {
+        const m = arr1.length;
+        const n = arr2.length;
+        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+        // Build LCS matrix
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                if (compareFunc(arr1[i - 1], arr2[j - 1])) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+
+        // Backtrack to find the actual LCS and positions
+        const lcs = [];
+        const positions1 = [];
+        const positions2 = [];
+        let i = m, j = n;
+
+        while (i > 0 && j > 0) {
+            if (compareFunc(arr1[i - 1], arr2[j - 1])) {
+                lcs.unshift(arr1[i - 1]);
+                positions1.unshift(i - 1);
+                positions2.unshift(j - 1);
+                i--;
+                j--;
+            } else if (dp[i - 1][j] > dp[i][j - 1]) {
+                i--;
+            } else {
+                j--;
+            }
+        }
+
+        return {lcs, positions1, positions2};
     };
 
     const findTextDifferences = (originalHtml, rewrittenHtml) => {
-        // Extract and normalize text content from both HTML documents
+        // Extract text content from both HTML documents
         const originalText = extractTextContent(originalHtml);
         const rewrittenText = extractTextContent(rewrittenHtml);
 
         console.log('Original text length:', originalText.length);
         console.log('Rewritten text length:', rewrittenText.length);
 
-        // Normalize for comparison
-        const originalNormalized = normalizeText(originalText);
+        // Extract all words from both documents
+        const originalWords = extractWords(originalText);
+        const rewrittenWords = extractWords(rewrittenText);
 
-        // Split into sentences for better comparison
-        const originalSentences = splitIntoSentences(originalText);
-        const rewrittenSentences = splitIntoSentences(rewrittenText);
+        console.log('Original words:', originalWords.length);
+        console.log('Rewritten words:', rewrittenWords.length);
 
-        console.log('Original sentences:', originalSentences.length);
-        console.log('Rewritten sentences:', rewrittenSentences.length);
+        // Compare function - words match if normalized versions are equal
+        const wordsMatch = (word1, word2) => {
+            const norm1 = normalizeText(word1);
+            const norm2 = normalizeText(word2);
+            // Only match if both are substantial words (length > 2)
+            if (norm1.length < 3 || norm2.length < 3) {
+                // For short words, require exact match
+                return word1.toLowerCase() === word2.toLowerCase();
+            }
+            return norm1 === norm2;
+        };
 
-        // Find phrases/sentences that appear in rewritten but not in original
-        const additions = [];
+        // Find longest common subsequence
+        const {positions1, positions2} = computeLCS(originalWords, rewrittenWords, wordsMatch);
+
+        console.log('LCS length:', positions1.length);
+
+        // Create sets of matched positions for quick lookup
+        const matchedInOriginal = new Set(positions1);
+        const matchedInRewritten = new Set(positions2);
+
+        // Find removals - words in original that aren't matched
         const removals = [];
+        let currentRemovalPhrase = [];
 
-        // Find additions - sentences in rewritten that don't exist in original
-        rewrittenSentences.forEach(sentence => {
-            // Check if this sentence exists in original
-            const existsInOriginal = originalSentences.some(orig => {
-                // Use similarity check - sentences are similar if one contains most of the other
-                const similarity = calculateSimilarity(orig, sentence);
-                return similarity > 0.8; // 80% similar
-            });
+        originalWords.forEach((word, index) => {
+            if (!matchedInOriginal.has(index)) {
+                // This word was removed
+                currentRemovalPhrase.push(word);
+            } else {
+                // This word was kept - flush any accumulated removals
+                if (currentRemovalPhrase.length > 0) {
+                    const phrase = currentRemovalPhrase.join(' ').trim();
+                    if (phrase.length > 0) {
+                        removals.push(phrase);
+                    }
+                    currentRemovalPhrase = [];
+                }
+            }
+        });
 
-            if (!existsInOriginal) {
-                // This is a genuinely new sentence
-                // Split into phrases for more granular highlighting
-                const phrases = sentence.split(/[,;]+/).map(p => p.trim()).filter(p => p.length > 15);
-                phrases.forEach(phrase => {
-                    // Check if phrase exists in original (normalized)
-                    if (!originalNormalized.includes(phrase)) {
+        // Don't forget the last phrase
+        if (currentRemovalPhrase.length > 0) {
+            const phrase = currentRemovalPhrase.join(' ').trim();
+            if (phrase.length > 0) {
+                removals.push(phrase);
+            }
+        }
+
+        // Find additions - words in rewritten that aren't matched
+        const additions = [];
+        let currentAdditionPhrase = [];
+
+        rewrittenWords.forEach((word, index) => {
+            if (!matchedInRewritten.has(index)) {
+                // This word was added
+                currentAdditionPhrase.push(word);
+            } else {
+                // This word existed - flush any accumulated additions
+                if (currentAdditionPhrase.length > 0) {
+                    const phrase = currentAdditionPhrase.join(' ').trim();
+                    if (phrase.length > 0) {
                         additions.push(phrase);
                     }
-                });
+                    currentAdditionPhrase = [];
+                }
             }
         });
 
-        // Find removals - sentences in original that don't exist in rewritten
-        originalSentences.forEach(sentence => {
-            const existsInRewritten = rewrittenSentences.some(rew => {
-                const similarity = calculateSimilarity(rew, sentence);
-                return similarity > 0.8;
-            });
-
-            if (!existsInRewritten) {
-                removals.push(sentence);
+        // Don't forget the last phrase
+        if (currentAdditionPhrase.length > 0) {
+            const phrase = currentAdditionPhrase.join(' ').trim();
+            if (phrase.length > 0) {
+                additions.push(phrase);
             }
-        });
+        }
 
         console.log('Total additions found:', additions.length);
         console.log('Total removals found:', removals.length);
-        console.log('Sample additions:', additions.slice(0, 5));
-        console.log('Sample removals:', removals.slice(0, 5));
+        console.log('Sample additions:', additions.slice(0, 10));
+        console.log('Sample removals:', removals.slice(0, 10));
 
         return {additions, removals};
-    };
-
-    const calculateSimilarity = (text1, text2) => {
-        // Calculate word-based similarity between two texts
-        const words1 = text1.split(' ').filter(w => w.length > 3);
-        const words2 = text2.split(' ').filter(w => w.length > 3);
-
-        if (words1.length === 0 || words2.length === 0) return 0;
-
-        // Count matching words
-        const matches = words1.filter(w => words2.includes(w)).length;
-        const maxLength = Math.max(words1.length, words2.length);
-
-        return matches / maxLength;
     };
 
     const highlightAdditions = (originalHtml, rewrittenHtml) => {
@@ -294,76 +551,103 @@ const OptimizedResume = () => {
         if (additions && additions.length > 0) {
             console.log('Applying highlighting for', additions.length, 'additions');
 
-            // Remove duplicates and sort by length (longest first)
+            // Remove duplicates and sort by length (longest first to prevent partial matches)
             const sortedAdditions = [...new Set(additions)]
-                .filter(phrase => phrase && phrase.trim().length > 10)
+                .filter(phrase => phrase && phrase.trim().length > 2)
                 .sort((a, b) => b.length - a.length);
 
             let highlightCount = 0;
+            const highlightedRanges = new Set(); // Track what we've already highlighted
 
             // Walk through all text nodes and highlight matching phrases
             const walkTextNodes = (node) => {
                 if (node.nodeType === Node.TEXT_NODE) {
                     const text = node.textContent;
-                    const normalizedText = normalizeText(text);
+                    let replacements = [];
 
                     // Check each addition phrase
                     for (const phrase of sortedAdditions) {
-                        if (normalizedText.includes(phrase)) {
-                            // Found a match - need to highlight it
-                            // Create a case-insensitive search for the original text
-                            const words = phrase.split(' ').filter(w => w.length > 3);
-                            if (words.length === 0) continue;
+                        // Create a case-insensitive regex to find the phrase
+                        // Escape special regex characters
+                        const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(escapedPhrase, 'gi');
 
-                            // Build regex to find the phrase in original casing
-                            const pattern = words.map(w => {
-                                // Escape special chars and match word boundaries
-                                const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                                return `\\b${escaped}\\w*`;
-                            }).join('\\s+');
+                        let match;
+                        while ((match = regex.exec(text)) !== null) {
+                            const start = match.index;
+                            const end = start + match[0].length;
+                            const rangeKey = `${start}-${end}`;
 
-                            const regex = new RegExp(`(${pattern})`, 'gi');
-                            const match = text.match(regex);
+                            // Check if this range overlaps with existing highlights
+                            let overlaps = false;
+                            for (const existing of highlightedRanges) {
+                                const [existStart, existEnd] = existing.split('-').map(Number);
+                                if ((start >= existStart && start < existEnd) ||
+                                    (end > existStart && end <= existEnd) ||
+                                    (start <= existStart && end >= existEnd)) {
+                                    overlaps = true;
+                                    break;
+                                }
+                            }
 
-                            if (match) {
-                                // Replace text node with highlighted version
-                                const span = document.createElement('span');
-                                span.className = 'change-highlight-add';
-
-                                // Split the text and wrap matched portion
-                                const parts = text.split(regex);
-                                const fragment = document.createDocumentFragment();
-
-                                // eslint-disable-next-line no-loop-func
-                                parts.forEach((part, index) => {
-                                    if (index % 2 === 0) {
-                                        // Regular text
-                                        if (part) fragment.appendChild(document.createTextNode(part));
-                                    } else {
-                                        // Matched text - highlight it
-                                        const highlightSpan = document.createElement('span');
-                                        highlightSpan.className = 'change-highlight-add';
-                                        highlightSpan.textContent = part;
-                                        fragment.appendChild(highlightSpan);
-                                        highlightCount++;
-                                    }
+                            if (!overlaps) {
+                                replacements.push({
+                                    start: start,
+                                    end: end,
+                                    text: match[0]
                                 });
-
-                                node.parentNode.replaceChild(fragment, node);
-                                break; // Move to next text node
+                                highlightedRanges.add(rangeKey);
                             }
                         }
+                    }
+
+                    if (replacements.length > 0) {
+                        // Sort by start position
+                        replacements.sort((a, b) => a.start - b.start);
+
+                        // Build the new content with highlights
+                        const fragment = document.createDocumentFragment();
+                        let lastIndex = 0;
+
+                        replacements.forEach(replacement => {
+                            // Add text before the match
+                            if (replacement.start > lastIndex) {
+                                fragment.appendChild(
+                                    document.createTextNode(text.substring(lastIndex, replacement.start))
+                                );
+                            }
+
+                            // Add highlighted match
+                            const highlightSpan = document.createElement('span');
+                            highlightSpan.className = 'change-highlight-add';
+                            highlightSpan.textContent = replacement.text;
+                            fragment.appendChild(highlightSpan);
+                            highlightCount++;
+
+                            lastIndex = replacement.end;
+                        });
+
+                        // Add remaining text
+                        if (lastIndex < text.length) {
+                            fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                        }
+
+                        node.parentNode.replaceChild(fragment, node);
+                        return true; // Indicate we modified this node
                     }
                 } else if (node.nodeType === Node.ELEMENT_NODE) {
                     // Don't highlight inside script or style tags
                     if (node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
-                        Array.from(node.childNodes).forEach(walkTextNodes);
+                        // Process children in reverse to avoid issues with DOM modification
+                        const children = Array.from(node.childNodes);
+                        children.forEach(child => walkTextNodes(child));
                     }
                 }
+                return false;
             };
 
             walkTextNodes(doc.body);
-            console.log('Total highlights applied:', highlightCount);
+            console.log('Total addition highlights applied:', highlightCount);
         } else {
             console.log('No additions found to highlight');
         }
@@ -420,68 +704,99 @@ const OptimizedResume = () => {
         if (removals && removals.length > 0) {
             console.log('Applying highlighting for', removals.length, 'removals');
 
-            // Remove duplicates and sort by length (longest first)
+            // Remove duplicates and sort by length (longest first to prevent partial matches)
             const sortedRemovals = [...new Set(removals)]
-                .filter(phrase => phrase && phrase.trim().length > 10)
+                .filter(phrase => phrase && phrase.trim().length > 2)
                 .sort((a, b) => b.length - a.length);
 
             let highlightCount = 0;
+            const highlightedRanges = new Set(); // Track what we've already highlighted
 
             // Walk through all text nodes and highlight matching phrases
             const walkTextNodes = (node) => {
                 if (node.nodeType === Node.TEXT_NODE) {
                     const text = node.textContent;
-                    const normalizedText = normalizeText(text);
+                    let replacements = [];
 
                     // Check each removal phrase
                     for (const phrase of sortedRemovals) {
-                        if (normalizedText.includes(phrase)) {
-                            // Found a match - need to highlight it
-                            // Create a case-insensitive search for the original text
-                            const words = phrase.split(' ').filter(w => w.length > 3);
-                            if (words.length === 0) continue;
+                        // Create a case-insensitive regex to find the phrase
+                        // Escape special regex characters
+                        const escapedPhrase = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(escapedPhrase, 'gi');
 
-                            // Build regex to find the phrase in original casing
-                            const pattern = words.map(w => {
-                                // Escape special chars and match word boundaries
-                                const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                                return `\\b${escaped}\\w*`;
-                            }).join('\\s+');
+                        let match;
+                        while ((match = regex.exec(text)) !== null) {
+                            const start = match.index;
+                            const end = start + match[0].length;
+                            const rangeKey = `${start}-${end}`;
 
-                            const regex = new RegExp(`(${pattern})`, 'gi');
-                            const match = text.match(regex);
+                            // Check if this range overlaps with existing highlights
+                            let overlaps = false;
+                            for (const existing of highlightedRanges) {
+                                const [existStart, existEnd] = existing.split('-').map(Number);
+                                if ((start >= existStart && start < existEnd) ||
+                                    (end > existStart && end <= existEnd) ||
+                                    (start <= existStart && end >= existEnd)) {
+                                    overlaps = true;
+                                    break;
+                                }
+                            }
 
-                            if (match) {
-                                // Replace text node with highlighted version
-                                const parts = text.split(regex);
-                                const fragment = document.createDocumentFragment();
-
-                                // eslint-disable-next-line no-loop-func
-                                parts.forEach((part, index) => {
-                                    if (index % 2 === 0) {
-                                        // Regular text
-                                        if (part) fragment.appendChild(document.createTextNode(part));
-                                    } else {
-                                        // Matched text - highlight it
-                                        const highlightSpan = document.createElement('span');
-                                        highlightSpan.className = 'change-highlight-remove';
-                                        highlightSpan.textContent = part;
-                                        fragment.appendChild(highlightSpan);
-                                        highlightCount++;
-                                    }
+                            if (!overlaps) {
+                                replacements.push({
+                                    start: start,
+                                    end: end,
+                                    text: match[0]
                                 });
-
-                                node.parentNode.replaceChild(fragment, node);
-                                break; // Move to next text node
+                                highlightedRanges.add(rangeKey);
                             }
                         }
+                    }
+
+                    if (replacements.length > 0) {
+                        // Sort by start position
+                        replacements.sort((a, b) => a.start - b.start);
+
+                        // Build the new content with highlights
+                        const fragment = document.createDocumentFragment();
+                        let lastIndex = 0;
+
+                        replacements.forEach(replacement => {
+                            // Add text before the match
+                            if (replacement.start > lastIndex) {
+                                fragment.appendChild(
+                                    document.createTextNode(text.substring(lastIndex, replacement.start))
+                                );
+                            }
+
+                            // Add highlighted match
+                            const highlightSpan = document.createElement('span');
+                            highlightSpan.className = 'change-highlight-remove';
+                            highlightSpan.textContent = replacement.text;
+                            fragment.appendChild(highlightSpan);
+                            highlightCount++;
+
+                            lastIndex = replacement.end;
+                        });
+
+                        // Add remaining text
+                        if (lastIndex < text.length) {
+                            fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+                        }
+
+                        node.parentNode.replaceChild(fragment, node);
+                        return true; // Indicate we modified this node
                     }
                 } else if (node.nodeType === Node.ELEMENT_NODE) {
                     // Don't highlight inside script or style tags
                     if (node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
-                        Array.from(node.childNodes).forEach(walkTextNodes);
+                        // Process children in reverse to avoid issues with DOM modification
+                        const children = Array.from(node.childNodes);
+                        children.forEach(child => walkTextNodes(child));
                     }
                 }
+                return false;
             };
 
             walkTextNodes(doc.body);
@@ -506,7 +821,10 @@ const OptimizedResume = () => {
     };
 
     const handleCancel = () => {
-        if (jobId) {
+        if (fromViewResume) {
+            // Return to ViewResume page
+            navigate(`/view-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
+        } else if (jobId) {
             navigate(`/job-details/${jobId}`);
         } else {
             navigate('/job-tracker');
@@ -522,7 +840,10 @@ const OptimizedResume = () => {
             });
 
             // Redirect without alert
-            if (jobId) {
+            if (fromViewResume) {
+                // Return to ViewResume page
+                navigate(`/view-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
+            } else if (jobId) {
                 navigate(`/job-details/${jobId}`);
             } else {
                 navigate('/resume');

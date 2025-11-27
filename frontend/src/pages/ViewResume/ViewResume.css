@@ -29,11 +29,54 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+  padding: 5px 10px;
+  transition: color 0.2s;
+}
+
+.back-button:hover {
+  color: #007bff;
+}
+
 .view-resume-header h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
   color: #333;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-right: 15px;
+  transition: background-color 0.2s;
+}
+
+.edit-button:hover {
+  background-color: #218838;
 }
 
 .download-button {

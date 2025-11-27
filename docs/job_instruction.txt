@@ -198,7 +198,6 @@ POST /v1/contact
     "contact_note": ""
 }
 
-
 # ===== Calendar =======================================================================================================
 
 The calendar section consists of 3 page views, the month view, the week view and daily view and additionally will have an appointment details page and an add/edit appointment page, for a total of 5 pages. The calendar page is accessed by clicking on "Calendar" from the main navigation menu and will replace the main display area with it's default view of the current month.
@@ -207,12 +206,104 @@ The calendar section consists of 3 page views, the month view, the week view and
 
 The month page starts like the rest, with the page title being "Calendar - month view" and the conditionally displayed arrow icon. Justified to the right is a button titled "+ Add Appointment". Directly below this row should have buttons for navigating through time, so a forward and back arrow button on each end for moving to the next or previous month.  Also have a button labeled "Week", which will switch to the week view calendar. Below the calendar navigation row it will display a grid for the current calendar month.  The current day should be highlighted with the background color of #fbffcd. Use a black color font to number each day of the month and use a light grey for days the bleed into the previous and next months.  The app will make a call to the API service to get scheduled appointments for the month
 
+# ======================================================================================================================
+
+Actually, the new algoritm for finding the diff from the original to rewritten resumes, is more like 20% accurate and not functional enough.  Every word matters and needs to be either matched (in sequence) or flagged as new or removed content.
+
+# ======================================================================================================================
+
+On the View Resume page, let's add another button to the left of the buttons on the top right of the page labeled "Edit".  When this button is clicked on, it will take the user to a new page titled "Manually Edit Resume".  On this page we're going to try something different.  We are going to embed the TinyMCE wysiwyg text editor into the page.  Create a new environment variable named "TINYMCE_API_KEY" and add it to the .env file for use and associate this value to that entry: "7qrgi9by3dbq7a1w58d4mdvcns386w3fmav69z9bnc6yibtd".  The application should make a call to the backend to retrieve the "resume_html_rewrite" value from the "resume_detail" table.  It will then load that content into the embedded editor.  Adjust the editor so that it has a save and cancel button.  The save button will update the same value in the DB from where we grabbed it.  Here's some code that will help you in this task.
+
+Procedure
+1. Use the Vite package and the React SWC plugin to create a new React project named tinymce-react-demo.
+
+# NPM 7+, extra double-dash is needed
+npm create vite@5 tinymce-react-demo -- --template react-swc
+
+2. Change to the newly created directory.
+
+cd tinymce-react-demo
+
+3. Install the @tinymce/tinymce-react package.
+
+npm install @tinymce/tinymce-react
+
+4. Using a text editor, open ./src/App.jsx and replace the contents with:
+
+import { useRef } from 'react';
+import { Editor } from '@tinymce/tinymce-react';
+import './App.css';
+
+export default function App() {
+  const editorRef = useRef(null);
+  const log = () => {
+    if (editorRef.current) {
+      console.log(editorRef.current.getContent());
+    }
+  };
+
+  return (
+    <>
+      <Editor
+        apiKey='no-api-key'
+        onInit={ (_evt, editor) => editorRef.current = editor }
+        initialValue="<p>This is the initial content of the editor.</p>"
+        init={{
+          height: 500,
+          menubar: false,
+          plugins: [
+            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+            'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+          ],
+          toolbar: 'undo redo | blocks | ' +
+            'bold italic forecolor | alignleft aligncenter ' +
+            'alignright alignjustify | bullist numlist outdent indent | ' +
+            'removeformat | help',
+          content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+        }}
+      />
+      <button onClick={log}>Log editor content</button>
+    </>
+  );
+}
+This JavaScript file will create a component “App” containing a TinyMCE editor configured with basic features.
+
+5. Update the apiKey option in the editor element and include your Tiny Cloud API key.
+
+# ======================================================================================================================
 
 
-# ===== Notes ==========================================================================================================
-# ===== Documents ======================================================================================================
-# ===== Resume =========================================================================================================
-# ===== Cover Letter ===================================================================================================
+
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
 
 
 

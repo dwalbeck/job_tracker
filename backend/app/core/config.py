@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 	allowed_origins: Union[List[str], str] = "*"
 
 	# AI Configuration
-	ai_model: str = "gpt-4o-mini"
+	ai_model: str = "gpt-4.1-mini"
 	openai_api_key: str
 	openai_project: str
 

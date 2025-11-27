@@ -1,43 +1,32 @@
-# Development Dockerfile for React application
-FROM ubuntu/nginx:1.18-22.04_beta
+FROM node:18-alpine as build
 
-RUN mkdir /var/www/jobtracker
-
-# Set working directory
-WORKDIR /var/www/jobtracker
-
-RUN apt update && apt install -y curl vim
-#    nodejs \
-#    npm \
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh && \
-    bash /tmp/nodesource_setup.sh && \
-    apt update && \
-    apt install -y nodejs && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY docker/portal.jobtracker.com.conf /etc/nginx/sites-available/portal.jobtracker.com.conf
 
-# Install all dependencies (including dev dependencies)
-RUN npm install && \
-    ln -s /etc/nginx/sites-available/portal.jobtracker.com.conf /etc/nginx/sites-enabled/portal.jobtracker.com.conf && \
-    rm /etc/nginx/sites-enabled/default && \
-    service nginx stop
+# Install dependencies
+RUN npm ci --only=production
 
 # Copy source code
 COPY . .
 
-# Copy entrypoint script
-#COPY docker-entrypoint.sh /usr/local/bin/
-#RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Build the app
 RUN npm run build
-#RUN npm run start
+
+# Production stage
+FROM nginx:alpine
+
+# Create directory and copy built app
+RUN mkdir -p /var/www/jobtracker/build
+COPY --from=build /app/build /var/www/jobtracker/build
+
+# Copy nginx configuration
+COPY docker/portal.jobtracker.com.conf /etc/nginx/conf.d/default.conf
 
 # Expose ports
-EXPOSE 80 3000
+EXPOSE 3000
+EXPOSE 80
 
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
-# Use entrypoint script
-#ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

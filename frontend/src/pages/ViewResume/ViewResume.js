@@ -86,6 +86,25 @@ const ViewResume = () => {
         setActiveTab(tab);
     };
 
+    const handleCompareClick = () => {
+        // Navigate to OptimizedResume with state indicating we came from ViewResume
+        navigate(`/optimized-resume/${resumeId}`, {
+            state: {
+                resumeHtml: resumeDetail?.resume_html,
+                resumeHtmlRewrite: resumeDetail?.resume_html_rewrite,
+                baselineScore: resumeDetail?.baseline_score || 0,
+                rewriteScore: resumeDetail?.rewrite_score || 0,
+                jobId: jobId,
+                fromViewResume: true  // Flag to indicate we came from ViewResume
+            }
+        });
+    };
+
+    const handleEditClick = () => {
+        // Navigate to ManuallyEditResume page
+        navigate(`/manually-edit-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
+    };
+
     const renderKeywords = () => {
         if (!resumeDetail) return null;
 
@@ -205,6 +224,12 @@ const ViewResume = () => {
                 </div>
                 <div className="header-controls">
                     <button
+                        onClick={handleEditClick}
+                        className="edit-button"
+                    >
+                        Edit
+                    </button>
+                    <button
                         onClick={() => handleDownload('odt')}
                         className="download-button"
                         disabled={downloading}
@@ -254,6 +279,14 @@ const ViewResume = () => {
                 >
                     View Keyword Lists
                 </div>
+                {resumeDetail?.resume_html_rewrite && (
+                    <div
+                        className="tab-item"
+                        onClick={handleCompareClick}
+                    >
+                        Compare
+                    </div>
+                )}
             </div>
 
             <div className="view-resume-content">

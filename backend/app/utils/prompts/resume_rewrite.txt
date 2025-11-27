@@ -26,13 +26,13 @@ RESUME JOB TITLE LINE #:
 
 GUIDELINES:
 1. **Keyword Optimization**:
-    - Augment experiences in the job history section to add KEYWORDS to
-    - Integrate the KEYWORDS from the provided list into job tasks descriptions in job history
+    - Integrate the KEYWORDS from the provided list by augmenting job tasks descriptions in job history
     - Insure that KEYWORDS placement makes sense in the sentence and has natural flow
     - KEYWORDS that are technologies should not be placed where they clash with other incompatible technologies mentioned
-    - Use each of the given KEYWORDS at least once within the resume
-    - FOCUS keyword list should have each entry used at least three times within the resume
-   
+    - Use each of the given KEYWORDS at least once within the resume where they naturally fit
+    - FOCUS keyword list should have each entry used 2-3 times within the resume
+    - Don't fabricate job history, only enhance existing descriptions
+    
 2. **Job Position Title**:
     - The same job position title used in the job description, should be used as the job title in the resume
     - Use the "RESUME JOB TITLE" and "RESUME JOB TITLE LINE #" values (if set) to correctly identify and replace with "JOB TITLE" value
