@@ -1,11 +1,13 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
+import {Editor} from '@tinymce/tinymce-react';
 import apiService from '../../services/api';
 import './CreateCoverLetter.css';
 
 const CreateCoverLetter = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const editorRef = useRef(null);
     const [jobListings, setJobListings] = useState([]);
     const [selectedJobId, setSelectedJobId] = useState('');
     const [resumeId, setResumeId] = useState('');
@@ -149,6 +151,9 @@ const CreateCoverLetter = () => {
             return;
         }
 
+        // Get content from TinyMCE editor
+        const content = editorRef.current ? editorRef.current.getContent() : letterContent;
+
         try {
             await apiService.saveLetter({
                 cover_id: coverId,
@@ -157,11 +162,12 @@ const CreateCoverLetter = () => {
                 letter_length: length,
                 letter_tone: tone,
                 instruction: instruction,
-                letter_content: letterContent
+                letter_content: content
             });
 
+            setLetterContent(content);
             setIsEditing(false);
-            setOriginalLetterContent(letterContent);
+            setOriginalLetterContent(content);
         } catch (error) {
             console.error('Error saving cover letter:', error);
             alert('Failed to save cover letter. Please try again.');
@@ -386,11 +392,29 @@ const CreateCoverLetter = () => {
 
                     <div className="preview-container">
                         {isEditing ? (
-                            <textarea
-                                className="preview-textarea"
-                                value={letterContent}
-                                onChange={(e) => setLetterContent(e.target.value)}
-                            />
+                            <div className="editor-wrapper">
+                                <Editor
+                                    apiKey={process.env.REACT_APP_TINYMCE_API_KEY}
+                                    onInit={(_evt, editor) => editorRef.current = editor}
+                                    initialValue={letterContent}
+                                    init={{
+                                        height: 500,
+                                        menubar: true,
+                                        plugins: [
+                                            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                                            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                                            'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                                        ],
+                                        toolbar: 'undo redo | blocks | ' +
+                                            'bold italic forecolor | alignleft aligncenter ' +
+                                            'alignright alignjustify | bullist numlist outdent indent | ' +
+                                            'removeformat | help',
+                                        content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                                        branding: false,
+                                        resize: true
+                                    }}
+                                />
+                            </div>
                         ) : letterContent ? (
                             <iframe
                                 className="preview-iframe"

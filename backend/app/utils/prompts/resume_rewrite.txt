@@ -32,6 +32,7 @@ GUIDELINES:
     - Use each of the given KEYWORDS at least once within the resume where they naturally fit
     - FOCUS keyword list should have each entry used 2-3 times within the resume
     - Don't fabricate job history, only enhance existing descriptions
+    - Precise purposeful minimal changes are more effective
     
 2. **Job Position Title**:
     - The same job position title used in the job description, should be used as the job title in the resume
