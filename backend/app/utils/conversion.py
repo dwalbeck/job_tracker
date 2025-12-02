@@ -689,7 +689,7 @@ class Conversion:
 
     # HTML to DOCX conversion (legacy method, keeping for backwards compatibility)
     @classmethod
-    def html2docx(cls, job_id: int, db) -> dict:
+    def html2docx_from_job(cls, job_id: int, db) -> dict:
         """
         Convert resume HTML to DOCX format for a specific job.
 
@@ -736,6 +736,12 @@ class Conversion:
             original_file_name = result.file_name
             resume_id = result.resume_id
 
+            logger.debug(f"Legacy HTML to DOCX conversion", job_id=job_id, html_length=len(html_content) if html_content else 0)
+
+            # Check if HTML content is empty
+            if not html_content or not html_content.strip():
+                raise ValueError(f"No rewritten HTML content found for job_id {job_id}")
+
             # Remove file extension from original filename
             if '.' in original_file_name:
                 base_name = original_file_name.rsplit('.', 1)[0]
@@ -745,28 +751,30 @@ class Conversion:
             # Create new filename with -tailored.docx suffix
             new_file_name = f"{base_name}-tailored.docx"
 
-            # Convert HTML to DOCX
-            docx_file = html2docx(html_content, title="Resume")
-
-            # Write DOCX file to resume directory
+            # Convert HTML to DOCX using python-docx directly
             file_path = cls._get_file_path(new_file_name)
 
-            # Save the document
-            with open(file_path, 'wb') as f:
-                docx_file.save(f)
+            # Convert and get cleaned HTML
+            cleaned_html = cls._html_to_docx_direct(html_content, file_path)
 
-            # Update resume_detail with the new filename
+            logger.info(f"Converted using python-docx successfully")
+
+            # Update resume_detail with the cleaned HTML and new filename
             update_query = text("""
                 UPDATE resume_detail
-                SET rewrite_file_name = :file_name
+                SET resume_html_rewrite = :cleaned_html,
+                    rewrite_file_name = :file_name
                 WHERE resume_id = :resume_id
             """)
 
             db.execute(update_query, {
+                "cleaned_html": cleaned_html,
                 "file_name": new_file_name,
                 "resume_id": resume_id
             })
             db.commit()
+
+            logger.info(f"Updated resume_html_rewrite with cleaned HTML")
 
             return {"file_name": new_file_name}
 
@@ -774,3 +782,269 @@ class Conversion:
             raise
         except Exception as e:
             raise Exception(f"Error converting HTML to DOCX: {str(e)}")
+
+
+    @classmethod
+    def _html_to_docx_direct(cls, html_content: str, output_path: Path) -> str:
+        """
+        Convert HTML to DOCX using python-docx directly for better control.
+
+        Args:
+            html_content: HTML string to convert
+            output_path: Path where the DOCX file will be saved
+
+        Returns:
+            Cleaned HTML string (for database storage)
+        """
+        from bs4 import BeautifulSoup
+        from docx import Document
+        from docx.shared import Pt, RGBColor
+        from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+
+        # Clean the HTML first
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Remove problematic elements
+        for tag in soup.find_all(['script', 'meta', 'title', 'style']):
+            tag.decompose()
+
+        # Remove wrapper divs with class attributes
+        for div in soup.find_all('div', class_=True):
+            div.unwrap()
+
+        # Process diff tags
+        for ins_tag in soup.find_all('ins'):
+            ins_tag.unwrap()
+        for del_tag in soup.find_all('del'):
+            del_tag.decompose()
+
+        # Create a new Document
+        doc = Document()
+
+        # Process the HTML elements
+        def process_element(element, doc):
+            """Recursively process HTML elements and add to document"""
+            if element.name == 'h1':
+                p = doc.add_heading(element.get_text().strip(), level=1)
+            elif element.name == 'h2':
+                p = doc.add_heading(element.get_text().strip(), level=2)
+            elif element.name == 'h3':
+                p = doc.add_heading(element.get_text().strip(), level=3)
+            elif element.name == 'p':
+                text = element.get_text().strip()
+                if text:
+                    # Check for text-based bullets in the paragraph
+                    lines = text.split('\n')
+                    bullet_lines = [line.strip() for line in lines if line.strip().startswith('- ')]
+                    non_bullet_lines = [line.strip() for line in lines if line.strip() and not line.strip().startswith('- ')]
+
+                    # Add non-bullet content first
+                    if non_bullet_lines:
+                        doc.add_paragraph('\n'.join(non_bullet_lines))
+
+                    # Add bullets
+                    for bullet in bullet_lines:
+                        doc.add_paragraph(bullet[2:], style='List Bullet')
+            elif element.name == 'ul':
+                for li in element.find_all('li', recursive=False):
+                    doc.add_paragraph(li.get_text().strip(), style='List Bullet')
+            elif element.name == 'ol':
+                for li in element.find_all('li', recursive=False):
+                    doc.add_paragraph(li.get_text().strip(), style='List Number')
+            elif element.name == 'hr':
+                doc.add_paragraph('_' * 50)
+            elif element.name in ['strong', 'b', 'em', 'i', 'a']:
+                # These will be handled by parent paragraph
+                pass
+            elif hasattr(element, 'children'):
+                for child in element.children:
+                    if hasattr(child, 'name'):
+                        process_element(child, doc)
+
+        # Get body or root element
+        body = soup.find('body')
+        root = body if body else soup
+
+        # Process all top-level elements
+        for element in root.children:
+            if hasattr(element, 'name'):
+                process_element(element, doc)
+
+        # Save the document
+        doc.save(str(output_path))
+
+        # Return cleaned HTML for database
+        return str(soup)
+
+    @classmethod
+    def _clean_html_for_docx(cls, html_content: str) -> str:
+        """
+        Clean HTML using BeautifulSoup for proper parsing and structure.
+        Preserves CSS for WeasyPrint PDF generation.
+
+        Args:
+            html_content: Raw HTML content
+
+        Returns:
+            Cleaned, well-formed HTML string
+        """
+        from bs4 import BeautifulSoup
+
+        # Parse the HTML (use html.parser to avoid lxml adding extra tags)
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Remove problematic elements (keep style for PDF generation)
+        for tag in soup.find_all(['script', 'meta', 'title']):
+            tag.decompose()
+
+        # Remove wrapper divs that have class attributes (from diff output)
+        for div in soup.find_all('div', class_=True):
+            # Unwrap the div (keep content, remove the div tag)
+            div.unwrap()
+
+        # Process diff tags (ins/del from htmldiff)
+        # Replace <ins> with its text content (accepted additions)
+        for ins_tag in soup.find_all('ins'):
+            ins_tag.unwrap()
+
+        # Remove <del> completely (rejected deletions)
+        for del_tag in soup.find_all('del'):
+            del_tag.decompose()
+
+        return str(soup)
+
+    # New HTML conversion methods for /convert/final endpoint
+    @classmethod
+    def html2docx(cls, html_content: str, output_filename: str) -> tuple[Path, str]:
+        """
+        Convert HTML content to DOCX format using python-docx directly.
+
+        Args:
+            html_content: HTML string to convert
+            output_filename: Name for the output DOCX file
+
+        Returns:
+            Tuple of (Path to created DOCX file, cleaned HTML string)
+
+        Raises:
+            Exception: If conversion fails
+        """
+        try:
+            # Log the HTML content length for debugging
+            logger.debug(f"HTML content length before cleaning", length=len(html_content) if html_content else 0)
+
+            # Check if HTML content is empty or None
+            if not html_content or not html_content.strip():
+                raise Exception("HTML content is empty or None")
+
+            # Write DOCX file to resume directory
+            file_path = cls._get_file_path(output_filename)
+
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            # Convert HTML to DOCX using python-docx directly
+            cleaned_html = cls._html_to_docx_direct(html_content, file_path)
+
+            logger.info(f"HTML to DOCX conversion completed using python-docx", output_file=output_filename)
+
+            return file_path, cleaned_html
+
+        except Exception as e:
+            logger.error(f"Error converting HTML to DOCX", error=str(e), output_filename=output_filename)
+            raise Exception(f"Error converting HTML to DOCX: {str(e)}")
+
+
+    @classmethod
+    def html2pdf(cls, html_content: str, output_filename: str) -> Path:
+        """
+        Convert HTML content to PDF format using WeasyPrint.
+        WeasyPrint honors CSS, so styles will be preserved.
+
+        Args:
+            html_content: HTML string to convert
+            output_filename: Name for the output PDF file
+
+        Returns:
+            Path to the created PDF file
+
+        Raises:
+            Exception: If conversion fails
+        """
+        try:
+            from weasyprint import HTML
+
+            # Clean HTML but preserve CSS (WeasyPrint honors it)
+            cleaned_html = cls._clean_html_for_docx(html_content)
+
+            # Write PDF file to resume directory
+            file_path = cls._get_file_path(output_filename)
+
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            # Convert HTML to PDF (WeasyPrint honors CSS styles)
+            HTML(string=cleaned_html).write_pdf(str(file_path))
+
+            logger.info(f"HTML to PDF conversion completed", output_file=output_filename)
+            return file_path
+
+        except Exception as e:
+            logger.error(f"Error converting HTML to PDF", error=str(e))
+            raise Exception(f"Error converting HTML to PDF: {str(e)}")
+
+
+    @classmethod
+    def html2odt(cls, html_content: str, output_filename: str) -> Path:
+        """
+        Convert HTML content to ODT format using pandoc.
+
+        Args:
+            html_content: HTML string to convert
+            output_filename: Name for the output ODT file
+
+        Returns:
+            Path to the created ODT file
+
+        Raises:
+            Exception: If conversion fails
+        """
+        try:
+            import tempfile
+            import subprocess
+
+            # Create temporary HTML file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as temp_html:
+                temp_html.write(html_content)
+                temp_html_path = temp_html.name
+
+            # Get output file path
+            file_path = cls._get_file_path(output_filename)
+
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            try:
+                # Use pandoc to convert HTML to ODT
+                subprocess.run(
+                    ['pandoc', temp_html_path, '-o', str(file_path)],
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+
+                logger.info(f"HTML to ODT conversion completed", output_file=output_filename)
+                return file_path
+
+            finally:
+                # Clean up temporary HTML file
+                if os.path.exists(temp_html_path):
+                    os.unlink(temp_html_path)
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Pandoc conversion failed", error=e.stderr)
+            raise Exception(f"Error converting HTML to ODT: {e.stderr}")
+        except Exception as e:
+            logger.error(f"Error converting HTML to ODT", error=str(e))
+            raise Exception(f"Error converting HTML to ODT: {str(e)}")
+

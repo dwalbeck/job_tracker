@@ -1,6 +1,5 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {useParams, useNavigate, useLocation} from 'react-router-dom';
-import ReactDiffViewer from 'react-diff-viewer-continued';
 import HtmlDiff from 'htmldiff-js';
 import apiService from '../../services/api';
 import './OptimizedResume.css';
@@ -12,33 +11,140 @@ const OptimizedResume = () => {
 
     const [baselineScore, setBaselineScore] = useState(0);
     const [rewriteScore, setRewriteScore] = useState(0);
-    const [originalText, setOriginalText] = useState('');
-    const [rewrittenText, setRewrittenText] = useState('');
-    const [originalHtml, setOriginalHtml] = useState('');
-    const [rewrittenHtml, setRewrittenHtml] = useState('');
     const [htmlDiff, setHtmlDiff] = useState('');
-    const [viewMode, setViewMode] = useState('rendered'); // 'rendered' or 'source'
     const [changeStates, setChangeStates] = useState({}); // Track accepted/rejected changes
     const [jobId, setJobId] = useState(null);
     const [fromViewResume, setFromViewResume] = useState(false);
     const diffContainerRef = useRef(null);
+
+    // Helper function to remove embedded style tags
+    const processEmbeddedStyles = (html) => {
+        if (!html) return '';
+
+        // Remove all <style> tags completely (html2docx doesn't use CSS and renders them as text)
+        return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    };
+
+    // Helper function to convert text-based bullets into HTML lists
+    const convertBulletsToLists = (html) => {
+        if (!html) return '';
+
+        // Process each paragraph that contains bullet lists
+        return html.replace(/(<p[^>]*>)([\s\S]*?)(<\/p>)/gi, (match, openTag, content, closeTag) => {
+            // Check if this paragraph contains bullets: <br>- or <br>-&nbsp;
+            const hasBullets = /<br\s*\/?>\s*-\s*(&nbsp;)?/i.test(content);
+
+            if (!hasBullets) {
+                return match; // No bullets, return unchanged
+            }
+
+            // Split content by the bullet pattern to identify list items
+            const bulletPattern = /(<br\s*\/?>\s*-\s*(?:&nbsp;)?)/gi;
+            const parts = content.split(bulletPattern);
+
+            let result = '';
+            let inList = false;
+            let listItems = [];
+
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+
+                // Check if this part is a bullet marker
+                if (bulletPattern.test(part)) {
+                    if (!inList) {
+                        // First bullet item - add <br> to end of preceding text if there is any
+                        if (result.trim()) {
+                            result += '<br>';
+                        }
+                        inList = true;
+                        listItems = [];
+                    }
+                    // Skip the bullet marker itself, we'll add proper list tags
+                    continue;
+                }
+
+                if (inList) {
+                    // This is list item content
+                    listItems.push(part.trim());
+                } else {
+                    // This is content before the first bullet
+                    result += part;
+                }
+            }
+
+            // If we found list items, wrap them in <ul>
+            if (inList && listItems.length > 0) {
+                result += '<ul>';
+                listItems.forEach(item => {
+                    if (item) {
+                        result += `<li>${item}</li>`;
+                    }
+                });
+                result += '</ul>';
+            }
+
+            // Return with opening tag and closing paragraph tag
+            return openTag + result + closeTag;
+        });
+    };
+
+    // Helper function to remove unwanted <br /> tags while preserving bullet list breaks
+    const removeUnwantedBreaks = (html) => {
+        if (!html) return '';
+
+        // Split by <br /> tags to analyze context
+        const parts = html.split(/(<br\s*\/?>)/gi);
+        let result = '';
+
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+
+            // If this is a <br /> tag, decide whether to keep it
+            if (/<br\s*\/?>/i.test(part)) {
+                const prevPart = i > 0 ? parts[i - 1] : '';
+                const nextPart = i < parts.length - 1 ? parts[i + 1] : '';
+
+                // Extract text content around the break (strip HTML tags)
+                const prevText = prevPart.replace(/<[^>]*>/g, '').trim();
+                const nextText = nextPart.replace(/<[^>]*>/g, '').trim();
+
+                // Keep the <br /> if:
+                // 1. Current line (before break) starts with "- " (has a bullet)
+                // 2. OR next line (after break) starts with "- " (next line has a bullet)
+                const keepBreak = prevText.startsWith('- ') || nextText.startsWith('- ');
+
+                if (keepBreak) {
+                    result += part;
+                }
+                // Otherwise, skip the <br /> tag (don't add it to result)
+            } else {
+                // Not a <br /> tag, keep the content
+                result += part;
+            }
+        }
+
+        return result;
+    };
 
     useEffect(() => {
         if (location.state) {
             const origHtml = location.state.resumeHtml || '';
             const rewrHtml = location.state.resumeHtmlRewrite || '';
 
-            // Store original HTML for rendered view
-            setOriginalHtml(origHtml);
-            setRewrittenHtml(rewrHtml);
-
-            // Format HTML for source diff view
-            setOriginalText(formatHtmlForDiff(origHtml));
-            setRewrittenText(formatHtmlForDiff(rewrHtml));
-
             // Generate HTML diff with inline highlights
+            // 1. Remove width-constraining styles
+            // 2. Convert text bullets (<br>- item) to HTML lists (<ul><li>item</li></ul>)
+            // 3. Remove unwanted <br /> tags (remaining breaks in non-list content)
             try {
-                const diff = HtmlDiff.execute(origHtml, rewrHtml);
+                let processedOrigHtml = processEmbeddedStyles(origHtml);
+                processedOrigHtml = convertBulletsToLists(processedOrigHtml);
+                processedOrigHtml = removeUnwantedBreaks(processedOrigHtml);
+
+                let processedRewrHtml = processEmbeddedStyles(rewrHtml);
+                processedRewrHtml = convertBulletsToLists(processedRewrHtml);
+                processedRewrHtml = removeUnwantedBreaks(processedRewrHtml);
+
+                const diff = HtmlDiff.execute(processedOrigHtml, processedRewrHtml);
                 setHtmlDiff(diff);
             } catch (error) {
                 console.error('Error generating HTML diff:', error);
@@ -54,7 +160,7 @@ const OptimizedResume = () => {
 
     // Make diff changes interactive
     useEffect(() => {
-        if (viewMode === 'rendered' && diffContainerRef.current) {
+        if (diffContainerRef.current) {
             const container = diffContainerRef.current;
 
             // Find all ins and del elements
@@ -80,7 +186,7 @@ const OptimizedResume = () => {
                 el.onclick = () => toggleChange(changeId, 'del', el);
             });
         }
-    }, [htmlDiff, viewMode]);
+    }, [htmlDiff]);
 
     const toggleChange = (changeId, changeType, element) => {
         setChangeStates(prev => {
@@ -117,23 +223,6 @@ const OptimizedResume = () => {
         });
     };
 
-    // Format HTML for better diffing - preserve structure but make it more readable
-    const formatHtmlForDiff = (html) => {
-        if (!html) return '';
-
-        // Add newlines after block-level closing tags for better line-by-line comparison
-        let formatted = html
-            // Block level elements - add newlines
-            .replace(/<\/(p|div|h[1-6]|li|ul|ol|section|article|header|footer|table|tr|td|th)>/gi, '</$1>\n')
-            // Opening block elements
-            .replace(/<(p|div|h[1-6]|li|ul|ol|section|article|header|footer|table|tr|td|th)[^>]*>/gi, '\n<$1>')
-            // Clean up multiple newlines
-            .replace(/\n\s*\n/g, '\n')
-            .trim();
-
-        return formatted;
-    };
-
     const handleCancel = () => {
         if (fromViewResume) {
             navigate(`/view-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
@@ -145,7 +234,7 @@ const OptimizedResume = () => {
     };
 
     const reconstructHtml = () => {
-        if (!diffContainerRef.current) return rewrittenHtml;
+        if (!diffContainerRef.current) return htmlDiff;
 
         // Clone the diff container to work with
         const clone = diffContainerRef.current.cloneNode(true);
@@ -224,80 +313,18 @@ const OptimizedResume = () => {
                 </div>
             </div>
 
-            <div className="view-mode-tabs">
-                <button
-                    className={`tab-button ${viewMode === 'rendered' ? 'active' : ''}`}
-                    onClick={() => setViewMode('rendered')}
-                >
-                    Rendered View
-                </button>
-                <button
-                    className={`tab-button ${viewMode === 'source' ? 'active' : ''}`}
-                    onClick={() => setViewMode('source')}
-                >
-                    Source View
-                </button>
+            <div className="diff-help-text">
+                Click on any highlighted change to toggle it. Green = additions, Red with strikethrough = deletions.
+                Clicking toggles between accepting and rejecting each change.
             </div>
 
-            {viewMode === 'rendered' && (
-                <div className="diff-help-text">
-                    Click on any highlighted change to toggle it. Green = additions, Red with strikethrough = deletions.
-                    Clicking toggles between accepting and rejecting each change.
-                </div>
-            )}
-
             <div className="diff-container">
-                {viewMode === 'rendered' ? (
-                    <div className="rendered-diff-container" ref={diffContainerRef}>
-                        <div
-                            className="html-diff-content"
-                            dangerouslySetInnerHTML={{__html: htmlDiff}}
-                        />
-                    </div>
-                ) : (
-                    <ReactDiffViewer
-                        oldValue={originalText}
-                        newValue={rewrittenText}
-                        splitView={true}
-                        compareMethod="diffWordsWithSpace"
-                        useDarkTheme={false}
-                        leftTitle="Baseline Resume (Source)"
-                        rightTitle="Optimized Resume (Source)"
-                        styles={{
-                            variables: {
-                                light: {
-                                    diffViewerBackground: '#fff',
-                                    addedBackground: '#d4edda',
-                                    addedColor: '#155724',
-                                    removedBackground: '#f8d7da',
-                                    removedColor: '#721c24',
-                                    wordAddedBackground: '#a6f3a6',
-                                    wordRemovedBackground: '#ffa8a8',
-                                    gutterBackground: '#f7f7f7',
-                                    gutterColor: '#666',
-                                    codeFoldBackground: '#f1f1f1',
-                                    emptyLineBackground: '#fafafa',
-                                    highlightBackground: '#fffbdd',
-                                    highlightGutterBackground: '#ffcd3c',
-                                }
-                            },
-                            line: {
-                                padding: '10px 2px',
-                                fontSize: '14px',
-                                lineHeight: '1.6',
-                                fontFamily: 'Arial, sans-serif'
-                            },
-                            gutter: {
-                                padding: '10px 8px',
-                                minWidth: '50px'
-                            },
-                            diffContainer: {
-                                marginBottom: '20px'
-                            }
-                        }}
-                        showDiffOnly={false}
+                <div className="rendered-diff-container" ref={diffContainerRef}>
+                    <div
+                        className="html-diff-content"
+                        dangerouslySetInnerHTML={{__html: htmlDiff}}
                     />
-                )}
+                </div>
             </div>
 
             <div className="button-container">

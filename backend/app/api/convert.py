@@ -11,7 +11,6 @@ from ..core.config import settings
 from ..utils.conversion import Conversion
 from ..utils.logger import logger
 
-
 router = APIRouter()
 
 
@@ -158,12 +157,12 @@ class Html2DocxResponse(BaseModel):
 @router.get("/convert/html2docx", response_model=Html2DocxResponse)
 async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
 	"""
-	Convert resume markdown to DOCX format for a specific job.
+	Convert resume HTML to DOCX format for a specific job.
 
 	This endpoint checks if the conversion has already been performed by
 	looking at the resume_detail.rewrite_file_name field. If the file
 	already exists, it returns the existing filename. Otherwise, it
-	performs the conversion from markdown to DOCX and returns the new filename.
+	performs the conversion from HTML to DOCX and returns the new filename.
 
 	Query parameters:
 	- job_id: ID of the job
@@ -171,13 +170,13 @@ async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
 	Returns:
 	- file_name: Name of the generated DOCX file
 	"""
-	logger.info(f"Markdown to DOCX conversion requested", job_id=job_id)
+	logger.info(f"HTML to DOCX conversion requested", job_id=job_id)
 
 	# Step 0: Retrieve first and last name
 	query = text("""SELECT first_name, last_name
-					FROM personal
-					WHERE first_name IS NOT NULL
-					LIMIT 1""")
+                    FROM personal
+                    WHERE first_name IS NOT NULL
+                    LIMIT 1""")
 	personal_result = db.execute(query).first()
 	if not personal_result:
 		logger.error("Failed to retrieve first_name and last_name from personal")
@@ -188,11 +187,11 @@ async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
 	try:
 		# Check if conversion already exists
 		check_query = text("""
-			SELECT rd.rewrite_file_name, rd.resume_id
-			FROM job j
-			JOIN resume_detail rd ON (j.resume_id = rd.resume_id)
-			WHERE j.job_id = :job_id
-		""")
+                           SELECT rd.rewrite_file_name, rd.resume_id
+                           FROM job j
+                                    JOIN resume_detail rd ON (j.resume_id = rd.resume_id)
+                           WHERE j.job_id = :job_id
+		                   """)
 
 		result = db.execute(check_query, {"job_id": job_id}).first()
 
@@ -201,34 +200,26 @@ async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
 			raise HTTPException(status_code=404, detail="No resume associated with this job")
 
 		# If rewrite_file_name already exists, check if file actually exists
-		with open('/tmp/convert_debug.log', 'a') as f:
-			f.write(f"DEBUG ENDPOINT: rewrite_file_name = {result.rewrite_file_name}\n")
+		logger.debug(f"DB value for rewrite filename:", rewrite_file_name=result.rewrite_file_name)
 		if result.rewrite_file_name:
 			# Check if file actually exists
 			file_path = os.path.join('/app', settings.base_job_file_path, 'resumes', result.rewrite_file_name)
-			with open('/tmp/convert_debug.log', 'a') as f:
-				f.write(f"DEBUG ENDPOINT: Checking if file exists at {file_path}\n")
-				f.write(f"DEBUG ENDPOINT: File exists: {os.path.exists(file_path)}\n")
+			logger.debug(f"Checking if file exists at {file_path}\n")
+			logger.debug(f"File exists: {os.path.exists(file_path)}\n")
 			if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-				with open('/tmp/convert_debug.log', 'a') as f:
-					f.write(f"DEBUG ENDPOINT: Returning cached filename (file exists)\n")
 				logger.debug(f"Using existing DOCX file", file_name=result.rewrite_file_name, job_id=job_id)
 				Conversion.pageFormatting(result.rewrite_file_name, full_name)
 				return Html2DocxResponse(file_name=result.rewrite_file_name)
 			else:
-				with open('/tmp/convert_debug.log', 'a') as f:
-					f.write(f"DEBUG ENDPOINT: File doesn't exist or is empty, regenerating\n")
+				logger.debug(f"File doesn't exist or is empty, regenerating\n")
 
-		# Otherwise, perform the conversion from markdown to DOCX
-		with open('/tmp/convert_debug.log', 'a') as f:
-			f.write(f"DEBUG ENDPOINT: About to call md2docx_from_job\n")
-		logger.debug(f"Performing Markdown to DOCX conversion", job_id=job_id)
-		conversion_result = Conversion.md2docx_from_job(job_id, db)
-		with open('/tmp/convert_debug.log', 'a') as f:
-			f.write(f"DEBUG ENDPOINT: md2docx_from_job returned {conversion_result}\n")
+		# Otherwise, perform the conversion from HTML to DOCX
+		logger.debug(f"Performing HTML to DOCX conversion", job_id=job_id)
+		conversion_result = Conversion.html2docx_from_job(job_id, db)
+		logger.debug(f"html2docx_from_job returned {conversion_result}\n")
 
 		logger.log_database_operation("UPDATE", "resume_detail", result.resume_id)
-		logger.info(f"Markdown to DOCX conversion completed", job_id=job_id, file_name=conversion_result['file_name'])
+		logger.info(f"HTML to DOCX conversion completed", job_id=job_id, file_name=conversion_result['file_name'])
 
 		if Conversion.pageFormatting(conversion_result['file_name'], full_name):
 			logger.info(f"Custom page formatting succeeded")
@@ -241,10 +232,10 @@ async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
 		logger.error(f"Validation error during conversion", job_id=job_id, error=str(e))
 		raise HTTPException(status_code=404, detail=str(e))
 	except Exception as e:
-		logger.error(f"Error during Markdown to DOCX conversion", job_id=job_id, error=str(e))
+		logger.error(f"Error during HTML to DOCX conversion", job_id=job_id, error=str(e))
 		raise HTTPException(
 			status_code=500,
-			detail=f"Error converting Markdown to DOCX: {str(e)}"
+			detail=f"Error converting HTML to DOCX: {str(e)}"
 		)
 
 
@@ -352,8 +343,8 @@ class ConvertFinalResponse(BaseModel):
 
 @router.post("/convert/final", response_model=ConvertFinalResponse)
 async def convert_final(
-	request: ConvertFinalRequest,
-	db: Session = Depends(get_db)
+		request: ConvertFinalRequest,
+		db: Session = Depends(get_db)
 ):
 	"""
 	Convert the final resume (resume_md_rewrite) to the specified output format.
@@ -381,12 +372,12 @@ async def convert_final(
 
 		# Query to get resume data
 		query = text("""
-			SELECT r.file_name, rd.resume_md_rewrite, rr.file_name AS orig_file_name, rr.original_format
-			FROM resume r
-			JOIN resume_detail rd ON (r.resume_id = rd.resume_id) 
-				JOIN resume rr ON (r.baseline_resume_id = rr.resume_id) 
-			WHERE r.resume_id = :resume_id
-		""")
+                     SELECT r.file_name, rd.resume_html_rewrite, rr.file_name AS orig_file_name, rr.original_format
+                     FROM resume r
+                              JOIN resume_detail rd ON (r.resume_id = rd.resume_id)
+                              JOIN resume rr ON (r.baseline_resume_id = rr.resume_id)
+                     WHERE r.resume_id = :resume_id
+		             """)
 
 		result = db.execute(query, {"resume_id": request.resume_id}).first()
 
@@ -394,13 +385,14 @@ async def convert_final(
 			logger.error(f"Resume not found", resume_id=request.resume_id)
 			raise HTTPException(status_code=404, detail=f"Resume not found for resume_id: {request.resume_id}")
 
-		if not result.resume_md_rewrite:
-			logger.error(f"No rewritten markdown content found", resume_id=request.resume_id)
-			raise HTTPException(status_code=400, detail=f"No rewritten markdown content found for resume_id: {request.resume_id}")
+		if not result.resume_html_rewrite:
+			logger.error(f"No rewritten HTML content found", resume_id=request.resume_id)
+			raise HTTPException(status_code=400,
+			                    detail=f"No rewritten HTML content found for resume_id: {request.resume_id}")
 
 		# Extract values
 		original_file_name = result.file_name
-		md_content = result.resume_md_rewrite
+		html_content = result.resume_html_rewrite
 
 		# Determine if we should use a reference file
 		reference_file = None
@@ -416,12 +408,12 @@ async def convert_final(
 		# Generate new filename with requested extension
 		new_file_name = Conversion.rename_file(original_file_name, request.output_format.value)
 
-		logger.debug(f"Converting resume", original_file_name=original_file_name, new_file_name=new_file_name, reference_file=reference_file)
+		logger.debug(f"Converting resume", original_file_name=original_file_name, new_file_name=new_file_name,
+		             reference_file=reference_file)
 
 		# Convert based on output format
 		if request.output_format.value == "html":
-			# For HTML, save the converted content directly
-			html_content = Conversion.mdToHtml(md_content)
+			# For HTML, save the HTML content directly
 			output_path = Conversion._get_file_path(new_file_name)
 			# Ensure directory exists
 			os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -430,18 +422,28 @@ async def convert_final(
 			logger.debug(f"HTML file created", file_path=str(output_path))
 
 		elif request.output_format.value == "docx":
-			# For DOCX, use the Conversion class method with optional reference
-			output_path = Conversion.md2docx(md_content, new_file_name, reference_file=reference_file)
+			# For DOCX, use html2docx
+			output_path, cleaned_html = Conversion.html2docx(html_content, new_file_name)
 			logger.debug(f"DOCX file created", file_path=output_path)
 
+			# Update database with cleaned HTML
+			update_query = text("""
+				UPDATE resume_detail
+				SET resume_html_rewrite = :cleaned_html
+				WHERE resume_id = :resume_id
+			""")
+			db.execute(update_query, {"cleaned_html": cleaned_html, "resume_id": request.resume_id})
+			db.commit()
+			logger.debug(f"Updated resume_html_rewrite with cleaned HTML")
+
 		elif request.output_format.value == "odt":
-			# For ODT, use md2odt with optional reference
-			output_path = Conversion.md2odt(md_content, new_file_name, reference_file=reference_file)
+			# For ODT, use html2odt
+			output_path = Conversion.html2odt(html_content, new_file_name)
 			logger.debug(f"ODT file created", file_path=output_path)
 
 		elif request.output_format.value == "pdf":
-			# For PDF, use md2pdf
-			output_path = Conversion.md2pdf(md_content, new_file_name)
+			# For PDF, use html2pdf
+			output_path = Conversion.html2pdf(html_content, new_file_name)
 			logger.debug(f"PDF file created", file_path=output_path)
 
 		logger.info(f"Resume conversion completed successfully", resume_id=request.resume_id, output_file=new_file_name)
