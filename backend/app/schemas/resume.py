@@ -47,6 +47,7 @@ class ResumeDetailBase(BaseModel):
     title_line_no: Optional[int] = None
     keyword_count: Optional[int] = None
     resume_keyword: Optional[List[str]] = None
+    focus_keyword: Optional[List[str]] = None
     keyword_final: Optional[List[str]] = None
     focus_count: Optional[int] = None
     focus_final: Optional[List[str]] = None
@@ -123,9 +124,6 @@ class ResumeExtractResponse(BaseModel):
 
 class ResumeRewriteRequest(BaseModel):
     job_id: int
-    resume_id: int
-    keyword_final: List[str]
-    focus_final: List[str]
 
 
 class ResumeRewriteResponse(BaseModel):
@@ -135,4 +133,12 @@ class ResumeRewriteResponse(BaseModel):
     suggestion: List[str]
     baseline_score: int
     rewrite_score: int
-    text_changes: List[str]
+
+class ResumeFullRequest(BaseModel):
+	baseline_resume_id: int
+	job_id: int
+	keyword_final: List[str]
+	focus_final: List[str]
+
+class ResumeFullResponse(BaseModel):
+	resume_id: int

@@ -299,7 +299,7 @@ class AiAgent:
 
     def resume_rewrite(
         self,
-        resume_markdown: str,
+        resume_html: str,
         job_desc: str,
         keyword_final: list,
         focus_final: list,
@@ -311,7 +311,7 @@ class AiAgent:
         Rewrite a resume based on job description and keywords using AI.
 
         Args:
-            resume_markdown: Original markdown resume content
+            resume_html: Original HTML resume content
             job_desc: Job description text
             keyword_final: List of final keywords to incorporate
             focus_final: List of focus areas to emphasize
@@ -321,7 +321,7 @@ class AiAgent:
 
         Returns:
             Dictionary containing:
-                - resume_md_rewrite: rewritten markdown resume
+                - resume_html_rewrite: rewritten HTML resume
 
         Raises:
             ValueError: If AI response parsing fails
@@ -335,7 +335,7 @@ class AiAgent:
 
         # Format the prompt with variables using replace to avoid issues with curly braces
         # Handle None values by converting to empty string
-        prompt = prompt_template.replace('{resume_markdown}', resume_markdown or '')
+        prompt = prompt_template.replace('{resume_html}', resume_html or '')
         prompt = prompt.replace('{job_desc}', job_desc or '')
         prompt = prompt.replace('{keyword_final}', keyword_final_str)
         prompt = prompt.replace('{focus_final}', focus_final_str)
@@ -347,7 +347,7 @@ class AiAgent:
         prompt_size = len(prompt)
         logger.debug(f"Resume rewrite prompt analysis",
                     prompt_size=prompt_size,
-                    resume_size=len(resume_markdown or ''),
+                    resume_size=len(resume_html or ''),
                     job_desc_size=len(job_desc or ''),
                     keywords_count=len(keyword_final),
                     focus_count=len(focus_final))
@@ -400,9 +400,9 @@ class AiAgent:
             # Try to parse the response as JSON
             result = json.loads(response_text)
 
-            # Validate the structure - only require 'resume_md_rewrite'
+            # Validate the structure - only require 'resume_html_rewrite'
             # Note: 'suggestions' has been removed from requirements as per user request
-            required_keys = ['resume_md_rewrite']
+            required_keys = ['resume_html_rewrite']
             if not all(key in result for key in required_keys):
                 missing_keys = [key for key in required_keys if key not in result]
                 print(f"DEBUG resume_rewrite: Missing keys: {missing_keys}", file=sys.stderr, flush=True)
@@ -416,7 +416,7 @@ class AiAgent:
             return result
 
         except json.JSONDecodeError as e:
-            # If JSON parsing fails, try to extract JSON from markdown code blocks
+            # If JSON parsing fails, try to extract JSON from HTML code blocks
             import re
             json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
             if json_match:

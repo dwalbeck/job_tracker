@@ -167,8 +167,14 @@ const OptimizedResume = () => {
             const insElements = container.querySelectorAll('ins');
             const delElements = container.querySelectorAll('del');
 
-            // Add unique IDs and click handlers
+            // Add unique IDs and click handlers (skip single-character changes)
             insElements.forEach((el, index) => {
+                // Skip single-character changes (likely artifacts)
+                if (el.textContent.length <= 1) {
+                    el.style.display = 'none'; // Hide single-char artifacts
+                    return;
+                }
+
                 const changeId = `ins-${index}`;
                 el.setAttribute('data-change-id', changeId);
                 el.style.cursor = 'pointer';
@@ -178,6 +184,12 @@ const OptimizedResume = () => {
             });
 
             delElements.forEach((el, index) => {
+                // Skip single-character changes (likely artifacts)
+                if (el.textContent.length <= 1) {
+                    el.style.display = 'none'; // Hide single-char artifacts
+                    return;
+                }
+
                 const changeId = `del-${index}`;
                 el.setAttribute('data-change-id', changeId);
                 el.style.cursor = 'pointer';
@@ -248,9 +260,11 @@ const OptimizedResume = () => {
             const state = changeStates[changeId] || 'accepted';
 
             if (state === 'accepted') {
-                // Keep the insertion - replace <ins> with its content
-                const textNode = document.createTextNode(el.textContent);
-                el.parentNode.replaceChild(textNode, el);
+                // Keep the insertion - unwrap the <ins> tag but keep its content
+                while (el.firstChild) {
+                    el.parentNode.insertBefore(el.firstChild, el);
+                }
+                el.remove();
             } else {
                 // Reject the insertion - remove it entirely
                 el.remove();
@@ -265,9 +279,27 @@ const OptimizedResume = () => {
                 // Accept the deletion - remove the element
                 el.remove();
             } else {
-                // Reject the deletion - keep the original text
-                const textNode = document.createTextNode(el.textContent);
-                el.parentNode.replaceChild(textNode, el);
+                // Reject the deletion - unwrap the <del> tag but keep its content
+                while (el.firstChild) {
+                    el.parentNode.insertBefore(el.firstChild, el);
+                }
+                el.remove();
+            }
+        });
+
+        // Clean up single-character artifacts in the final HTML
+        const allInsElements = clone.querySelectorAll('ins');
+        const allDelElements = clone.querySelectorAll('del');
+
+        allInsElements.forEach(el => {
+            if (el.textContent.length <= 1) {
+                el.remove();
+            }
+        });
+
+        allDelElements.forEach(el => {
+            if (el.textContent.length <= 1) {
+                el.remove();
             }
         });
 

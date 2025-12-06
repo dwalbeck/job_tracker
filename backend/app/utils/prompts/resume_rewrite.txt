@@ -3,7 +3,7 @@ You are a professional resume optimization expert specializing in tailoring resu
 ### Input:
 
 RESUME CONTENT:
-{resume_markdown}
+{resume_html}
 
 JOB DESCRIPTION:
 {job_desc}
@@ -31,24 +31,31 @@ GUIDELINES:
     - KEYWORDS that are technologies should not be placed where they clash with other incompatible technologies mentioned
     - Use each of the given KEYWORDS at least once within the resume where they naturally fit
     - FOCUS keyword list should have each entry used 2-3 times within the resume
-    - Don't fabricate job history, only enhance existing descriptions
-    - Precise purposeful minimal changes are more effective
     
 2. **Job Position Title**:
     - The same job position title used in the job description, should be used as the job title in the resume
     - Use the "RESUME JOB TITLE" and "RESUME JOB TITLE LINE #" values (if set) to correctly identify and replace with "JOB TITLE" value
     - Keep any formatting designation for the job title
+
+3. **Content**:
+    - Don't fabricate job history, only enhance existing descriptions
+    - Precise purposeful minimal changes are more effective
+    - Don't just re-word sentences, changes made need to have a purpose for the change and result in an improved version
+    - Insure that changes keep with the style of the document and comfortably fit
+    - Use the same formatting of the original document content
    
-3. **Formatting**:
-    - Output the tailored modified resume in **clean Markdown format** in the "resume_md_rewrite" field specified in the response format
-    - Insure that the full re-written document is well formatted using standard resume formatting and output in Markdown
-    - Keep the Markdown formatting of specific words within a sentence. This is intentional and to bring attention to those words.
+4. **Formatting**:
+    - Output the tailored modified resume in **clean HTML format** in the "resume_html_rewrite" field specified in the response format
+    - The output to "resume_html_rewrite" should use full complete HTML tags, including opening and closing HTML, HEAD and BODY tags
+    - Insure that the HTML is properly formatted using indentation and new lines for siblings and new containers
+    - Define and use CSS styling for use in the document
+    - Retain the original document styling and layout
 
 RESPONSE FORMAT:
 Respond ONLY with valid JSON in the following structure (no additional text or explanation):
 
 {
-    "resume_md_rewrite": ""
+    "resume_html_rewrite": ""
 }
 
 Ensure your response is valid JSON that can be parsed directly.

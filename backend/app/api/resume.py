@@ -24,7 +24,9 @@ from ..schemas.resume import (
 	ResumeExtractResponse,
 	JobTitleData,
 	ResumeRewriteRequest,
-	ResumeRewriteResponse
+	ResumeRewriteResponse,
+	ResumeFullRequest,
+	ResumeFullResponse
 )
 from ..utils.ai_agent import AiAgent
 from ..utils.conversion import Conversion
@@ -926,58 +928,95 @@ async def extract_resume_data(
 			detail=f"Error extracting resume data: {str(e)}"
 		)
 
-
-@router.post("/resume/rewrite", response_model=ResumeRewriteResponse)
-async def rewrite_resume(
-	rewrite_request: ResumeRewriteRequest,
-	background_tasks: BackgroundTasks,
+@router.post("/resume/full", response_model=ResumeFullResponse)
+async def resume_full(
+	request: ResumeFullRequest,
 	db: Session = Depends(get_db)
 ):
 	"""
-	Rewrite a baseline resume for a specific job using AI.
+	Used to create the initial 'resume' and 'resume_detail' records populated with baseline resume
 
-	This endpoint performs the following operations:
-	1. Retrieves the baseline resume and its details
-	2. Retrieves the job and job details
-	3. Uses AI to rewrite the resume based on job requirements
-	4. Creates a new resume record linked to the job
-	5. Generates HTML versions of both original and rewritten resumes
-	6. Creates a resume_detail record with all relevant data
-
-	JSON body:
-	- job_id: ID of the target job
-	- resume_id: ID of the baseline resume to rewrite
-	- keyword_final: Final list of keywords to incorporate
-	- focus_final: Final list of focus areas to emphasize
-
-	Returns:
-	- resume_id: ID of the newly created resume
-	- resume_html: HTML version of original resume
-	- resume_html_rewrite: HTML version of rewritten resume
-	- suggestion: List of improvement suggestions
+	:param request: baseline_resume_id  the baseline resume to use as the starting template
+					job_id              the job posting associated with the resume to create
+					keyword_final       finalized keyword selection from job posting
+					focus_final         finalized focus keyword list from job posting
+	:param db:
+	:return: resume_id
 	"""
-	logger.info(f"Rewriting resume", job_id=rewrite_request.job_id, resume_id=rewrite_request.resume_id)
+	logger.info(f"Creating resume for job posting", job_id=request.job_id, baseline_resume_id=request.baseline_resume_id)
 
 	try:
-		# Step 1: Retrieve resume data and verify it's a baseline resume
+		# Step 0: Check for pre-existing resume associated with job posting
 		query = text("""
-			SELECT r.*, rd.*
+			SELECT j.resume_id, rd.keyword_final, rd.focus_final 
+			FROM job j JOIN resume_detail rd ON (j.resume_id=rd.resume_id) 
+			WHERE j.job_id = :job_id
+		""")
+		check_result = db.execute(query, {"job_id": request.job_id}).first()
+
+		if check_result:
+			logger.debug(f"Resume has already been created for this job posting", resume_id=check_result.resume_id)
+
+			# Check for keyword differences
+			# Compare keyword_final and focus_final arrays
+			existing_keywords = check_result.keyword_final or []
+			existing_focus = check_result.focus_final or []
+			new_keywords = request.keyword_final or []
+			new_focus = request.focus_final or []
+
+			# Check if arrays are identical
+			if set(existing_keywords) == set(new_keywords) and set(existing_focus) == set(new_focus):
+				# Return cached results
+				logger.info(f"Keywords are unchanged - returning resume_id", resume_id=check_result.resume_id)
+				return ResumeFullResponse(
+					resume_id=check_result.resume_id
+				)
+
+			# Need to update resume_detail record with changed keywords
+			update_query = text("""
+                UPDATE resume_detail
+                SET focus_count         = :focus_count,
+                    keyword_count       = :keyword_count,
+                    keyword_final       = :keyword_final,
+                    focus_final         = :focus_final
+                WHERE resume_id = :resume_id
+            """)
+
+			db.execute(update_query, {
+				"resume_id": check_result.resume_id,
+				"focus_count": len(request.focus_final),
+				"keyword_count": len(request.keyword_final),
+				"keyword_final": request.keyword_final,
+				"focus_final": request.focus_final
+			})
+			db.commit()
+
+			logger.log_database_operation("UPDATE", "resume_detail", check_result.resume_id)
+			logger.info(f"Updated existing resume successfully", resume_id=check_result.resume_id)
+
+			return ResumeFullResponse(
+				resume_id=check_result.resume_id
+			)
+
+		# Step 1: Retrieve baseline resume data and verify it's a baseline resume
+		query = text("""
+			SELECT r.original_format, rd.resume_markdown, rd.resume_html, rd.position_title 
 			FROM resume r
 			JOIN resume_detail rd ON (r.resume_id = rd.resume_id)
 			WHERE r.resume_id = :resume_id
 		""")
-		resume_result = db.execute(query, {"resume_id": rewrite_request.resume_id}).first()
+		resume_result = db.execute(query, {"resume_id": request.baseline_resume_id}).first()
 
 		if not resume_result:
-			logger.warning(f"Resume not found", resume_id=rewrite_request.resume_id)
+			logger.warning(f"Resume not found", resume_id=request.resume_id)
 			raise HTTPException(status_code=404, detail="Resume not found")
 
 		# Verify is_baseline is true
 		if not resume_result.is_baseline:
-			logger.error(f"Resume is not a baseline resume", resume_id=rewrite_request.resume_id)
+			logger.error(f"Resume is not a baseline resume", resume_id=request.baseline_resume_id)
 			raise HTTPException(status_code=400, detail="Resume must be a baseline resume")
 
-		logger.debug(f"Retrieved baseline resume", resume_id=rewrite_request.resume_id)
+		logger.debug(f"Retrieved baseline resume", baseline_resume_id=request.baseline_resume_id)
 
 		# Step 2: Retrieve job data
 		job_query = text("""
@@ -986,313 +1025,193 @@ async def rewrite_resume(
 			JOIN job_detail jd ON (j.job_id = jd.job_id)
 			WHERE j.job_id = :job_id
 		""")
-		job_result = db.execute(job_query, {"job_id": rewrite_request.job_id}).first()
+		job_result = db.execute(job_query, {"job_id": request.job_id}).first()
 
 		if not job_result:
-			logger.warning(f"Job not found", job_id=rewrite_request.job_id)
+			logger.warning(f"Job not found", job_id=request.job_id)
 			raise HTTPException(status_code=404, detail="Job not found")
 
 		if not job_result.job_desc:
-			logger.error(f"Job description is empty", job_id=rewrite_request.job_id)
+			logger.error(f"Job description is empty", job_id=request.job_id)
 			raise HTTPException(status_code=400, detail="Job description is required")
 
-		logger.debug(f"Retrieved job data", job_id=rewrite_request.job_id)
+		logger.debug(f"Retrieved job data", job_id=request.job_id)
 
-		# Step 2a: Check if a resume already exists for this job
-		existing_resume_query = text("""
-			SELECT jd.job_desc, r.resume_id, r.baseline_resume_id, rd.resume_html, rd.resume_html_rewrite,
-				   rd.suggestion, rd.baseline_score, rd.rewrite_score, rd.keyword_final, rd.focus_final,
-				   rd.resume_md_rewrite, rd.resume_markdown
-			FROM job j
-			LEFT JOIN job_detail jd ON (j.job_id = jd.job_id)
-			LEFT JOIN resume r ON (j.resume_id = r.resume_id)
-			LEFT JOIN resume_detail rd ON (r.resume_id = rd.resume_id)
-			WHERE j.job_id = :job_id
-		""")
-		existing_resume = db.execute(existing_resume_query, {"job_id": rewrite_request.job_id}).first()
-
-		logger.debug(f"Retrieved job resume")
-
-		# Check if this is a re-run (resume already exists for this job)
-		if existing_resume and existing_resume.resume_id:
-			# Verify IDs match expected pattern
-			if (existing_resume.resume_id != rewrite_request.resume_id and
-				existing_resume.baseline_resume_id == rewrite_request.resume_id):
-
-				logger.debug(f"Found existing resume for job", existing_resume_id=existing_resume.resume_id)
-
-				# Compare keyword_final and focus_final arrays
-				existing_keywords = existing_resume.keyword_final or []
-				existing_focus = existing_resume.focus_final or []
-				new_keywords = rewrite_request.keyword_final or []
-				new_focus = rewrite_request.focus_final or []
-
-				# Check if arrays are identical
-				if set(existing_keywords) == set(new_keywords) and set(existing_focus) == set(new_focus):
-					# Return cached results
-					# Generate text diff between baseline and rewrite
-					text_changes = generate_text_diff(
-						existing_resume.resume_markdown if existing_resume.resume_markdown else "",
-						existing_resume.resume_md_rewrite if existing_resume.resume_md_rewrite else ""
-					)
-
-					logger.info(f"Returning cached resume (keywords/focus unchanged)", resume_id=existing_resume.resume_id)
-					return ResumeRewriteResponse(
-						resume_id=existing_resume.resume_id,
-						resume_html=existing_resume.resume_html,
-						resume_html_rewrite=existing_resume.resume_html_rewrite,
-						suggestion=existing_resume.suggestion or [],
-						baseline_score=existing_resume.baseline_score,
-						rewrite_score=existing_resume.rewrite_score,
-						text_changes=text_changes
-					)
-
-				# Keywords/focus differ, so re-run with alternate logic
-				logger.debug(f"Keywords/focus changed, reprocessing existing resume")
-
-				# Initialize AI agent
-				ai_agent = AiAgent(db)
-
-				logger.debug(f"Calling AI rewrite")
-
-				# Call AI agent to rewrite using the previous rewrite as base
-				rewrite_result = ai_agent.resume_rewrite(
-					resume_markdown=existing_resume.resume_md_rewrite,
-					job_desc=existing_resume.job_desc,
-					keyword_final=rewrite_request.keyword_final,
-					focus_final=rewrite_request.focus_final,
-					job_title=job_result.job_title,
-					position_title="",  # Already replaced in previous rewrite
-					title_line_no=0
-				)
-
-				# logger.debug(f"AI rewrite completed (re-run)", suggestion_count=len(rewrite_result['suggestion']))
-				logger.debug(f"AI rewrite completed (re-run)")
-
-				# Calculate new rewrite_score using regex matching
-				rewrite_score = calculate_keyword_score(job_result.job_keyword, rewrite_result['resume_md_rewrite'])
-
-				logger.debug(f"Calculated new rewrite_score", rewrite_score=rewrite_score)
-
-				# Convert rewritten markdown to HTML
-				resume_html_rewrite = Conversion.mdToHtml(rewrite_result['resume_md_rewrite'])
-
-				# Get original markdown and convert to HTML
-				md_query = text("SELECT resume_markdown FROM resume_detail WHERE resume_id = :resume_id")
-				md_result = db.execute(md_query, {"resume_id": existing_resume.resume_id}).first()
-
-				resume_html = Conversion.mdToHtml(md_result.resume_markdown)
-
-				logger.debug(f"Generated HTML version")
-
-				# Generate text diff between baseline and new rewrite
-				text_changes = generate_text_diff(
-					md_result.resume_markdown if md_result.resume_markdown else "",
-					rewrite_result['resume_md_rewrite']
-				)
-
-				logger.debug(f"Generated text diff")
-
-				# Update the existing resume_detail record
-				update_query = text("""
-					UPDATE resume_detail
-					SET focus_count = :focus_count,
-						keyword_count = :keyword_count,
-						resume_md_rewrite = :resume_md_rewrite,
-						resume_html = :resume_html,
-						resume_html_rewrite = :resume_html_rewrite,
-						rewrite_score = :rewrite_score,
-						keyword_final = :keyword_final,
-						focus_final = :focus_final
-					WHERE resume_id = :resume_id
-				""")
-
-				db.execute(update_query, {
-					"resume_id": existing_resume.resume_id,
-					"focus_count": len(rewrite_request.focus_final),
-					"keyword_count": len(rewrite_request.keyword_final),
-					"resume_md_rewrite": rewrite_result['resume_md_rewrite'],
-					"resume_html": resume_html,
-					"resume_html_rewrite": resume_html_rewrite,
-					"rewrite_score": rewrite_score,
-					# "suggestion": rewrite_result['suggestion'],
-					"keyword_final": rewrite_request.keyword_final,
-					"focus_final": rewrite_request.focus_final
-				})
-				db.commit()
-
-				logger.log_database_operation("UPDATE", "resume_detail", existing_resume.resume_id)
-				logger.info(f"Updated existing resume successfully", resume_id=existing_resume.resume_id, rewrite_score=rewrite_score)
-
-				# Schedule background task to generate suggestions
-				background_tasks.add_task(
-					ai_agent.resume_suggestion,
-					rewrite_result['resume_md_rewrite'],
-					existing_resume.resume_id
-				)
-
-				# Return updated response
-				return ResumeRewriteResponse(
-					resume_id=existing_resume.resume_id,
-					resume_html=resume_html,
-					resume_html_rewrite=resume_html_rewrite,
-					suggestion=[],  # Will be populated by background task
-					baseline_score=existing_resume.baseline_score,
-					rewrite_score=rewrite_score,
-					text_changes=text_changes
-				)
-
-		logger.debug(f"Calling AI Agent to rewrite resume")
-
-		# Step 3: Call AI agent to rewrite resume
-		ai_agent = AiAgent(db)
-
-		rewrite_result = ai_agent.resume_rewrite(
-			resume_markdown=resume_result.resume_markdown,
-			job_desc=job_result.job_desc,
-			keyword_final=rewrite_request.keyword_final,
-			focus_final=rewrite_request.focus_final,
-			job_title=job_result.job_title,
-			position_title=resume_result.position_title,
-			title_line_no=resume_result.title_line_no
-		)
-
-		logger.debug(f"AI resume rewrite completed")
-
-		# Step 4: Create filename for new resume
-		company_part = clean_filename_part(job_result.company)
-		job_title_part = clean_filename_part(job_result.job_title)
-		file_name = f"{company_part}-{job_title_part}.md"
-
-		# Ensure unique filename
-		file_name = make_unique_filename(file_name, db)
-
-		# Step 5: Write rewritten markdown to file
-		base_path = Path(settings.resume_dir)
-		base_path.mkdir(parents=True, exist_ok=True)
-		file_path = base_path / file_name
-
-		with open(file_path, "w", encoding="utf-8") as f:
-			f.write(rewrite_result['resume_md_rewrite'])
-
-		logger.debug(f"Wrote rewritten markdown resume to file", file_name=file_name)
-
-		# Step 6: Insert new resume record
-		# Ensure resume_title is unique
+		# Step 3: Create the resume record
 		base_resume_title = f"{job_result.company} - {job_result.job_title}"
 		unique_resume_title = make_unique_resume_title(base_resume_title, db)
+		file_name = Conversion._set_file(job_result.company, job_result.job_title, db)
+		baseline_score = calculate_keyword_score(job_result.job_keyword, resume_result.resume_markdown)
 
 		new_resume = Resume(
-			baseline_resume_id=rewrite_request.resume_id,
-			job_id=rewrite_request.job_id,
-			original_format=FileFormat.md,
+			baseline_resume_id=request.baseline_resume_id,
+			job_id=request.job_id,
+			original_format=resume_result.original_format,
 			resume_title=unique_resume_title,
 			file_name=file_name,
 			is_baseline=False,
 			is_default=False,
 			is_active=True
 		)
-
 		db.add(new_resume)
 		db.flush()  # Get the new resume_id
 
 		logger.log_database_operation("INSERT", "resume", new_resume.resume_id)
 		logger.debug(f"Created new resume record", new_resume_id=new_resume.resume_id)
 
-		# Step 7: Convert both markdown versions to HTML
-		resume_html = Conversion.mdToHtml(resume_result.resume_markdown)
-		resume_html_rewrite = Conversion.mdToHtml(rewrite_result['resume_md_rewrite'])
-
-		# Step 7a: Generate text diff between baseline and rewrite
-		text_changes = generate_text_diff(
-			resume_result.resume_markdown,
-			rewrite_result['resume_md_rewrite']
-		)
-
-		logger.debug(f"Converted markdown to HTML")
-
-		# Step 8: Insert resume_detail record
+		# Step 4: Insert resume_detail record
 		new_detail = ResumeDetail(
 			resume_id=new_resume.resume_id,
 			resume_markdown=resume_result.resume_markdown,
-			resume_md_rewrite=rewrite_result['resume_md_rewrite'],
-			resume_html=resume_html,
-			resume_html_rewrite=resume_html_rewrite,
+			resume_html=resume_result.resume_html,
 			position_title=resume_result.position_title,
-			title_line_no=resume_result.title_line_no,
-			keyword_count=len(rewrite_request.keyword_final),
-			resume_keyword=resume_result.resume_keyword,
-			keyword_final=rewrite_request.keyword_final,
-			focus_count=len(rewrite_request.focus_final),
-			focus_final=rewrite_request.focus_final
-			# suggestion=rewrite_result['suggestion']
+			keyword_count=len(request.keyword_final),
+			focus_count=len(request.focus_final),
+			resume_keyword=job_result.job_keyword,
+			baseline_score=baseline_score,
+			keyword_final=request.resume_final,
+			focus_final=request.focus_final,
 		)
-
 		db.add(new_detail)
 		db.commit()
 
 		logger.log_database_operation("INSERT", "resume_detail", new_resume.resume_id)
 		logger.debug(f"Resume detail record created", resume_id=new_resume.resume_id)
 
-		# Step 9: Calculate baseline_score using regex matching against baseline resume markdown
-		baseline_score = calculate_keyword_score(job_result.job_keyword, resume_result.resume_markdown)
+		# Step 5: Update job record to associate the new resume
+		job_update_query = text("""
+            UPDATE job SET resume_id = :resume_id WHERE job_id = :job_id
+        """)
+		db.execute(job_update_query, {
+			"resume_id": new_resume.resume_id,
+			"job_id": request.job_id
+		})
+		db.commit()
 
-		logger.debug(f"Calculated baseline_score", baseline_score=baseline_score)
+		logger.log_database_operation("UPDATE", "job", request.job_id)
+		logger.info(f"Resume full completed successfully", new_resume_id=new_resume.resume_id, job_id=request.job_id,
+		            baseline_score=baseline_score)
 
-		# Step 10: Calculate rewrite_score using regex matching against rewritten resume markdown
-		rewrite_score = calculate_keyword_score(job_result.job_keyword, rewrite_result['resume_md_rewrite'])
+		return ResumeFullResponse(
+			resume_id=new_resume.resume_id
+		)
 
-		logger.debug(f"Calculated rewrite_score", rewrite_score=rewrite_score)
+	except HTTPException:
+		# Re-raise HTTP exceptions
+		raise
 
-		# Step 12: Update resume_detail with scores
-		update_query = text("""
-			UPDATE resume_detail
-			SET baseline_score = :baseline_score,
-				rewrite_score = :rewrite_score
-			WHERE resume_id = :resume_id
+	except Exception as e:
+		# Handle unexpected errors
+		raise HTTPException(
+			status_code=500,
+			detail=f"Error creating resume records: {str(e)}"
+		)
+
+@router.post("/resume/rewrite", response_model=ResumeRewriteResponse)
+async def rewrite_resume(
+	request: ResumeRewriteRequest,
+	background_tasks: BackgroundTasks,
+	db: Session = Depends(get_db)
+):
+	"""
+	Rewrite resume using baseline resume for a specific job using AI.
+
+	This endpoint performs the following operations:
+	1. Retrieves the baseline resume and job details
+	2. Uses AI to rewrite the resume based on job requirements
+	3. Calculate and set other resume_detail data based on rewrite
+	4. Update the resume_detail record with new values
+	5. Start background task to get suggestions and return response
+
+	JSON body:
+	- job_id: ID of the target job
+	- baseline_resume_id: ID of the baseline resume to rewrite
+	- keyword_final: Final list of keywords to incorporate
+	- focus_final: Final list of focus areas to emphasize
+
+	Returns:
+	- resume_id: ID of the newly created resume
+	"""
+	logger.info(f"Rewriting resume", job_id=request.job_id)
+
+	try:
+		# Step 1: Retrieve baseline resume data and verify it's a baseline resume
+		query = text("""
+			SELECT jd.job_desc, jd.job_keyword, j.job_title, j.resume_id, rd.resume_html, rd.keyword_final, rd.focus_final, rd.position_title, rd.title_line_no, rd.baseline_score 
+			FROM job j JOIN job_detail jd ON (j.job_id=jd.job_id) 
+				JOIN resume_detail rd ON (j.resume_id=rd.resume_id)
+			WHERE j.job_id = :job_id
 		""")
+		result = db.execute(query, {"job_id": request.job_id}).first()
+		if not result:
+			logger.warning(f"Job posting resume not found", job_id=request.job_id)
+			raise HTTPException(status_code=404, detail="Job posting resume not found")
+
+		if not result.job_desc:
+			logger.error(f"Job description is empty", job_id=request.job_id)
+			raise HTTPException(status_code=400, detail="Job description is required")
+
+		# Step 2: AI agent rewrite resume
+		ai_agent = AiAgent(db)
+		logger.debug(f"Calling AI rewrite")
+
+		# Call AI agent to rewrite resume from baseline resume
+		rewrite_result = ai_agent.resume_rewrite(
+			resume_html=result.resume_html,
+			job_desc=result.job_desc,
+			keyword_final=result.keyword_final,
+			focus_final=result.focus_final,
+			job_title=result.job_title,
+			position_title=result.position_title,  # Already replaced in previous rewrite
+			title_line_no=result.title_line_no
+		)
+		logger.debug(f"AI rewrite completed (re-run)")
+
+		# Step 3: Get resume_detail data based on rewrite version
+		# Calculate new rewrite_score using regex matching
+		rewrite_score = calculate_keyword_score(result.job_keyword, rewrite_result['resume_html_rewrite'])
+		logger.debug(f"Calculated new rewrite_score", rewrite_score=rewrite_score)
+
+		# Convert rewritten HTML to markdown
+		resume_md_rewrite = Conversion.html2md(rewrite_result['resume_html_rewrite'])
+		logger.debug(f"Generated Markdown version")
+
+		# Step 4: Update the existing resume_detail record with updated values
+		update_query = text("""
+            UPDATE resume_detail
+            SET resume_md_rewrite   = :resume_md_rewrite,
+                resume_html_rewrite = :resume_html_rewrite,
+                rewrite_score       = :rewrite_score
+            WHERE resume_id = :resume_id
+        """)
 
 		db.execute(update_query, {
-			"resume_id": new_resume.resume_id,
-			"baseline_score": baseline_score,
+			"resume_id": result.resume_id,
+			"resume_md_rewrite": resume_md_rewrite,
+			"resume_html_rewrite": rewrite_result['resume_html_rewrite'],
 			"rewrite_score": rewrite_score
 		})
 		db.commit()
 
-		logger.log_database_operation("UPDATE", "resume_detail", new_resume.resume_id)
+		logger.log_database_operation("UPDATE", "resume_detail", result.resume_id)
+		logger.info(f"Updated existing resume successfully", resume_id=result.resume_id, rewrite_score=rewrite_score)
 
-		# Step 13: Update job record to associate the new resume
-		job_update_query = text("""
-			UPDATE job
-			SET resume_id = :resume_id
-			WHERE job_id = :job_id
-		""")
-
-		db.execute(job_update_query, {
-			"resume_id": new_resume.resume_id,
-			"job_id": rewrite_request.job_id
-		})
-		db.commit()
-
-		logger.log_database_operation("UPDATE", "job", rewrite_request.job_id)
-		logger.info(f"Resume rewrite completed successfully", new_resume_id=new_resume.resume_id, job_id=rewrite_request.job_id, baseline_score=baseline_score, rewrite_score=rewrite_score)
-
+		# Step 5: Start background task to get suggestions and return response
 		# Schedule background task to generate suggestions
 		background_tasks.add_task(
 			ai_agent.resume_suggestion,
-			rewrite_result['resume_md_rewrite'],
-			new_resume.resume_id
+			rewrite_result['resume_html_rewrite'],
+			result.resume_id
 		)
 
-		# Step 14: Return response
+		# Return updated response
 		return ResumeRewriteResponse(
-			resume_id=new_resume.resume_id,
-			resume_html=resume_html,
-			resume_html_rewrite=resume_html_rewrite,
+			resume_id=result.resume_id,
+			resume_html=result.resume_html,
+			resume_html_rewrite=rewrite_result['resume_html_rewrite'],
 			suggestion=[],  # Will be populated by background task
-			baseline_score=baseline_score,
-			rewrite_score=rewrite_score,
-			text_changes=text_changes
+			baseline_score=result.baseline_score,
+			rewrite_score=rewrite_score
 		)
 
 	except HTTPException:

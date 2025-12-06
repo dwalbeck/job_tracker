@@ -31,6 +31,21 @@ class Conversion:
         return Path(cls.RESUME_DIR) / file_name
 
     @classmethod
+    def _set_file(cls, company: str, title: str, mimetype: str) -> str:
+        """
+        This will create a filename using the values from the company name and job title
+
+        :param company: Company name
+        :param title: Job position title
+        :param mimetype: File format as the file extension to use
+        :return: full path and filename with extension
+        """
+        filetmp = company.strip() + '-' + title.strip()
+        filename = filetmp.replace(' ', '_') + '.' + mimetype
+        return filename
+
+
+    @classmethod
     def rename_file(cls, filename: str, mime_type: str) -> str:
         """
         Rename a file by replacing its extension with the specified mime_type.
@@ -133,7 +148,6 @@ class Conversion:
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
-            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             color: #333;
@@ -307,19 +321,21 @@ class Conversion:
             HTML content as string
         """
         try:
-            import mammoth
+            from docx_parser_converter.docx_to_html.docx_to_html_converter import DocxToHtmlConverter
+            from docx_parser_converter.docx_parsers.utils import read_binary_from_file_path
 
             file_path = cls._get_file_path(file_name)
 
             if not file_path.exists():
                 raise FileNotFoundError(f"File not found: {file_name}")
 
-            # Convert DOCX to HTML using mammoth
-            with open(file_path, 'rb') as docx_file:
-                result = mammoth.convert_to_html(docx_file)
-                html_content = result.value
+            docx_file_content = read_binary_from_file_path(file_path)
 
-            return html_content
+            converter = DocxToHtmlConverter(docx_file_content, use_default_values=True)
+            html_output = converter.convert_to_html()
+
+            return html_output
+
         except Exception as e:
             raise Exception(f"Error converting DOCX to HTML: {str(e)}")
 
@@ -687,6 +703,21 @@ class Conversion:
         except Exception as e:
             raise Exception(f"Error converting Markdown to PDF: {str(e)}")
 
+    @classmethod
+    def html2md(cls, html_content: str) -> str:
+        """
+        Convert resume HTML content to Markdown
+        :param cls:
+        :param html_content: contains the HTML content to be converted
+        :return: a string containing the Markdown formatting of the document
+        """
+
+        from html_to_markdown import convert
+
+        markdown = convert(html_content)
+        return markdown
+
+
     # HTML to DOCX conversion (legacy method, keeping for backwards compatibility)
     @classmethod
     def html2docx_from_job(cls, job_id: int, db) -> dict:
@@ -711,7 +742,6 @@ class Conversion:
             Dictionary with file_name key
         """
         try:
-            from html2docx import html2docx
             from sqlalchemy import text
 
             # Query to get resume data
@@ -749,15 +779,84 @@ class Conversion:
                 base_name = original_file_name
 
             # Create new filename with -tailored.docx suffix
-            new_file_name = f"{base_name}-tailored.docx"
+            new_file_name = f"{base_name}.docx"
 
-            # Convert HTML to DOCX using python-docx directly
+            # Convert HTML to DOCX using html4docx
+            from html4docx import HtmlToDocx
+
+            # Clean HTML
+            cleaned_html = cls._clean_html_for_docx(html_content)
+
             file_path = cls._get_file_path(new_file_name)
 
-            # Convert and get cleaned HTML
-            cleaned_html = cls._html_to_docx_direct(html_content, file_path)
+            try:
+                logger.debug(f"Converting HTML to DOCX via html4docx")
 
-            logger.info(f"Converted using python-docx successfully")
+                # Convert using html4docx
+                from docx.shared import Inches
+
+                parser = HtmlToDocx()
+                doc = parser.parse_html_string(cleaned_html)
+
+                # Set document margins to ensure content isn't clipped
+                for section in doc.sections:
+                    section.top_margin = Inches(0.5)
+                    section.bottom_margin = Inches(0.5)
+                    section.left_margin = Inches(0.75)
+                    section.right_margin = Inches(0.75)
+
+                # Remove leading empty paragraphs
+                while doc.paragraphs and not doc.paragraphs[0].text.strip():
+                    p = doc.paragraphs[0]._element
+                    p.getparent().remove(p)
+
+                # Fix heading and paragraph formatting to prevent clipping
+                from docx.shared import Pt
+                from docx.enum.text import WD_LINE_SPACING
+
+                for paragraph in doc.paragraphs:
+                    # Fix heading styles - ensure proper spacing and line height
+                    if paragraph.style.name.startswith('Heading'):
+                        # Get the font size to calculate appropriate line spacing
+                        font_size = None
+                        if paragraph.runs:
+                            for run in paragraph.runs:
+                                if run.font.size:
+                                    font_size = run.font.size
+                                    break
+
+                        # If no explicit font size, estimate based on heading level
+                        if font_size is None:
+                            if 'Heading 1' in paragraph.style.name:
+                                font_size = Pt(16)
+                            elif 'Heading 2' in paragraph.style.name:
+                                font_size = Pt(14)
+                            else:
+                                font_size = Pt(12)
+
+                        # Reset paragraph spacing with generous room above
+                        paragraph.paragraph_format.space_before = Pt(24)
+                        paragraph.paragraph_format.space_after = Pt(12)
+
+                        # Use MULTIPLE line spacing (1.5x) which scales with font size
+                        paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+                        paragraph.paragraph_format.line_spacing = 1.5
+
+                        # Remove any indentation
+                        paragraph.paragraph_format.left_indent = Pt(0)
+                        paragraph.paragraph_format.first_line_indent = Pt(0)
+                    else:
+                        # Fix regular paragraph indentation
+                        paragraph.paragraph_format.left_indent = Pt(0)
+                        paragraph.paragraph_format.first_line_indent = Pt(0)
+
+                doc.save(str(file_path))
+
+                logger.info(f"Converted using html4docx successfully")
+
+            except Exception as e:
+                logger.error(f"html4docx conversion failed: {str(e)}")
+                raise
 
             # Update resume_detail with the cleaned HTML and new filename
             update_query = text("""
@@ -880,7 +979,7 @@ class Conversion:
     def _clean_html_for_docx(cls, html_content: str) -> str:
         """
         Clean HTML using BeautifulSoup for proper parsing and structure.
-        Preserves CSS for WeasyPrint PDF generation.
+        Preserves CSS styling and ensures proper HTML document structure.
 
         Args:
             html_content: Raw HTML content
@@ -890,10 +989,10 @@ class Conversion:
         """
         from bs4 import BeautifulSoup
 
-        # Parse the HTML (use html.parser to avoid lxml adding extra tags)
+        # Parse the HTML - BeautifulSoup will fix malformed tags
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Remove problematic elements (keep style for PDF generation)
+        # Remove problematic elements (keep style tags for formatting)
         for tag in soup.find_all(['script', 'meta', 'title']):
             tag.decompose()
 
@@ -911,13 +1010,49 @@ class Conversion:
         for del_tag in soup.find_all('del'):
             del_tag.decompose()
 
-        return str(soup)
+        # Remove empty list items (artifacts)
+        for li in soup.find_all('li'):
+            if not li.get_text(strip=True):
+                li.decompose()
+
+        # Check if HTML already has proper document structure
+        has_html = soup.find('html') is not None
+        has_body = soup.find('body') is not None
+
+        if has_html and has_body:
+            # Already has structure, just return the cleaned version
+            return str(soup)
+        elif has_body:
+            # Has body but no html wrapper
+            body_content = str(soup.body)
+            return f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+{body_content}
+</html>'''
+        else:
+            # No document structure, wrap everything
+            body_content = str(soup)
+            return f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+{body_content}
+</body>
+</html>'''
 
     # New HTML conversion methods for /convert/final endpoint
     @classmethod
     def html2docx(cls, html_content: str, output_filename: str) -> tuple[Path, str]:
         """
-        Convert HTML content to DOCX format using python-docx directly.
+        Convert HTML content to DOCX format via WeasyPrint (HTML->PDF->DOCX).
+
+        This approach uses WeasyPrint to generate a well-formatted PDF that honors CSS,
+        then converts that PDF to DOCX format.
 
         Args:
             html_content: HTML string to convert
@@ -930,6 +1065,8 @@ class Conversion:
             Exception: If conversion fails
         """
         try:
+            from html4docx import HtmlToDocx
+
             # Log the HTML content length for debugging
             logger.debug(f"HTML content length before cleaning", length=len(html_content) if html_content else 0)
 
@@ -937,16 +1074,83 @@ class Conversion:
             if not html_content or not html_content.strip():
                 raise Exception("HTML content is empty or None")
 
+            # Clean HTML
+            cleaned_html = cls._clean_html_for_docx(html_content)
+
             # Write DOCX file to resume directory
             file_path = cls._get_file_path(output_filename)
 
             # Ensure directory exists
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-            # Convert HTML to DOCX using python-docx directly
-            cleaned_html = cls._html_to_docx_direct(html_content, file_path)
+            try:
+                logger.debug(f"Converting HTML to DOCX via html4docx")
 
-            logger.info(f"HTML to DOCX conversion completed using python-docx", output_file=output_filename)
+                # Convert using html4docx
+                from docx.shared import Inches
+
+                parser = HtmlToDocx()
+                doc = parser.parse_html_string(cleaned_html)
+
+                # Set document margins to ensure content isn't clipped
+                for section in doc.sections:
+                    section.top_margin = Inches(0.5)
+                    section.bottom_margin = Inches(0.5)
+                    section.left_margin = Inches(0.75)
+                    section.right_margin = Inches(0.75)
+
+                # Remove leading empty paragraphs
+                while doc.paragraphs and not doc.paragraphs[0].text.strip():
+                    p = doc.paragraphs[0]._element
+                    p.getparent().remove(p)
+
+                # Fix heading and paragraph formatting to prevent clipping
+                from docx.shared import Pt
+                from docx.enum.text import WD_LINE_SPACING
+
+                for paragraph in doc.paragraphs:
+                    # Fix heading styles - ensure proper spacing and line height
+                    if paragraph.style.name.startswith('Heading'):
+                        # Get the font size to calculate appropriate line spacing
+                        font_size = None
+                        if paragraph.runs:
+                            for run in paragraph.runs:
+                                if run.font.size:
+                                    font_size = run.font.size
+                                    break
+
+                        # If no explicit font size, estimate based on heading level
+                        if font_size is None:
+                            if 'Heading 1' in paragraph.style.name:
+                                font_size = Pt(16)
+                            elif 'Heading 2' in paragraph.style.name:
+                                font_size = Pt(14)
+                            else:
+                                font_size = Pt(12)
+
+                        # Reset paragraph spacing with generous room above
+                        paragraph.paragraph_format.space_before = Pt(24)
+                        paragraph.paragraph_format.space_after = Pt(12)
+
+                        # Use MULTIPLE line spacing (1.5x) which scales with font size
+                        paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+                        paragraph.paragraph_format.line_spacing = 1.5
+
+                        # Remove any indentation
+                        paragraph.paragraph_format.left_indent = Pt(0)
+                        paragraph.paragraph_format.first_line_indent = Pt(0)
+                    else:
+                        # Fix regular paragraph indentation
+                        paragraph.paragraph_format.left_indent = Pt(0)
+                        paragraph.paragraph_format.first_line_indent = Pt(0)
+
+                doc.save(str(file_path))
+
+                logger.info(f"HTML to DOCX conversion completed via html4docx", output_file=output_filename)
+
+            except Exception as e:
+                logger.error(f"html4docx conversion failed", error=str(e))
+                raise
 
             return file_path, cleaned_html
 

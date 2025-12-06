@@ -15,12 +15,20 @@ RUN apt-get update \
         build-essential \
         libpq-dev \
         curl \
+        git \
         pandoc \
         texlive-latex-base \
         texlive-latex-recommended \
         texlive-fonts-recommended \
         lmodern \
         vim \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libgdk-pixbuf-2.0-0 \
+        libffi-dev \
+        shared-mime-info \
+        libcairo2 \
+        libpangoft2-1.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better Docker layer caching
@@ -28,7 +36,8 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir git+https://github.com/dfop02/html4docx.git@1.1.1
 
 # Copy application code
 COPY . .

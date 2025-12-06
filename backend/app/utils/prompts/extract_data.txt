@@ -19,6 +19,7 @@ INSTRUCTIONS:
    - Certifications
    - Industry-specific terms
    - Soft skills
+   - Exclude single letter keywords
 
 3. Provide 3-5 specific, actionable suggestions for improving this resume:
    - Focus on content, formatting, and presentation
