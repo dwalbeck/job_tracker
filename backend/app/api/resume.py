@@ -1000,7 +1000,7 @@ async def resume_full(
 
 		# Step 1: Retrieve baseline resume data and verify it's a baseline resume
 		query = text("""
-			SELECT r.original_format, rd.resume_markdown, rd.resume_html, rd.position_title 
+			SELECT r.original_format, r.is_baseline, rd.resume_markdown, rd.resume_html, rd.position_title
 			FROM resume r
 			JOIN resume_detail rd ON (r.resume_id = rd.resume_id)
 			WHERE r.resume_id = :resume_id
@@ -1008,7 +1008,7 @@ async def resume_full(
 		resume_result = db.execute(query, {"resume_id": request.baseline_resume_id}).first()
 
 		if not resume_result:
-			logger.warning(f"Resume not found", resume_id=request.resume_id)
+			logger.warning(f"Resume not found", resume_id=request.baseline_resume_id)
 			raise HTTPException(status_code=404, detail="Resume not found")
 
 		# Verify is_baseline is true
@@ -1040,7 +1040,7 @@ async def resume_full(
 		# Step 3: Create the resume record
 		base_resume_title = f"{job_result.company} - {job_result.job_title}"
 		unique_resume_title = make_unique_resume_title(base_resume_title, db)
-		file_name = Conversion._set_file(job_result.company, job_result.job_title, db)
+		#file_name = Conversion._set_file(job_result.company, job_result.job_title, 'docx')
 		baseline_score = calculate_keyword_score(job_result.job_keyword, resume_result.resume_markdown)
 
 		new_resume = Resume(
@@ -1048,7 +1048,7 @@ async def resume_full(
 			job_id=request.job_id,
 			original_format=resume_result.original_format,
 			resume_title=unique_resume_title,
-			file_name=file_name,
+			#file_name=file_name,
 			is_baseline=False,
 			is_default=False,
 			is_active=True
@@ -1069,7 +1069,7 @@ async def resume_full(
 			focus_count=len(request.focus_final),
 			resume_keyword=job_result.job_keyword,
 			baseline_score=baseline_score,
-			keyword_final=request.resume_final,
+			keyword_final=request.keyword_final,
 			focus_final=request.focus_final,
 		)
 		db.add(new_detail)

@@ -55,5 +55,7 @@ RUN chmod +x wait-for-db.py
 # Switch to non-root user
 USER appuser
 
-# Run uvicorn directly
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "200", "--timeout-keep-alive", "200"]
+# Run uvicorn with multiple workers for concurrent request handling
+# --workers 4: Run with 4 worker processes for parallel request processing
+# Each worker can handle requests independently, preventing blocking
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--timeout-graceful-shutdown", "200", "--timeout-keep-alive", "200"]

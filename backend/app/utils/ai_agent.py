@@ -357,6 +357,7 @@ class AiAgent:
         logger.debug(f"Starting OpenAI resume rewrite call", timestamp=start_time)
 
         try:
+            logger.debug(f"Starting resume/rewrite AI call", llm=self.rewrite_llm)
             response = self.client.chat.completions.create(
                 model=self.rewrite_llm,
                 messages=[

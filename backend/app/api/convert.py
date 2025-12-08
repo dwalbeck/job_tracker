@@ -190,14 +190,12 @@ async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
         conversion_result = Conversion.html2docx_from_job(job_id, db)
         logger.debug(f"html2docx_from_job returned {conversion_result}\n")
 
-        logger.log_database_operation("UPDATE", "resume_detail", result.resume_id)
-        logger.info(f"HTML to DOCX conversion completed", job_id=job_id, file_name=conversion_result['file_name'])
-
         if Conversion.pageFormatting(conversion_result['file_name'], full_name):
             logger.info(f"Custom page formatting succeeded")
         else:
             logger.info(f"Custom page formatting failed")
 
+        logger.info(f"HTML to DOCX conversion completed", job_id=job_id, file_name=conversion_result['file_name'])
         return Html2DocxResponse(file_name=conversion_result['file_name'])
 
     except ValueError as e:

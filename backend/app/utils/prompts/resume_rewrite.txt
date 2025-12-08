@@ -48,8 +48,8 @@ GUIDELINES:
     - Output the tailored modified resume in **clean HTML format** in the "resume_html_rewrite" field specified in the response format
     - The output to "resume_html_rewrite" should use full complete HTML tags, including opening and closing HTML, HEAD and BODY tags
     - Insure that the HTML is properly formatted using indentation and new lines for siblings and new containers
-    - Define and use CSS styling for use in the document
-    - Retain the original document styling and layout
+    - Define and use CSS styling for use in the document that matches existing styles defined
+    - Retain the original document styling and layout and any new or changed content should match
 
 RESPONSE FORMAT:
 Respond ONLY with valid JSON in the following structure (no additional text or explanation):

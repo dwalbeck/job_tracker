@@ -312,16 +312,25 @@ class ApiService {
         });
     }
 
-    async rewriteResume(jobId, resumeId, keywordFinal, focusFinal) {
+    async resumeFull(jobId, baselineResumeId, keywordFinal, focusFinal) {
+        return this.request('/v1/resume/full', {
+            method: 'POST',
+            body: JSON.stringify({
+                baseline_resume_id: baselineResumeId,
+                job_id: jobId,
+                keyword_final: keywordFinal,
+                focus_final: focusFinal,
+            }),
+        });
+    }
+
+    async rewriteResume(jobId) {
         return this.request('/v1/resume/rewrite', {
             method: 'POST',
             body: JSON.stringify({
                 job_id: jobId,
-                resume_id: resumeId,
-                keyword_final: keywordFinal,
-                focus_final: focusFinal,
             }),
-            timeout: 150000, // 150 second (2.5 minute) timeout for resume rewrite
+            timeout: 180000, // 180 second (3 minute) timeout for resume rewrite
         });
     }
 

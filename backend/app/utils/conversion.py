@@ -746,7 +746,7 @@ class Conversion:
 
             # Query to get resume data
             query = text("""
-                SELECT rd.resume_html_rewrite, rd.suggestion, r.file_name, r.resume_id
+                SELECT rd.resume_html_rewrite, rd.suggestion, r.file_name, r.resume_id, j.job_title, j.company 
                 FROM job j
                 JOIN resume r ON (j.resume_id = r.resume_id)
                 JOIN resume_detail rd ON (r.resume_id = rd.resume_id)
@@ -763,7 +763,7 @@ class Conversion:
 
             # Extract values
             html_content = result.resume_html_rewrite
-            original_file_name = result.file_name
+            file_name = cls._set_file(result.company, result.job_title, 'docx')
             resume_id = result.resume_id
 
             logger.debug(f"Legacy HTML to DOCX conversion", job_id=job_id, html_length=len(html_content) if html_content else 0)
@@ -772,22 +772,13 @@ class Conversion:
             if not html_content or not html_content.strip():
                 raise ValueError(f"No rewritten HTML content found for job_id {job_id}")
 
-            # Remove file extension from original filename
-            if '.' in original_file_name:
-                base_name = original_file_name.rsplit('.', 1)[0]
-            else:
-                base_name = original_file_name
-
-            # Create new filename with -tailored.docx suffix
-            new_file_name = f"{base_name}.docx"
-
             # Convert HTML to DOCX using html4docx
             from html4docx import HtmlToDocx
 
             # Clean HTML
-            cleaned_html = cls._clean_html_for_docx(html_content)
-
-            file_path = cls._get_file_path(new_file_name)
+            #cleaned_html = cls._clean_html_for_docx(html_content)
+            cleaned_html = html_content
+            file_path = cls._get_file_path(file_name)
 
             try:
                 logger.debug(f"Converting HTML to DOCX via html4docx")
@@ -802,8 +793,8 @@ class Conversion:
                 for section in doc.sections:
                     section.top_margin = Inches(0.5)
                     section.bottom_margin = Inches(0.5)
-                    section.left_margin = Inches(0.75)
-                    section.right_margin = Inches(0.75)
+                    section.left_margin = Inches(0.5)
+                    section.right_margin = Inches(0.5)
 
                 # Remove leading empty paragraphs
                 while doc.paragraphs and not doc.paragraphs[0].text.strip():
@@ -814,41 +805,45 @@ class Conversion:
                 from docx.shared import Pt
                 from docx.enum.text import WD_LINE_SPACING
 
-                for paragraph in doc.paragraphs:
+                '''
+                #for paragraph in doc.paragraphs:
                     # Fix heading styles - ensure proper spacing and line height
-                    if paragraph.style.name.startswith('Heading'):
+                    #if paragraph.style.name.startswith('Heading'):
                         # Get the font size to calculate appropriate line spacing
-                        font_size = None
-                        if paragraph.runs:
-                            for run in paragraph.runs:
-                                if run.font.size:
-                                    font_size = run.font.size
-                                    break
+                        #font_size = None
+                        #if paragraph.runs:
+                        #    for run in paragraph.runs:
+                        #        if run.font.size:
+                        #            font_size = run.font.size
+                        #            break
 
                         # If no explicit font size, estimate based on heading level
-                        if font_size is None:
-                            if 'Heading 1' in paragraph.style.name:
-                                font_size = Pt(16)
-                            elif 'Heading 2' in paragraph.style.name:
-                                font_size = Pt(14)
-                            else:
-                                font_size = Pt(12)
+                        #if font_size is None:
+                        #    if 'Heading 1' in paragraph.style.name:
+                        #        font_size = Pt(20)
+                        #    elif 'Heading 2' in paragraph.style.name:
+                        #        font_size = Pt(18)
+                        #    elif 'Heading 3' in paragraph.style.name:
+                        #        font_size = Pt(14)
+                        #    else:
+                        #        font_size = Pt(12)
 
                         # Reset paragraph spacing with generous room above
-                        paragraph.paragraph_format.space_before = Pt(24)
-                        paragraph.paragraph_format.space_after = Pt(12)
+                        #paragraph.paragraph_format.space_before = Pt(24)
+                        #paragraph.paragraph_format.space_after = Pt(12)
 
                         # Use MULTIPLE line spacing (1.5x) which scales with font size
-                        paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
-                        paragraph.paragraph_format.line_spacing = 1.5
+                        #paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+                        #paragraph.paragraph_format.line_spacing = 1.2
 
                         # Remove any indentation
-                        paragraph.paragraph_format.left_indent = Pt(0)
-                        paragraph.paragraph_format.first_line_indent = Pt(0)
-                    else:
+                        #paragraph.paragraph_format.left_indent = Pt(0)
+                        #paragraph.paragraph_format.first_line_indent = Pt(0)
+                    #else:
                         # Fix regular paragraph indentation
-                        paragraph.paragraph_format.left_indent = Pt(0)
-                        paragraph.paragraph_format.first_line_indent = Pt(0)
+                        #paragraph.paragraph_format.left_indent = Pt(0)
+                        #paragraph.paragraph_format.first_line_indent = Pt(0)
+                '''
 
                 doc.save(str(file_path))
 
@@ -868,14 +863,14 @@ class Conversion:
 
             db.execute(update_query, {
                 "cleaned_html": cleaned_html,
-                "file_name": new_file_name,
+                "file_name": file_name,
                 "resume_id": resume_id
             })
             db.commit()
 
             logger.info(f"Updated resume_html_rewrite with cleaned HTML")
 
-            return {"file_name": new_file_name}
+            return {"file_name": file_name}
 
         except ValueError:
             raise
