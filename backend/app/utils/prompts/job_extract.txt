@@ -39,6 +39,7 @@ INSTRUCTIONS:
    - Industry-specific terms
    - Soft skills
    - Do not include keywords that consist of a single letter
+   - Do not select part of a word. Keywords must consist of at a minimum the full word and can span multiple adjoining words.
 
 
 RESPONSE FORMAT:

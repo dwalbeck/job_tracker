@@ -31,6 +31,32 @@ class Conversion:
         return Path(cls.RESUME_DIR) / file_name
 
     @classmethod
+    def _get_convertapi_key(cls) -> Optional[str]:
+        """
+        Retrieve ConvertAPI key from database.
+
+        Returns:
+            API key string if found and valid, None otherwise
+        """
+        from ..core.database import SessionLocal
+        from sqlalchemy import text
+
+        db = SessionLocal()
+        try:
+            query = text("SELECT convertapi_key FROM personal LIMIT 1")
+            result = db.execute(query).first()
+            if not result or not result.convertapi_key:
+                logger.error("ConvertAPI key not found in database")
+                return None
+            api_key = result.convertapi_key.strip() if result.convertapi_key else None
+            if not api_key:
+                logger.error("ConvertAPI key is empty after stripping")
+                return None
+            return api_key
+        finally:
+            db.close()
+
+    @classmethod
     def _set_file(cls, company: str, title: str, mimetype: str) -> str:
         """
         This will create a filename using the values from the company name and job title
@@ -1247,3 +1273,701 @@ class Conversion:
             logger.error(f"Error converting HTML to ODT", error=str(e))
             raise Exception(f"Error converting HTML to ODT: {str(e)}")
 
+    # ========================================================================================
+    # STANDARDIZED CONVERSION METHODS
+    # All methods follow the signature: (input_path: str, output_path: str) -> bool
+    # Returns True on success, False on failure
+    # ========================================================================================
+    @classmethod
+    def docx2html_docx2html(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert Docx file to HTML using the docx2html library package
+
+        Args:
+            input_path: Full path to input DOCX file
+            output_path: Full path for output HTML file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+
+        from docx2html import convert
+
+        html = convert(input_path)
+
+        # Write to output file
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html)
+
+        return True
+
+    @classmethod
+    def docx2html_docx_parser_converter(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert DOCX file to HTML using docx-parser-converter library.
+
+        Args:
+            input_path: Full path to input DOCX file
+            output_path: Full path for output HTML file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            from docx_parser_converter.docx_to_html.docx_to_html_converter import DocxToHtmlConverter
+            from docx_parser_converter.docx_parsers.utils import read_binary_from_file_path
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            docx_file_content = read_binary_from_file_path(input_path)
+            converter = DocxToHtmlConverter(docx_file_content, use_default_values=True)
+            html_output = converter.convert_to_html()
+
+            # Write to output file
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(html_output)
+
+            logger.info(f"DOCX to HTML conversion successful", input=input_path, output=output_path)
+            return True
+
+        except Exception as e:
+            logger.error(f"DOCX to HTML conversion failed", error=str(e), input=input_path)
+            return False
+
+    @classmethod
+    def odt2html_pandoc(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert ODT file to HTML using pandoc.
+
+        Args:
+            input_path: Full path to input ODT file
+            output_path: Full path for output HTML file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            import subprocess
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Use pandoc for ODT to HTML conversion
+            result = subprocess.run(
+                ['pandoc', input_path, '-f', 'odt', '-t', 'html', '-o', output_path],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+
+            logger.info(f"ODT to HTML conversion successful", input=input_path, output=output_path)
+            return True
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"ODT to HTML conversion failed", error=e.stderr, input=input_path)
+            return False
+        except Exception as e:
+            logger.error(f"ODT to HTML conversion failed", error=str(e), input=input_path)
+            return False
+
+    @classmethod
+    def odt2docx_pandoc(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert ODT file to DOCX using pandoc.
+
+        Args:
+            input_path: Full path to input ODT file
+            output_path: Full path for output DOCX file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            import subprocess
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Use pandoc for ODT to DOCX conversion
+            result = subprocess.run(
+                ['pandoc', input_path, '-f', 'odt', '-t', 'docx', '-o', output_path],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+
+            logger.info(f"ODT to DOCX conversion successful", input=input_path, output=output_path)
+            return True
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"ODT to DOCX conversion failed", error=e.stderr, input=input_path)
+            return False
+        except Exception as e:
+            logger.error(f"ODT to DOCX conversion failed", error=str(e), input=input_path)
+            return False
+
+    @classmethod
+    def pdf2html_markitdown(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert PDF file to HTML using MarkItDown (PDF -> Markdown -> HTML).
+
+        Args:
+            input_path: Full path to input PDF file
+            output_path: Full path for output HTML file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            from markitdown import MarkItDown
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Convert PDF to Markdown using MarkItDown
+            md = MarkItDown()
+            result = md.convert(input_path)
+            markdown_content = result.text_content
+
+            # Convert Markdown to HTML
+            html_content = cls._markdown_to_html(markdown_content)
+
+            # Write to output file
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+
+            logger.info(f"PDF to HTML conversion successful", input=input_path, output=output_path)
+            return True
+
+        except Exception as e:
+            logger.error(f"PDF to HTML conversion failed", error=str(e), input=input_path)
+            return False
+
+    @classmethod
+    def html2docx_html4docx(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert HTML file to DOCX using html4docx library.
+
+        Args:
+            input_path: Full path to input HTML file
+            output_path: Full path for output DOCX file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            from html4docx import HtmlToDocx
+            from docx.shared import Inches
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Read HTML content
+            with open(input_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+
+            # Clean HTML
+            #cleaned_html = cls._clean_html_for_docx(html_content)
+            cleaned_html = html_content
+
+            # Convert using html4docx
+            parser = HtmlToDocx()
+            doc = parser.parse_html_string(cleaned_html)
+
+            '''
+            # Set document margins
+            for section in doc.sections:
+                section.top_margin = Inches(0.5)
+                section.bottom_margin = Inches(0.5)
+                section.left_margin = Inches(0.5)
+                section.right_margin = Inches(0.5)
+
+            # Fix heading clipping issues
+            from docx.shared import Pt
+            from docx.enum.text import WD_LINE_SPACING
+
+            for paragraph in doc.paragraphs:
+                if paragraph.style.name.startswith('Heading'):
+                    paragraph.paragraph_format.space_before = Pt(24)
+                    paragraph.paragraph_format.space_after = Pt(12)
+                    paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+                    paragraph.paragraph_format.line_spacing = 1.2
+            '''
+
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            # Save document
+            doc.save(output_path)
+
+            logger.info(f"HTML to DOCX conversion successful", input=input_path, output=output_path)
+            return True
+
+        except Exception as e:
+            logger.error(f"HTML to DOCX conversion failed", error=str(e), input=input_path)
+            return False
+
+    @classmethod
+    def html2odt_pandoc(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert HTML file to ODT using pandoc.
+
+        Args:
+            input_path: Full path to input HTML file
+            output_path: Full path for output ODT file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            import subprocess
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            # Use pandoc to convert HTML to ODT
+            subprocess.run(
+                ['pandoc', input_path, '-o', output_path],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+
+            logger.info(f"HTML to ODT conversion successful", input=input_path, output=output_path)
+            return True
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"HTML to ODT conversion failed", error=e.stderr, input=input_path)
+            return False
+        except Exception as e:
+            logger.error(f"HTML to ODT conversion failed", error=str(e), input=input_path)
+            return False
+
+    @classmethod
+    def html2pdf_weasyprint(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert HTML file to PDF using WeasyPrint.
+
+        Args:
+            input_path: Full path to input HTML file
+            output_path: Full path for output PDF file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            from weasyprint import HTML
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Read HTML content
+            with open(input_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+
+            # Clean HTML
+            cleaned_html = cls._clean_html_for_docx(html_content)
+
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            # Convert HTML to PDF
+            HTML(string=cleaned_html).write_pdf(output_path)
+
+            logger.info(f"HTML to PDF conversion successful", input=input_path, output=output_path)
+            return True
+
+        except Exception as e:
+            logger.error(f"HTML to PDF conversion failed", error=str(e), input=input_path)
+            return False
+
+    # ========================================================================================
+    # CONVERTAPI CONVERSION METHODS
+    # Uses ConvertAPI service for conversions
+    # ========================================================================================
+
+    @classmethod
+    def docx2html_convertapi(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert DOCX file to HTML using ConvertAPI service.
+
+        Args:
+            input_path: Full path to input DOCX file
+            output_path: Full path for output HTML file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            import convertapi
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Get ConvertAPI key from database
+            api_key = cls._get_convertapi_key()
+            if not api_key:
+                return False
+
+            # Ensure output directory exists before conversion
+            output_dir = os.path.dirname(output_path)
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+
+            # Set API credentials (the library uses api_credentials, not api_secret)
+            convertapi.api_credentials = api_key
+            logger.debug(f"ConvertAPI conversion starting", input=input_path, output=output_path)
+
+            # Convert file
+            result = convertapi.convert('html', {'File': input_path}, from_format='docx')
+
+            # Save result
+            result.file.save(output_path)
+
+            logger.info(f"DOCX to HTML conversion (ConvertAPI) successful", input=input_path, output=output_path)
+            return True
+
+        except Exception as e:
+            logger.error(f"DOCX to HTML conversion (ConvertAPI) failed", error=str(e), input=input_path)
+            import traceback
+            logger.debug(f"ConvertAPI traceback", traceback=traceback.format_exc())
+            return False
+
+    @classmethod
+    def html2docx_convertapi(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert HTML file to DOCX using ConvertAPI service.
+
+        Args:
+            input_path: Full path to input HTML file
+            output_path: Full path for output DOCX file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            import convertapi
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Get ConvertAPI key from database
+            api_key = cls._get_convertapi_key()
+            if not api_key:
+                return False
+
+            # Set API secret
+            convertapi.api_credentials = api_key
+
+            # Convert file
+            result = convertapi.convert('docx', {'File': input_path}, from_format='html')
+
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            # Save result
+            result.file.save(output_path)
+
+            logger.info(f"HTML to DOCX conversion (ConvertAPI) successful", input=input_path, output=output_path)
+            return True
+
+        except Exception as e:
+            logger.error(f"HTML to DOCX conversion (ConvertAPI) failed", error=str(e), input=input_path)
+            return False
+
+    @classmethod
+    def html2odt_convertapi(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert HTML file to ODT using ConvertAPI service.
+
+        Args:
+            input_path: Full path to input HTML file
+            output_path: Full path for output ODT file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            import convertapi
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Get ConvertAPI key from database
+            api_key = cls._get_convertapi_key()
+            if not api_key:
+                return False
+
+            # Set API secret
+            convertapi.api_credentials = api_key
+
+            # Convert file
+            result = convertapi.convert('odt', {'File': input_path}, from_format='html')
+
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            # Save result
+            result.file.save(output_path)
+
+            logger.info(f"HTML to ODT conversion (ConvertAPI) successful", input=input_path, output=output_path)
+            return True
+
+        except Exception as e:
+            logger.error(f"HTML to ODT conversion (ConvertAPI) failed", error=str(e), input=input_path)
+            return False
+
+    @classmethod
+    def html2pdf_convertapi(cls, input_path: str, output_path: str) -> bool:
+        """
+        Convert HTML file to PDF using ConvertAPI service.
+
+        Args:
+            input_path: Full path to input HTML file
+            output_path: Full path for output PDF file
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            import convertapi
+
+            if not os.path.exists(input_path):
+                logger.error(f"Input file not found", input_path=input_path)
+                return False
+
+            # Get ConvertAPI key from database
+            api_key = cls._get_convertapi_key()
+            if not api_key:
+                return False
+
+            # Set API secret
+            convertapi.api_credentials = api_key
+
+            # Convert file
+            result = convertapi.convert('pdf', {'File': input_path}, from_format='html')
+
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+            # Save result
+            result.file.save(output_path)
+
+            logger.info(f"HTML to PDF conversion (ConvertAPI) successful", input=input_path, output=output_path)
+            return True
+
+        except Exception as e:
+            logger.error(f"HTML to PDF conversion (ConvertAPI) failed", error=str(e), input=input_path)
+            return False
+
+    # ========================================================================================
+    # ROUTING METHOD
+    # Routes conversion requests to the appropriate method based on database settings
+    # ========================================================================================
+
+    @classmethod
+    def convert_file(cls, source_format: str, target_format: str, input_path: str, output_path: str) -> bool:
+        """
+        Convert a file from source format to target format using the configured conversion method.
+
+        This routing method reads conversion preferences from the personal table for HTML conversions
+        and uses fixed methods for Markdown conversions.
+
+        Args:
+            source_format: Source file format (e.g., 'docx', 'odt', 'pdf', 'html', 'md')
+            target_format: Target file format (e.g., 'html', 'docx', 'odt', 'pdf', 'md')
+            input_path: Full path to input file
+            output_path: Full path for output file
+
+        Returns:
+            True if conversion successful, False otherwise
+
+        Supported conversions:
+            - docx -> md (uses pandoc)
+            - odt -> md (uses pandoc)
+            - pdf -> md (uses markitdown)
+            - docx -> html (methods: convertapi, docx-parser-converter)
+            - odt -> html (methods: convertapi, pandoc)
+            - pdf -> html (methods: convertapi, markitdown)
+            - html -> docx (methods: convertapi, html4docx)
+            - html -> odt (methods: convertapi, pandoc)
+            - html -> pdf (methods: convertapi, weasyprint)
+        """
+        try:
+            import subprocess
+            from pathlib import Path
+
+            # Normalize formats
+            source_format = source_format.lower().strip()
+            target_format = target_format.lower().strip()
+
+            # Create conversion key (e.g., 'docx2html', 'html2docx')
+            conversion_key = f"{source_format}2{target_format}"
+
+            logger.debug(f"Convert file called", source_format=source_format, target_format=target_format, conversion_key=conversion_key)
+
+            # Handle conversions to Markdown (not in personal table)
+            if target_format == 'md':
+                if source_format == 'docx':
+                    # Use pandoc for DOCX to MD
+                    result = subprocess.run(
+                        ['pandoc', input_path, '-f', 'docx', '-t', 'markdown', '-o', output_path],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    return True
+                elif source_format == 'odt':
+                    # Use pandoc for ODT to MD
+                    result = subprocess.run(
+                        ['pandoc', input_path, '-f', 'odt', '-t', 'markdown', '-o', output_path],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    return True
+                elif source_format == 'pdf':
+                    # Use MarkItDown for PDF to MD
+                    from markitdown import MarkItDown
+                    md = MarkItDown()
+                    result = md.convert(input_path)
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        f.write(result.text_content)
+                    return True
+                else:
+                    logger.error(f"Unsupported conversion to markdown: {source_format}2md")
+                    return False
+
+            # Get conversion preference from database for HTML conversions
+            from ..core.database import SessionLocal
+            from sqlalchemy import text
+
+            db = SessionLocal()
+            try:
+                query = text(f"SELECT {conversion_key} FROM personal LIMIT 1")
+                result = db.execute(query).first()
+
+                if not result:
+                    logger.error("No personal settings found in database")
+                    return False
+
+                # Get the preferred conversion method
+                preferred_method = getattr(result, conversion_key, None)
+                logger.debug(f"preferred method", method=preferred_method)
+
+            finally:
+                db.close()
+
+            # Default methods if no preference is set
+            default_methods = {
+                'docx2html': 'docx-parser-converter',
+                'odt2html': 'pandoc',
+                'pdf2html': 'markitdown',
+                'html2docx': 'html4docx',
+                'html2odt': 'pandoc',
+                'html2pdf': 'weasyprint'
+            }
+
+            # Use default if no preference set
+            if not preferred_method and conversion_key in default_methods:
+                preferred_method = default_methods[conversion_key]
+
+            if not preferred_method:
+                logger.error(f"No conversion method configured for {conversion_key}")
+                return False
+
+            # Route to appropriate method based on conversion type and preferred method
+            # If convertapi is selected and fails, automatically fall back to default method
+            if conversion_key == 'docx2html':
+                if preferred_method == 'convertapi':
+                    result = cls.docx2html_convertapi(input_path, output_path)
+                    if not result:
+                        logger.warning(f"ConvertAPI failed for {conversion_key}, falling back to default method")
+                        return cls.docx2html_docx_parser_converter(input_path, output_path)
+                    return result
+                elif preferred_method == 'docx-parser-converter':
+                    return cls.docx2html_docx_parser_converter(input_path, output_path)
+
+            elif conversion_key == 'odt2html':
+                if preferred_method == 'convertapi':
+                    result = cls.odt2html_convertapi(input_path, output_path)
+                    if not result:
+                        logger.warning(f"ConvertAPI failed for {conversion_key}, falling back to default method")
+                        return cls.odt2html_pandoc(input_path, output_path)
+                    return result
+                elif preferred_method == 'pandoc':
+                    return cls.odt2html_pandoc(input_path, output_path)
+
+            elif conversion_key == 'pdf2html':
+                if preferred_method == 'convertapi':
+                    result = cls.pdf2html_convertapi(input_path, output_path)
+                    if not result:
+                        logger.warning(f"ConvertAPI failed for {conversion_key}, falling back to default method")
+                        return cls.pdf2html_markitdown(input_path, output_path)
+                    return result
+                elif preferred_method == 'markitdown':
+                    return cls.pdf2html_markitdown(input_path, output_path)
+
+            elif conversion_key == 'html2docx':
+                if preferred_method == 'convertapi':
+                    result = cls.html2docx_convertapi(input_path, output_path)
+                    if not result:
+                        logger.warning(f"ConvertAPI failed for {conversion_key}, falling back to default method")
+                        return cls.html2docx_html4docx(input_path, output_path)
+                    return result
+                elif preferred_method == 'html4docx':
+                    return cls.html2docx_html4docx(input_path, output_path)
+
+            elif conversion_key == 'html2odt':
+                if preferred_method == 'convertapi':
+                    result = cls.html2odt_convertapi(input_path, output_path)
+                    if not result:
+                        logger.warning(f"ConvertAPI failed for {conversion_key}, falling back to default method")
+                        return cls.html2odt_pandoc(input_path, output_path)
+                    return result
+                elif preferred_method == 'pandoc':
+                    return cls.html2odt_pandoc(input_path, output_path)
+
+            elif conversion_key == 'html2pdf':
+                if preferred_method == 'convertapi':
+                    result = cls.html2pdf_convertapi(input_path, output_path)
+                    if not result:
+                        logger.warning(f"ConvertAPI failed for {conversion_key}, falling back to default method")
+                        return cls.html2pdf_weasyprint(input_path, output_path)
+                    return result
+                elif preferred_method == 'weasyprint':
+                    return cls.html2pdf_weasyprint(input_path, output_path)
+
+            else:
+                logger.error(f"Unsupported conversion: {conversion_key}")
+                return False
+
+            logger.error(f"Unknown conversion method: {preferred_method} for {conversion_key}")
+            return False
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"File conversion failed",
+                        source=source_format,
+                        target=target_format,
+                        error=e.stderr if hasattr(e, 'stderr') else str(e))
+            return False
+        except Exception as e:
+            logger.error(f"File conversion routing failed",
+                        source=source_format,
+                        target=target_format,
+                        error=str(e))
+            return False

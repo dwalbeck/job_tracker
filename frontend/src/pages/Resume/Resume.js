@@ -124,8 +124,24 @@ const Resume = () => {
         }
     };
 
-    const handleEdit = (resumeId) => {
-        window.location.href = `/edit-resume?resume_id=${resumeId}`;
+    const handleEdit = async (resumeId) => {
+        try {
+            // Check if TinyMCE API key is configured
+            const personalInfo = await apiService.getPersonalInfo();
+            const hasTinyMCEKey = personalInfo.tinymce_api_key && personalInfo.tinymce_api_key.trim() !== '';
+
+            if (hasTinyMCEKey) {
+                // Navigate to ManuallyEditResume page with TinyMCE
+                window.location.href = `/manually-edit-resume?resume_id=${resumeId}`;
+            } else {
+                // Navigate to EditResume page for manual HTML editing
+                window.location.href = `/edit-resume?resume_id=${resumeId}`;
+            }
+        } catch (error) {
+            console.error('Error checking TinyMCE API key:', error);
+            // Fallback to manual editing if there's an error
+            window.location.href = `/edit-resume?resume_id=${resumeId}`;
+        }
     };
 
     const handleTailor = (jobId, baselineResumeId) => {

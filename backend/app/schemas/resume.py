@@ -108,23 +108,13 @@ class ResumeCloneRequest(BaseModel):
 
 class ResumeExtractRequest(BaseModel):
     resume_id: int
-    bad_list: Optional[List[str]] = []
-
-
-class JobTitleData(BaseModel):
-    job_title: str
-    line_number: int
-
 
 class ResumeExtractResponse(BaseModel):
-    job_title: JobTitleData
-    keywords: List[str]
+    job_title: str
     suggestions: List[str]
-
 
 class ResumeRewriteRequest(BaseModel):
     job_id: int
-
 
 class ResumeRewriteResponse(BaseModel):
     resume_id: int
@@ -135,10 +125,10 @@ class ResumeRewriteResponse(BaseModel):
     rewrite_score: int
 
 class ResumeFullRequest(BaseModel):
-	baseline_resume_id: int
-	job_id: int
-	keyword_final: List[str]
-	focus_final: List[str]
+    baseline_resume_id: int
+    job_id: int
+    keyword_final: List[str]
+    focus_final: List[str]
 
 class ResumeFullResponse(BaseModel):
-	resume_id: int
+    resume_id: int

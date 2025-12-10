@@ -307,7 +307,7 @@ class ApiService {
     async updateResume(resumeData) {
         console.log('RESUME_DATA', resumeData);
         return this.request('/v1/resume', {
-            method: 'POST',
+            method: 'PUT',
             body: JSON.stringify(resumeData),
         });
     }
@@ -330,7 +330,7 @@ class ApiService {
             body: JSON.stringify({
                 job_id: jobId,
             }),
-            timeout: 180000, // 180 second (3 minute) timeout for resume rewrite
+            timeout: 360000, // 360 second (6 minute) timeout for resume rewrite
         });
     }
 
@@ -377,6 +377,17 @@ class ApiService {
         return this.request(`/v1/convert/final`, {
             method: 'POST',
             body: JSON.stringify(body)
+        });
+    }
+
+    async convertFile(resumeId, sourceFormat, targetFormat) {
+        return this.request(`/v1/convert/file`, {
+            method: 'POST',
+            body: JSON.stringify({
+                resume_id: resumeId,
+                source_format: sourceFormat,
+                target_format: targetFormat
+            })
         });
     }
 

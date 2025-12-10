@@ -1,17 +1,19 @@
 import React, {useState, useEffect} from 'react';
 import {useSearchParams, useNavigate} from 'react-router-dom';
-import {API_BASE_URL} from '../../config';
+import apiService from '../../services/api';
 import './EditResume.css';
 
 const EditResume = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const resumeId = searchParams.get('resume_id');
+    const jobId = searchParams.get('job_id');
 
-    const [resumeMarkdown, setResumeMarkdown] = useState('');
+    const [resumeHtml, setResumeHtml] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [saving, setSaving] = useState(false);
+    const [showRendered, setShowRendered] = useState(false);
 
     useEffect(() => {
         if (resumeId) {
@@ -23,12 +25,11 @@ const EditResume = () => {
     const fetchResumeDetail = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_BASE_URL}/v1/resume/detail/${resumeId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch resume details');
-            }
-            const data = await response.json();
-            setResumeMarkdown(data.resume_markdown || '');
+            const data = await apiService.getResumeDetail(resumeId);
+
+            // Use rewritten HTML if available, otherwise fall back to baseline HTML
+            const htmlContent = data.resume_html_rewrite || data.resume_html || '';
+            setResumeHtml(htmlContent);
         } catch (error) {
             console.error('Error fetching resume detail:', error);
             setError('Failed to load resume details');
@@ -40,22 +41,14 @@ const EditResume = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            const response = await fetch(`${API_BASE_URL}/v1/resume/detail`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    resume_id: parseInt(resumeId),
-                    resume_markdown: resumeMarkdown
-                }),
+
+            // Save to resume_html_rewrite
+            await apiService.updateResumeDetail({
+                resume_id: parseInt(resumeId),
+                resume_html_rewrite: resumeHtml
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to save resume');
-            }
-
-            // Navigate back to the previous page
+            // Navigate back to view resume page
             handleGoBack();
         } catch (error) {
             console.error('Error saving resume:', error);
@@ -66,7 +59,7 @@ const EditResume = () => {
     };
 
     const handleGoBack = () => {
-        navigate('/resume');
+        navigate(`/view-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
     };
 
     const handleCancel = () => {
@@ -92,6 +85,12 @@ const EditResume = () => {
                 </div>
                 <div className="header-controls">
                     <button
+                        onClick={() => setShowRendered(!showRendered)}
+                        className="toggle-button"
+                    >
+                        {showRendered ? 'Show Raw HTML' : 'Show Preview'}
+                    </button>
+                    <button
                         onClick={handleCancel}
                         className="cancel-button"
                     >
@@ -108,12 +107,21 @@ const EditResume = () => {
             </div>
 
             <div className="edit-resume-content">
-        <textarea
-            className="resume-editor"
-            value={resumeMarkdown}
-            onChange={(e) => setResumeMarkdown(e.target.value)}
-            placeholder="Enter your resume content in Markdown format..."
-        />
+                {showRendered ? (
+                    <iframe
+                        className="resume-preview"
+                        srcDoc={resumeHtml}
+                        title="Resume Preview"
+                        sandbox="allow-same-origin"
+                    />
+                ) : (
+                    <textarea
+                        className="resume-editor"
+                        value={resumeHtml}
+                        onChange={(e) => setResumeHtml(e.target.value)}
+                        placeholder="Enter your resume content in HTML format..."
+                    />
+                )}
             </div>
         </div>
     );

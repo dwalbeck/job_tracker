@@ -25,7 +25,7 @@ const JobAnalysis = () => {
     const fetchJobData = async () => {
         try {
             setLoading(true);
-            setLoadingMessage('Analyzing job description with AI (this may take up to 4 minutes)...');
+            setLoadingMessage('Analyzing job description with AI...');
 
             console.log('JobAnalysis: job_id =', id, ', resume_id =', resumeId);
 
@@ -408,12 +408,12 @@ const JobAnalysis = () => {
             // Step 1: Create the resume record with baseline data
             const fullResponse = await apiService.resumeFull(id, resumeId, keywordFinal, focusFinal);
 
-            setLoadingMessage('Create resume for Job posting based on the selected baseline resume...completed\nRunning AI rewrite of resume (can take several minutes)...');
+            setLoadingMessage('Create resume for Job posting based on the selected baseline resume...<b>completed</b><br />Running AI rewrite of resume (can take several minutes)...');
 
             // Step 2: AI rewrite the resume
             const rewriteResponse = await apiService.rewriteResume(id);
 
-            setLoadingMessage('Create resume for Job posting based on the selected baseline resume...completed\nRunning AI rewrite of resume (can take several minutes)...completed');
+            setLoadingMessage('Create resume for Job posting based on the selected baseline resume...<b>completed</b><br />Running AI rewrite of resume (can take several minutes)...<b>completed</b>');
 
             // Navigate to the optimized resume page
             navigate(`/optimized-resume/${rewriteResponse.resume_id}`, {

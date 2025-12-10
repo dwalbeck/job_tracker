@@ -15,6 +15,7 @@ const ManuallyEditResume = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [initialContent, setInitialContent] = useState('');
+    const [tinyMceApiKey, setTinyMceApiKey] = useState('');
 
     useEffect(() => {
         if (resumeId) {
@@ -26,6 +27,11 @@ const ManuallyEditResume = () => {
     const fetchResumeContent = async () => {
         try {
             setLoading(true);
+
+            // Get TinyMCE API key from personal settings
+            const personalInfo = await apiService.getPersonalInfo();
+            setTinyMceApiKey(personalInfo.tinymce_api_key || '');
+
             const data = await apiService.getResumeDetail(resumeId);
 
             // Use rewritten HTML if available, otherwise fall back to baseline HTML
@@ -90,7 +96,7 @@ const ManuallyEditResume = () => {
 
             <div className="editor-container">
                 <Editor
-                    apiKey={process.env.REACT_APP_TINYMCE_API_KEY}
+                    apiKey={tinyMceApiKey}
                     onInit={(_evt, editor) => editorRef.current = editor}
                     initialValue={initialContent}
                     init={{

@@ -14,6 +14,7 @@ from ..core.config import settings
 from ..models.models import Resume, Job, FileFormat, ResumeDetail
 from ..schemas.resume import (
 	Resume as ResumeSchema,
+	ResumeUpdate,
 	ResumeDetailCreate,
 	ResumeDetail as ResumeDetailSchema,
 	ResumeBaseline,
@@ -22,7 +23,6 @@ from ..schemas.resume import (
 	ResumeCloneRequest,
 	ResumeExtractRequest,
 	ResumeExtractResponse,
-	JobTitleData,
 	ResumeRewriteRequest,
 	ResumeRewriteResponse,
 	ResumeFullRequest,
@@ -287,8 +287,8 @@ async def get_baseline_resume_list(db: Session = Depends(get_db)):
 	query = """
 		SELECT resume_id, resume_title, is_default
 		FROM resume
-		WHERE is_baseline = true
-		ORDER BY is_default DESC, resume_title ASC
+		WHERE is_baseline = true AND is_active = true
+		ORDER BY resume_created DESC
 	"""
 
 	result = db.execute(text(query))
@@ -525,6 +525,7 @@ async def create_or_update_resume(
 				content = await upload_file.read()
 				f.write(content)
 
+			'''
 			# Convert to markdown and create/update resume_detail
 			try:
 				markdown_content = _convert_to_markdown(calculated_file_name, original_format)
@@ -550,6 +551,7 @@ async def create_or_update_resume(
 					status_code=500,
 					detail=f"Error processing resume: Failed to convert to Markdown: {str(e)}"
 				)
+			'''
 
 	else:
 		# Create new resume
@@ -582,6 +584,7 @@ async def create_or_update_resume(
 				content = await upload_file.read()
 				f.write(content)
 
+			'''
 			# Convert to markdown and create resume_detail
 			try:
 				markdown_content = _convert_to_markdown(calculated_file_name, original_format)
@@ -598,6 +601,7 @@ async def create_or_update_resume(
 					status_code=500,
 					detail=f"Error processing resume: Failed to convert to Markdown: {str(e)}"
 				)
+			'''
 
 		resume = new_resume
 
@@ -612,6 +616,82 @@ async def create_or_update_resume(
 			logger.warning(f"Failed to update job activity", job_id=job_id, error=str(e))
 
 	return {"status": "success", "resume_id": resume.resume_id}
+
+
+@router.put("/resume")
+async def update_resume_json(
+	resume_data: ResumeUpdate,
+	db: Session = Depends(get_db)
+):
+	"""
+	Update an existing resume using JSON payload.
+
+	This endpoint accepts JSON and is used for simple resume metadata updates
+	without file uploads.
+	"""
+	if not resume_data.resume_id:
+		raise HTTPException(status_code=400, detail="resume_id is required for updates")
+
+	logger.info("Updating resume via PUT", resume_id=resume_data.resume_id)
+
+	# Check if resume exists
+	resume_query = text("SELECT resume_id FROM resume WHERE resume_id = :resume_id")
+	existing = db.execute(resume_query, {"resume_id": resume_data.resume_id}).first()
+
+	if not existing:
+		raise HTTPException(status_code=404, detail=f"Resume {resume_data.resume_id} not found")
+
+	# Build update query dynamically based on provided fields
+	update_fields = []
+	params = {"resume_id": resume_data.resume_id}
+
+	if resume_data.resume_title is not None:
+		update_fields.append("resume_title = :resume_title")
+		params["resume_title"] = resume_data.resume_title
+
+	if resume_data.file_name is not None:
+		update_fields.append("file_name = :file_name")
+		params["file_name"] = resume_data.file_name
+
+	if resume_data.is_baseline is not None:
+		update_fields.append("is_baseline = :is_baseline")
+		params["is_baseline"] = resume_data.is_baseline
+
+	if resume_data.is_default is not None:
+		update_fields.append("is_default = :is_default")
+		params["is_default"] = resume_data.is_default
+
+	if resume_data.is_active is not None:
+		update_fields.append("is_active = :is_active")
+		params["is_active"] = resume_data.is_active
+
+	if resume_data.baseline_resume_id is not None:
+		update_fields.append("baseline_resume_id = :baseline_resume_id")
+		params["baseline_resume_id"] = resume_data.baseline_resume_id
+
+	if resume_data.job_id is not None:
+		update_fields.append("job_id = :job_id")
+		params["job_id"] = resume_data.job_id
+
+	if update_fields:
+		update_fields.append("resume_updated = NOW()")
+		update_query = text(f"""
+			UPDATE resume
+			SET {', '.join(update_fields)}
+			WHERE resume_id = :resume_id
+		""")
+		db.execute(update_query, params)
+		db.commit()
+
+	# Update job activity if job_id is in the data
+	if resume_data.job_id:
+		try:
+			update_job_activity(db, resume_data.job_id)
+		except Exception as e:
+			logger.warning(f"Failed to update job activity", job_id=resume_data.job_id, error=str(e))
+
+	logger.info("Resume updated successfully", resume_id=resume_data.resume_id)
+	return {"status": "success", "resume_id": resume_data.resume_id}
 
 
 @router.post("/resume/detail")
@@ -633,7 +713,6 @@ async def create_or_update_resume_detail(
 	- keyword_count: Number of keywords applied
 	- resume_keyword: List of keywords applied
 	- focus_count: Number of focus areas applied
-	- focus_applied: List of focus areas applied
 	"""
 
 	# Verify that the resume exists
@@ -668,8 +747,7 @@ async def create_or_update_resume_detail(
 			position_title=detail_data.position_title,
 			keyword_count=detail_data.keyword_count,
 			resume_keyword=detail_data.resume_keyword,
-			focus_count=detail_data.focus_count,
-			focus_applied=detail_data.focus_applied
+			focus_count=detail_data.focus_count
 		)
 
 		db.add(new_detail)
@@ -881,20 +959,17 @@ async def extract_resume_data(
 	db: Session = Depends(get_db)
 ):
 	"""
-	Extract job title, keywords, and suggestions from a resume using AI.
+	Extract job title and suggestions from a resume using AI.
 
 	This endpoint uses OpenAI to analyze the resume content and extract:
-	- Primary job title with line number
-	- Relevant keywords and skills
+	- Primary job title
 	- Suggestions for improvement
 
 	JSON body:
 	- resume_id: ID of the resume to analyze
-	- bad_list: List of job titles to exclude from selection (optional)
 
 	Returns:
 	- job_title: Object containing job_title string and line_number
-	- keywords: List of extracted keywords
 	- suggestions: List of improvement suggestions
 	"""
 
@@ -904,17 +979,12 @@ async def extract_resume_data(
 
 		# Extract data using AI
 		result = ai_agent.extract_data(
-			resume_id=extract_request.resume_id,
-			bad_list=extract_request.bad_list
+			resume_id=extract_request.resume_id
 		)
 
 		# Convert the result to response model
 		return ResumeExtractResponse(
-			job_title=JobTitleData(
-				job_title=result['job_title']['job_title'],
-				line_number=result['job_title']['line_number']
-			),
-			keywords=result['keywords'],
+			job_title=result['job_title'],
 			suggestions=result['suggestions']
 		)
 

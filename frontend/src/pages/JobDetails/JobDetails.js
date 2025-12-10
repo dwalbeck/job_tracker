@@ -53,6 +53,12 @@ const JobDetails = () => {
         try {
             const details = await apiService.getResumeDetail(resumeId);
             setResumeDetail(details);
+
+            // Fetch full resume to get baseline_resume_id
+            const resume = await apiService.getResume(resumeId);
+            if (resume && resume.baseline_resume_id) {
+                setSelectedResumeId(resume.baseline_resume_id);
+            }
         } catch (error) {
             console.error('Error fetching resume details:', error);
             setResumeDetail(null);
@@ -466,7 +472,9 @@ const JobDetails = () => {
                             <div className="resume-selector-container">
                                 {!showResumeSelect ? (
                                     <div className="resume-display" onClick={handleResumeClick}>
-                                        <span className="baseline-label">baseline default</span>
+                                        <span className="baseline-label">
+                                            {baselineResumes.find(r => r.resume_id === selectedResumeId)?.is_default ? 'baseline default' : 'baseline'}
+                                        </span>
                                         <span className="resume-title">
                       {baselineResumes.find(r => r.resume_id === selectedResumeId)?.resume_title || 'Select Resume'}
                     </span>

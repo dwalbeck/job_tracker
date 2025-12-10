@@ -24,12 +24,15 @@ class AiAgent:
             db: SQLAlchemy database session
         """
         self.db = db
+
+        # Load LLM settings and API keys from database first
+        # This will update settings.openai_api_key if it exists in the database
+        settings.load_llm_settings_from_db(db)
+
+        # Now set instance variables from settings (using DB values if they were loaded)
         self.api_key = settings.openai_api_key
         self.model = settings.ai_model
         self.project = settings.openai_project
-
-        # Load LLM settings from database
-        settings.load_llm_settings_from_db(db)
 
         # Set LLM models from config (these can be different for each AI operation)
         self.resume_extract_llm = settings.resume_extract_llm
@@ -40,7 +43,7 @@ class AiAgent:
         # Initialize OpenAI client with timeout
         client_kwargs = {
             "api_key": self.api_key,
-            "timeout": 180.0,  # 120 second timeout for API requests (resume rewrite can be large)
+            "timeout": 600.0,  # 10 minute timeout for API requests (resume rewrite can be very large)
             "max_retries": 0   # Don't retry - fail fast to avoid long waits
         }
         if self.project:
@@ -69,6 +72,24 @@ class AiAgent:
         with open(prompt_path, 'r') as f:
             return f.read()
 
+    def get_html(self, resume_id: int) -> str:
+        """
+        Retrieve the HTML content of a resume from the DB
+
+        Args:
+            resume_id: ID of the resume to retrieve
+
+        Returns:
+            original HTML content of the resume
+        """
+        query = text("SELECT resume_html FROM resume_detail WHERE resume_id = :resume_id")
+        result = self.db.execute(query, {"resume_id": resume_id}).first()
+
+        if not result:
+            raise ValueError(f"Resume not found for resume_id: {resume_id}")
+
+        return result[0]
+
     def get_markdown(self, resume_id: int) -> str:
         """
         Retrieve the markdown content of a resume from the database.
@@ -90,7 +111,7 @@ class AiAgent:
 
         return result[0]
 
-    def extract_data(self, resume_id: int, bad_list: list = None) -> dict:
+    def extract_data(self, resume_id: int) -> dict:
         """
         Extract job title, keywords, and suggestions from a resume using AI.
 
@@ -101,23 +122,19 @@ class AiAgent:
         Returns:
             Dictionary containing:
                 - job_title: dict with job_title and line_number
-                - keywords: list of extracted keywords
                 - suggestions: list of improvement suggestions
         """
-        if bad_list is None:
-            bad_list = []
 
         # Get the markdown resume
-        md_resume = self.get_markdown(resume_id)
+        resume_html = self.get_html(resume_id)
 
         # Load the prompt template
         prompt_template = self._load_prompt('extract_data')
 
         # Format the prompt with variables using replace to avoid issues with curly braces
-        bad_list_str = "\n".join([f"- {title}" for title in bad_list]) if bad_list else "None"
-        prompt = prompt_template.replace('{md_resume}', md_resume)
-        prompt = prompt.replace('{bad_list}', bad_list_str)
+        prompt = prompt_template.replace('{resume_html}', resume_html)
 
+        logger.debug('LLM model used for extracting resume data', llm=self.resume_extract_llm)
         # Make API call to OpenAI
         response = self.client.chat.completions.create(
             model=self.resume_extract_llm,
@@ -136,11 +153,8 @@ class AiAgent:
             result = json.loads(response_text)
 
             # Validate the structure
-            if not all(key in result for key in ['job_title', 'keywords', 'suggestions']):
+            if not all(key in result for key in ['job_title', 'suggestions']):
                 raise ValueError("Response missing required keys")
-
-            if not all(key in result['job_title'] for key in ['job_title', 'line_number']):
-                raise ValueError("job_title missing required keys")
 
             return result
 

@@ -60,13 +60,13 @@ class Settings(BaseSettings):
 
 	def load_llm_settings_from_db(self, db):
 		"""
-		Load LLM settings from the personal table in the database.
+		Load LLM settings and API keys from the personal table in the database.
 		Updates the settings object with the database values if they exist.
 		"""
 		from sqlalchemy import text
 		try:
 			query = text("""
-				SELECT job_extract_llm, rewrite_llm, cover_llm, resume_extract_llm 
+				SELECT job_extract_llm, rewrite_llm, cover_llm, resume_extract_llm, openai_api_key
 				FROM personal
 				LIMIT 1
 			""")
@@ -81,6 +81,8 @@ class Settings(BaseSettings):
 					self.cover_llm = result.cover_llm
 				if result.resume_extract_llm:
 					self.resume_extract_llm = result.resume_extract_llm
+				if result.openai_api_key:
+					self.openai_api_key = result.openai_api_key
 		except Exception:
 			# If there's an error querying the DB, use defaults
 			pass

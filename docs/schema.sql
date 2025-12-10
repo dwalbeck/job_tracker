@@ -208,6 +208,15 @@ CREATE TABLE IF NOT EXISTS personal (
 	job_extract_llm         varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
 	rewrite_llm             varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
 	cover_llm               varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
+    docx2html               varchar(32) NOT NULL DEFAULT 'docx-parser-converter',
+    odt2html                varchar(32) NOT NULL DEFAULT 'pandoc',
+    pdf2html                varchar(32) NOT NULL DEFAULT 'markitdown',
+    html2docx               varchar(32) NOT NULL DEFAULT 'html4docx',
+    html2odt                varchar(32) NOT NULL DEFAULT 'pandoc',
+    html2pdf                varchar(32) NOT NULL DEFAULT 'weasyprint',
+    openai_api_key          varchar(192) DEFAULT NULL,
+    tinymce_api_key         varchar(64) DEFAULT NULL,
+    convertapi_key          varchar(64) DEFAULT NULL,
 	PRIMARY KEY (first_name, last_name)
 );
 

@@ -357,8 +357,7 @@ async def convert_final(
 
         if not result.resume_html_rewrite:
             logger.error(f"No rewritten HTML content found", resume_id=request.resume_id)
-            raise HTTPException(status_code=400,
-                                detail=f"No rewritten HTML content found for resume_id: {request.resume_id}")
+            raise HTTPException(status_code=400, detail=f"No rewritten HTML content found for resume_id: {request.resume_id}")
 
         # Extract values
         original_file_name = result.file_name
@@ -426,3 +425,140 @@ async def convert_final(
     except Exception as e:
         logger.error(f"Error converting resume", resume_id=request.resume_id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Error converting resume: {str(e)}")
+
+
+class ConvertFileRequest(BaseModel):
+    """Request schema for /v1/convert/file endpoint"""
+    resume_id: int
+    source_format: str
+    target_format: str
+
+
+class ConvertFileResponse(BaseModel):
+    """Response schema for /v1/convert/file endpoint"""
+    file: str
+    file_content: str
+
+
+@router.post("/convert/file", response_model=ConvertFileResponse)
+async def convert_file(
+        request: ConvertFileRequest,
+        db: Session = Depends(get_db)
+):
+    """
+    Convert resume file using personal configuration settings.
+
+    This endpoint:
+    1. Retrieves resume and resume_detail data from database
+    2. Determines input and output paths based on source/target formats
+    3. Calls Conversion.convert_file() with personal settings
+    4. Returns the filename and content (for md/html targets)
+
+    For baseline resumes (source: docx, odt, pdf):
+    - input_path: resume directory + resume.file_name
+    - output_path: change extension to target_format
+    - Returns: filename and file_content
+
+    For optimized resumes (source: md, html):
+    - input_path: resume.file_name (html) or swap extension to md
+    - output_path: append '-final' to avoid collision with baseline
+    - Returns: filename and file_content
+
+    Args:
+        request: ConvertFileRequest with resume_id, source_format, target_format
+        db: Database session
+
+    Returns:
+        ConvertFileResponse with file name and content
+
+    Raises:
+        HTTPException: If resume not found or conversion fails
+    """
+    try:
+        logger.info(f"File conversion requested", resume_id=request.resume_id,
+                   source_format=request.source_format, target_format=request.target_format)
+
+        # Normalize formats
+        source_format = request.source_format.lower().strip()
+        target_format = request.target_format.lower().strip()
+
+        # Query to get resume data
+        query = text("""
+            SELECT r.file_name, r.original_format, r.is_baseline
+            FROM resume r
+            WHERE r.resume_id = :resume_id
+        """)
+
+        result = db.execute(query, {"resume_id": request.resume_id}).first()
+
+        if not result:
+            logger.error(f"Resume not found", resume_id=request.resume_id)
+            raise HTTPException(status_code=404, detail=f"Resume not found for resume_id: {request.resume_id}")
+
+        file_name = result.file_name
+
+        # Determine paths based on source format
+        resume_dir = settings.resume_dir
+
+        if source_format in ['docx', 'odt', 'pdf']:
+            # Baseline resume
+            input_path = os.path.join(resume_dir, file_name)
+            # Change extension to target format
+            output_file_name = Conversion.rename_file(file_name, target_format)
+            output_path = os.path.join(resume_dir, output_file_name)
+
+        elif source_format in ['md', 'html']:
+            # Optimized resume
+            if source_format == 'html':
+                # Use file_name as-is
+                input_file_name = file_name
+            else:  # md
+                # Swap extension from html to md
+                input_file_name = Conversion.rename_file(file_name, 'md')
+
+            input_path = os.path.join(resume_dir, input_file_name)
+
+            # Append '-final' to output filename to avoid collision
+            base_name = file_name.rsplit('.', 1)[0] if '.' in file_name else file_name
+            output_file_name = f"{base_name}-final.{target_format}"
+            output_path = os.path.join(resume_dir, output_file_name)
+        else:
+            logger.error(f"Unsupported source format", source_format=source_format)
+            raise HTTPException(status_code=400, detail=f"Unsupported source format: {source_format}")
+
+        logger.debug(f"Conversion paths determined", input_path=input_path, output_path=output_path)
+
+        # Call the conversion method
+        conversion_success = Conversion.convert_file(
+            source_format=source_format,
+            target_format=target_format,
+            input_path=input_path,
+            output_path=output_path
+        )
+
+        if not conversion_success:
+            logger.error(f"Conversion failed", resume_id=request.resume_id)
+            raise HTTPException(status_code=500, detail="File conversion failed")
+
+        # Read file content for md and html targets
+        file_content = ""
+        if target_format in ['md', 'html']:
+            try:
+                with open(output_path, 'r', encoding='utf-8') as f:
+                    file_content = f.read()
+                logger.debug(f"File content read successfully", file_size=len(file_content))
+            except Exception as e:
+                logger.error(f"Error reading converted file", error=str(e))
+                raise HTTPException(status_code=500, detail=f"Error reading converted file: {str(e)}")
+
+        logger.info(f"File conversion completed successfully", resume_id=request.resume_id,
+                   output_file=output_file_name)
+
+        return ConvertFileResponse(file=output_file_name, file_content=file_content)
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Error during file conversion", resume_id=request.resume_id, error=str(e))
+        raise HTTPException(status_code=500, detail=f"Error during file conversion: {str(e)}")
