@@ -40,11 +40,8 @@ const ViewResume = () => {
         try {
             setDownloading(true);
 
-            // Call convert/final endpoint to generate the file
-            const convertResult = await apiService.convertFinal({
-                resume_id: parseInt(resumeId),
-                output_format: format
-            });
+            // Call convert/file endpoint to generate the file
+            const convertResult = await apiService.convertFile(parseInt(resumeId), 'html', format);
 
             const {file_name} = convertResult;
 

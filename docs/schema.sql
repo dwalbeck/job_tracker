@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS job (
     PRIMARY KEY (job_id)
 );
 CREATE INDEX IF NOT EXISTS job_job_status_idx ON job (job_status);
-CREATE INDEX IF NOT EXISTS job_last_contact_idx ON job (last_activity);
+CREATE INDEX IF NOT EXISTS job_last_activity_idx ON job (last_activity);
 
 CREATE TABLE IF NOT EXISTS job_detail (
 	job_id                  int NOT NULL REFERENCES job (job_id) ON DELETE CASCADE ON UPDATE CASCADE,

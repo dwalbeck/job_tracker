@@ -262,7 +262,7 @@ const JobDetails = () => {
 
     const handleDownloadResume = async () => {
         try {
-            const response = await apiService.convertHtmlToDocx(id);
+            const response = await apiService.convertFile(job.resume_id, 'html', 'docx');
             const fileName = response.file_name;
 
             // Trigger file download using standardized naming endpoint

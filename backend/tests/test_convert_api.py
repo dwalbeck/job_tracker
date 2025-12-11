@@ -1,6 +1,167 @@
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 from sqlalchemy import text
+
+
+class TestConvertOdt2Md:
+    """Test suite for POST /v1/convert/odt2md endpoint."""
+
+    @patch('app.utils.conversion.Conversion.odtToMd')
+    def test_convert_odt2md_success(self, mock_convert, client, test_db):
+        """Test successful ODT to Markdown conversion."""
+        mock_convert.return_value = "# Resume\n\nExperience..."
+
+        response = client.post("/v1/convert/odt2md", json={"file_name": "test.odt"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data['file_content'] == "# Resume\n\nExperience..."
+
+    @patch('app.utils.conversion.Conversion.odtToMd')
+    def test_convert_odt2md_file_not_found(self, mock_convert, client, test_db):
+        """Test conversion with non-existent file."""
+        mock_convert.side_effect = FileNotFoundError("File not found")
+
+        response = client.post("/v1/convert/odt2md", json={"file_name": "missing.odt"})
+
+        assert response.status_code == 404
+        assert "File not found" in response.json()['detail']
+
+
+class TestConvertOdt2Html:
+    """Test suite for POST /v1/convert/odt2html endpoint."""
+
+    @patch('app.utils.conversion.Conversion.odtToHtml')
+    def test_convert_odt2html_success(self, mock_convert, client, test_db):
+        """Test successful ODT to HTML conversion."""
+        mock_convert.return_value = "<html><body>Resume</body></html>"
+
+        response = client.post("/v1/convert/odt2html", json={"file_name": "test.odt"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data['file_content'] == "<html><body>Resume</body></html>"
+
+
+class TestConvertDocx2Md:
+    """Test suite for POST /v1/convert/docx2md endpoint."""
+
+    @patch('app.utils.conversion.Conversion.docxToMd')
+    def test_convert_docx2md_success(self, mock_convert, client, test_db):
+        """Test successful DOCX to Markdown conversion."""
+        mock_convert.return_value = "# Resume\n\nSoftware Engineer"
+
+        response = client.post("/v1/convert/docx2md", json={"file_name": "resume.docx"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data['file_content'] == "# Resume\n\nSoftware Engineer"
+
+    @patch('app.utils.conversion.Conversion.docxToMd')
+    def test_convert_docx2md_conversion_error(self, mock_convert, client, test_db):
+        """Test handling conversion errors."""
+        mock_convert.side_effect = Exception("Conversion failed")
+
+        response = client.post("/v1/convert/docx2md", json={"file_name": "bad.docx"})
+
+        assert response.status_code == 500
+        assert "Conversion failed" in response.json()['detail']
+
+
+class TestConvertDocx2Html:
+    """Test suite for POST /v1/convert/docx2html endpoint."""
+
+    @patch('app.utils.conversion.Conversion.docxToHtml')
+    def test_convert_docx2html_success(self, mock_convert, client, test_db):
+        """Test successful DOCX to HTML conversion."""
+        mock_convert.return_value = "<html><h1>Resume</h1></html>"
+
+        response = client.post("/v1/convert/docx2html", json={"file_name": "resume.docx"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data['file_content'] == "<html><h1>Resume</h1></html>"
+
+
+class TestConvertPdf2Md:
+    """Test suite for POST /v1/convert/pdf2md endpoint."""
+
+    @patch('app.utils.conversion.Conversion.pdfToMd')
+    def test_convert_pdf2md_success(self, mock_convert, client, test_db):
+        """Test successful PDF to Markdown conversion."""
+        mock_convert.return_value = "# Resume\n\nJohn Doe"
+
+        response = client.post("/v1/convert/pdf2md", json={"file_name": "resume.pdf"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data['file_content'] == "# Resume\n\nJohn Doe"
+
+    @patch('app.utils.conversion.Conversion.pdfToMd')
+    def test_convert_pdf2md_file_not_found(self, mock_convert, client, test_db):
+        """Test PDF conversion with missing file."""
+        mock_convert.side_effect = FileNotFoundError("PDF not found")
+
+        response = client.post("/v1/convert/pdf2md", json={"file_name": "missing.pdf"})
+
+        assert response.status_code == 404
+        assert "PDF not found" in response.json()['detail']
+
+
+class TestConvertPdf2Html:
+    """Test suite for POST /v1/convert/pdf2html endpoint."""
+
+    @patch('app.utils.conversion.Conversion.pdfToHtml')
+    def test_convert_pdf2html_success(self, mock_convert, client, test_db):
+        """Test successful PDF to HTML conversion."""
+        mock_convert.return_value = "<html><body><h1>Resume</h1></body></html>"
+
+        response = client.post("/v1/convert/pdf2html", json={"file_name": "resume.pdf"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "<h1>Resume</h1>" in data['file_content']
+
+
+class TestConvertHtml2Docx:
+    """Test suite for GET /v1/convert/html2docx endpoint."""
+
+    @patch('app.utils.conversion.Conversion.pageFormatting')
+    @patch('app.utils.conversion.Conversion.html2docx_from_job')
+    def test_convert_html2docx_success(self, mock_html2docx, mock_formatting, client, test_db):
+        """Test successful HTML to DOCX conversion."""
+        # Create test personal data
+        test_db.execute(text("""
+            UPDATE personal SET first_name = 'John', last_name = 'Doe'
+        """))
+        # Create test job
+        test_db.execute(text("""
+            INSERT INTO job (job_id, company, job_title, job_status, job_active, job_directory, resume_id)
+            VALUES (1, 'Test Co', 'Engineer', 'applied', true, 'test_co_engineer', NULL)
+        """))
+        test_db.commit()
+
+        mock_html2docx.return_value = {'file_name': 'resume.docx'}
+        mock_formatting.return_value = True
+
+        response = client.get("/v1/convert/html2docx?job_id=1")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data['file_name'] == 'resume.docx'
+        mock_html2docx.assert_called_once_with(1, test_db)
+        mock_formatting.assert_called_once_with('resume.docx', 'John Doe')
+
+    def test_convert_html2docx_no_personal_data(self, client, test_db):
+        """Test conversion fails when personal data not found."""
+        # Delete personal data
+        test_db.execute(text("DELETE FROM personal"))
+        test_db.commit()
+
+        response = client.get("/v1/convert/html2docx?job_id=1")
+
+        assert response.status_code == 404
+        assert "Failed to retrieve first_name and last_name" in response.json()['detail']
 
 
 class TestConvertFileEndpoint:

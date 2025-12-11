@@ -157,12 +157,7 @@ class Html2DocxResponse(BaseModel):
 @router.get("/convert/html2docx", response_model=Html2DocxResponse)
 async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
     """
-    Convert resume HTML to DOCX format for a specific job.
-
-    This endpoint checks if the conversion has already been performed by
-    looking at the resume_detail.rewrite_file_name field. If the file
-    already exists, it returns the existing filename. Otherwise, it
-    performs the conversion from HTML to DOCX and returns the new filename.
+    Performs the conversion from HTML to DOCX and returns the new filename.
 
     Query parameters:
     - job_id: ID of the job
@@ -170,7 +165,7 @@ async def convert_html_to_docx(job_id: int, db: Session = Depends(get_db)):
     Returns:
     - file_name: Name of the generated DOCX file
     """
-    logger.info(f"HTML to DOCX conversion requested", job_id=job_id)
+    logger.info(f"HTML to DOCX /convert/html2docx conversion requested", job_id=job_id)
 
     # Step 0: Retrieve first and last name
     query = text("""SELECT p.first_name, p.last_name, j.resume_id 

@@ -750,9 +750,6 @@ class Conversion:
         """
         Convert resume HTML to DOCX format for a specific job.
 
-        This is a legacy method that converts HTML to DOCX.
-        Consider using md2docx instead for markdown-based conversions.
-
         This method:
         1. Retrieves the resume_html_rewrite for the job's associated resume
         2. Converts the HTML to DOCX format
