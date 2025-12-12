@@ -307,21 +307,30 @@ class ApiService {
     async updateResume(resumeData) {
         console.log('RESUME_DATA', resumeData);
         return this.request('/v1/resume', {
-            method: 'POST',
+            method: 'PUT',
             body: JSON.stringify(resumeData),
         });
     }
 
-    async rewriteResume(jobId, resumeId, keywordFinal, focusFinal) {
+    async resumeFull(jobId, baselineResumeId, keywordFinal, focusFinal) {
+        return this.request('/v1/resume/full', {
+            method: 'POST',
+            body: JSON.stringify({
+                baseline_resume_id: baselineResumeId,
+                job_id: jobId,
+                keyword_final: keywordFinal,
+                focus_final: focusFinal,
+            }),
+        });
+    }
+
+    async rewriteResume(jobId) {
         return this.request('/v1/resume/rewrite', {
             method: 'POST',
             body: JSON.stringify({
                 job_id: jobId,
-                resume_id: resumeId,
-                keyword_final: keywordFinal,
-                focus_final: focusFinal,
             }),
-            timeout: 150000, // 150 second (2.5 minute) timeout for resume rewrite
+            timeout: 360000, // 360 second (6 minute) timeout for resume rewrite
         });
     }
 
@@ -368,6 +377,17 @@ class ApiService {
         return this.request(`/v1/convert/final`, {
             method: 'POST',
             body: JSON.stringify(body)
+        });
+    }
+
+    async convertFile(resumeId, sourceFormat, targetFormat) {
+        return this.request(`/v1/convert/file`, {
+            method: 'POST',
+            body: JSON.stringify({
+                resume_id: resumeId,
+                source_format: sourceFormat,
+                target_format: targetFormat
+            })
         });
     }
 

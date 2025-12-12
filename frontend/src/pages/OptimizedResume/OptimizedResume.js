@@ -15,14 +15,30 @@ const OptimizedResume = () => {
     const [changeStates, setChangeStates] = useState({}); // Track accepted/rejected changes
     const [jobId, setJobId] = useState(null);
     const [fromViewResume, setFromViewResume] = useState(false);
+    const [originalRewriteHtml, setOriginalRewriteHtml] = useState(''); // Store original complete HTML
     const diffContainerRef = useRef(null);
 
-    // Helper function to remove embedded style tags
-    const processEmbeddedStyles = (html) => {
+    // Helper function to extract body content only (for diffing)
+    const extractBodyContent = (html) => {
         if (!html) return '';
 
-        // Remove all <style> tags completely (html2docx doesn't use CSS and renders them as text)
-        return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+        // Extract only content between <body> and </body>
+        const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+        return bodyMatch ? bodyMatch[1] : html;
+    };
+
+    // Helper function to normalize whitespace for diffing
+    const normalizeWhitespace = (html) => {
+        if (!html) return '';
+
+        // Normalize whitespace while preserving HTML structure
+        return html
+            // Remove whitespace between tags (but preserve content whitespace)
+            .replace(/>\s+</g, '><')
+            // Normalize multiple spaces/newlines to single space within text content
+            .replace(/\s+/g, ' ')
+            // Remove leading/trailing whitespace from the entire string
+            .trim();
     };
 
     // Helper function to convert text-based bullets into HTML lists
@@ -131,20 +147,25 @@ const OptimizedResume = () => {
             const origHtml = location.state.resumeHtml || '';
             const rewrHtml = location.state.resumeHtmlRewrite || '';
 
-            // Generate HTML diff with inline highlights
-            // 1. Remove width-constraining styles
-            // 2. Convert text bullets (<br>- item) to HTML lists (<ul><li>item</li></ul>)
-            // 3. Remove unwanted <br /> tags (remaining breaks in non-list content)
+            // Store the original complete rewritten HTML
+            setOriginalRewriteHtml(rewrHtml);
+
+            // Generate HTML diff with inline highlights (only for body content)
             try {
-                let processedOrigHtml = processEmbeddedStyles(origHtml);
-                processedOrigHtml = convertBulletsToLists(processedOrigHtml);
-                processedOrigHtml = removeUnwantedBreaks(processedOrigHtml);
+                // Extract only body content for diffing (preserves full document structure)
+                let origBodyContent = extractBodyContent(origHtml);
+                let rewrBodyContent = extractBodyContent(rewrHtml);
 
-                let processedRewrHtml = processEmbeddedStyles(rewrHtml);
-                processedRewrHtml = convertBulletsToLists(processedRewrHtml);
-                processedRewrHtml = removeUnwantedBreaks(processedRewrHtml);
+                // Process body content for better diff visualization
+                origBodyContent = convertBulletsToLists(origBodyContent);
+                origBodyContent = removeUnwantedBreaks(origBodyContent);
+                origBodyContent = normalizeWhitespace(origBodyContent);
 
-                const diff = HtmlDiff.execute(processedOrigHtml, processedRewrHtml);
+                rewrBodyContent = convertBulletsToLists(rewrBodyContent);
+                rewrBodyContent = removeUnwantedBreaks(rewrBodyContent);
+                rewrBodyContent = normalizeWhitespace(rewrBodyContent);
+
+                const diff = HtmlDiff.execute(origBodyContent, rewrBodyContent);
                 setHtmlDiff(diff);
             } catch (error) {
                 console.error('Error generating HTML diff:', error);
@@ -167,8 +188,14 @@ const OptimizedResume = () => {
             const insElements = container.querySelectorAll('ins');
             const delElements = container.querySelectorAll('del');
 
-            // Add unique IDs and click handlers
+            // Add unique IDs and click handlers (skip single-character changes)
             insElements.forEach((el, index) => {
+                // Skip single-character changes (likely artifacts)
+                if (el.textContent.length <= 1) {
+                    el.style.display = 'none'; // Hide single-char artifacts
+                    return;
+                }
+
                 const changeId = `ins-${index}`;
                 el.setAttribute('data-change-id', changeId);
                 el.style.cursor = 'pointer';
@@ -178,6 +205,12 @@ const OptimizedResume = () => {
             });
 
             delElements.forEach((el, index) => {
+                // Skip single-character changes (likely artifacts)
+                if (el.textContent.length <= 1) {
+                    el.style.display = 'none'; // Hide single-char artifacts
+                    return;
+                }
+
                 const changeId = `del-${index}`;
                 el.setAttribute('data-change-id', changeId);
                 el.style.cursor = 'pointer';
@@ -234,23 +267,34 @@ const OptimizedResume = () => {
     };
 
     const reconstructHtml = () => {
-        if (!diffContainerRef.current) return htmlDiff;
+        if (!diffContainerRef.current || !originalRewriteHtml) {
+            return originalRewriteHtml || htmlDiff;
+        }
 
         // Clone the diff container to work with
-        const clone = diffContainerRef.current.cloneNode(true);
+        const diffClone = diffContainerRef.current.cloneNode(true);
+
+        // Find the html-diff-content div and get its content
+        const diffContentDiv = diffClone.querySelector('.html-diff-content');
+        if (!diffContentDiv) {
+            console.error('Could not find .html-diff-content div');
+            return originalRewriteHtml;
+        }
 
         // Process all changes based on their state
-        const insElements = clone.querySelectorAll('ins');
-        const delElements = clone.querySelectorAll('del');
+        const insElements = diffContentDiv.querySelectorAll('ins');
+        const delElements = diffContentDiv.querySelectorAll('del');
 
         insElements.forEach((el) => {
             const changeId = el.getAttribute('data-change-id');
             const state = changeStates[changeId] || 'accepted';
 
             if (state === 'accepted') {
-                // Keep the insertion - replace <ins> with its content
-                const textNode = document.createTextNode(el.textContent);
-                el.parentNode.replaceChild(textNode, el);
+                // Keep the insertion - unwrap the <ins> tag but keep its content
+                while (el.firstChild) {
+                    el.parentNode.insertBefore(el.firstChild, el);
+                }
+                el.remove();
             } else {
                 // Reject the insertion - remove it entirely
                 el.remove();
@@ -265,13 +309,48 @@ const OptimizedResume = () => {
                 // Accept the deletion - remove the element
                 el.remove();
             } else {
-                // Reject the deletion - keep the original text
-                const textNode = document.createTextNode(el.textContent);
-                el.parentNode.replaceChild(textNode, el);
+                // Reject the deletion - unwrap the <del> tag but keep its content
+                while (el.firstChild) {
+                    el.parentNode.insertBefore(el.firstChild, el);
+                }
+                el.remove();
             }
         });
 
-        return clone.innerHTML;
+        // Clean up any remaining ins/del tags (single-character artifacts)
+        diffContentDiv.querySelectorAll('ins, del').forEach(el => {
+            if (el.textContent.length <= 1) {
+                el.remove();
+            } else {
+                // Unwrap any remaining tags
+                while (el.firstChild) {
+                    el.parentNode.insertBefore(el.firstChild, el);
+                }
+                el.remove();
+            }
+        });
+
+        // Get the processed body content (without wrapper divs)
+        const processedBodyContent = diffContentDiv.innerHTML;
+
+        // Now reconstruct the full HTML document with the original structure
+        // Parse the original HTML to get DOCTYPE, head (including styles), etc.
+        const parser = new DOMParser();
+        const originalDoc = parser.parseFromString(originalRewriteHtml, 'text/html');
+
+        // Replace the body content with our processed content
+        if (originalDoc.body) {
+            originalDoc.body.innerHTML = processedBodyContent;
+        }
+
+        // Serialize back to string with proper document structure
+        const serializer = new XMLSerializer();
+        let finalHtml = serializer.serializeToString(originalDoc);
+
+        // Clean up XML artifacts from serializer (it adds xmlns)
+        finalHtml = finalHtml.replace(/ xmlns="[^"]*"/g, '');
+
+        return finalHtml;
     };
 
     const handleAcceptChanges = async () => {

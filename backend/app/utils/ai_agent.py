@@ -24,12 +24,15 @@ class AiAgent:
             db: SQLAlchemy database session
         """
         self.db = db
+
+        # Load LLM settings and API keys from database first
+        # This will update settings.openai_api_key if it exists in the database
+        settings.load_llm_settings_from_db(db)
+
+        # Now set instance variables from settings (using DB values if they were loaded)
         self.api_key = settings.openai_api_key
         self.model = settings.ai_model
         self.project = settings.openai_project
-
-        # Load LLM settings from database
-        settings.load_llm_settings_from_db(db)
 
         # Set LLM models from config (these can be different for each AI operation)
         self.resume_extract_llm = settings.resume_extract_llm
@@ -40,7 +43,7 @@ class AiAgent:
         # Initialize OpenAI client with timeout
         client_kwargs = {
             "api_key": self.api_key,
-            "timeout": 180.0,  # 120 second timeout for API requests (resume rewrite can be large)
+            "timeout": 600.0,  # 10 minute timeout for API requests (resume rewrite can be very large)
             "max_retries": 0   # Don't retry - fail fast to avoid long waits
         }
         if self.project:
@@ -69,6 +72,24 @@ class AiAgent:
         with open(prompt_path, 'r') as f:
             return f.read()
 
+    def get_html(self, resume_id: int) -> str:
+        """
+        Retrieve the HTML content of a resume from the DB
+
+        Args:
+            resume_id: ID of the resume to retrieve
+
+        Returns:
+            original HTML content of the resume
+        """
+        query = text("SELECT resume_html FROM resume_detail WHERE resume_id = :resume_id")
+        result = self.db.execute(query, {"resume_id": resume_id}).first()
+
+        if not result:
+            raise ValueError(f"Resume not found for resume_id: {resume_id}")
+
+        return result[0]
+
     def get_markdown(self, resume_id: int) -> str:
         """
         Retrieve the markdown content of a resume from the database.
@@ -90,7 +111,7 @@ class AiAgent:
 
         return result[0]
 
-    def extract_data(self, resume_id: int, bad_list: list = None) -> dict:
+    def extract_data(self, resume_id: int) -> dict:
         """
         Extract job title, keywords, and suggestions from a resume using AI.
 
@@ -101,23 +122,19 @@ class AiAgent:
         Returns:
             Dictionary containing:
                 - job_title: dict with job_title and line_number
-                - keywords: list of extracted keywords
                 - suggestions: list of improvement suggestions
         """
-        if bad_list is None:
-            bad_list = []
 
         # Get the markdown resume
-        md_resume = self.get_markdown(resume_id)
+        resume_html = self.get_html(resume_id)
 
         # Load the prompt template
         prompt_template = self._load_prompt('extract_data')
 
         # Format the prompt with variables using replace to avoid issues with curly braces
-        bad_list_str = "\n".join([f"- {title}" for title in bad_list]) if bad_list else "None"
-        prompt = prompt_template.replace('{md_resume}', md_resume)
-        prompt = prompt.replace('{bad_list}', bad_list_str)
+        prompt = prompt_template.replace('{resume_html}', resume_html)
 
+        logger.debug('LLM model used for extracting resume data', llm=self.resume_extract_llm)
         # Make API call to OpenAI
         response = self.client.chat.completions.create(
             model=self.resume_extract_llm,
@@ -136,11 +153,8 @@ class AiAgent:
             result = json.loads(response_text)
 
             # Validate the structure
-            if not all(key in result for key in ['job_title', 'keywords', 'suggestions']):
+            if not all(key in result for key in ['job_title', 'suggestions']):
                 raise ValueError("Response missing required keys")
-
-            if not all(key in result['job_title'] for key in ['job_title', 'line_number']):
-                raise ValueError("job_title missing required keys")
 
             return result
 
@@ -299,7 +313,7 @@ class AiAgent:
 
     def resume_rewrite(
         self,
-        resume_markdown: str,
+        resume_html: str,
         job_desc: str,
         keyword_final: list,
         focus_final: list,
@@ -311,7 +325,7 @@ class AiAgent:
         Rewrite a resume based on job description and keywords using AI.
 
         Args:
-            resume_markdown: Original markdown resume content
+            resume_html: Original HTML resume content
             job_desc: Job description text
             keyword_final: List of final keywords to incorporate
             focus_final: List of focus areas to emphasize
@@ -321,7 +335,7 @@ class AiAgent:
 
         Returns:
             Dictionary containing:
-                - resume_md_rewrite: rewritten markdown resume
+                - resume_html_rewrite: rewritten HTML resume
 
         Raises:
             ValueError: If AI response parsing fails
@@ -335,7 +349,7 @@ class AiAgent:
 
         # Format the prompt with variables using replace to avoid issues with curly braces
         # Handle None values by converting to empty string
-        prompt = prompt_template.replace('{resume_markdown}', resume_markdown or '')
+        prompt = prompt_template.replace('{resume_html}', resume_html or '')
         prompt = prompt.replace('{job_desc}', job_desc or '')
         prompt = prompt.replace('{keyword_final}', keyword_final_str)
         prompt = prompt.replace('{focus_final}', focus_final_str)
@@ -347,7 +361,7 @@ class AiAgent:
         prompt_size = len(prompt)
         logger.debug(f"Resume rewrite prompt analysis",
                     prompt_size=prompt_size,
-                    resume_size=len(resume_markdown or ''),
+                    resume_size=len(resume_html or ''),
                     job_desc_size=len(job_desc or ''),
                     keywords_count=len(keyword_final),
                     focus_count=len(focus_final))
@@ -357,6 +371,7 @@ class AiAgent:
         logger.debug(f"Starting OpenAI resume rewrite call", timestamp=start_time)
 
         try:
+            logger.debug(f"Starting resume/rewrite AI call", llm=self.rewrite_llm)
             response = self.client.chat.completions.create(
                 model=self.rewrite_llm,
                 messages=[
@@ -400,9 +415,9 @@ class AiAgent:
             # Try to parse the response as JSON
             result = json.loads(response_text)
 
-            # Validate the structure - only require 'resume_md_rewrite'
+            # Validate the structure - only require 'resume_html_rewrite'
             # Note: 'suggestions' has been removed from requirements as per user request
-            required_keys = ['resume_md_rewrite']
+            required_keys = ['resume_html_rewrite']
             if not all(key in result for key in required_keys):
                 missing_keys = [key for key in required_keys if key not in result]
                 print(f"DEBUG resume_rewrite: Missing keys: {missing_keys}", file=sys.stderr, flush=True)
@@ -416,7 +431,7 @@ class AiAgent:
             return result
 
         except json.JSONDecodeError as e:
-            # If JSON parsing fails, try to extract JSON from markdown code blocks
+            # If JSON parsing fails, try to extract JSON from HTML code blocks
             import re
             json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
             if json_match:

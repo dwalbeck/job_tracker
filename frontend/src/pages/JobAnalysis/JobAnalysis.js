@@ -25,7 +25,7 @@ const JobAnalysis = () => {
     const fetchJobData = async () => {
         try {
             setLoading(true);
-            setLoadingMessage('Analyzing job description with AI (this may take up to 4 minutes)...');
+            setLoadingMessage('Analyzing job description with AI...');
 
             console.log('JobAnalysis: job_id =', id, ', resume_id =', resumeId);
 
@@ -402,25 +402,32 @@ const JobAnalysis = () => {
         }
 
         setIsProcessing(true);
-        setLoadingMessage('Examining and rewriting resume with AI (this may take up to 3 minutes)...');
+        setLoadingMessage('Create resume for Job posting based on the selected baseline resume...');
 
         try {
-            const response = await apiService.rewriteResume(id, resumeId, keywordFinal, focusFinal);
+            // Step 1: Create the resume record with baseline data
+            const fullResponse = await apiService.resumeFull(id, resumeId, keywordFinal, focusFinal);
+
+            setLoadingMessage('Running AI rewrite of resume (can take several minutes)...');
+
+            // Step 2: AI rewrite the resume
+            const rewriteResponse = await apiService.rewriteResume(id);
+
+            setLoadingMessage('Running AI rewrite of resume (can take several minutes)... completed');
 
             // Navigate to the optimized resume page
-            navigate(`/optimized-resume/${response.resume_id}`, {
+            navigate(`/optimized-resume/${rewriteResponse.resume_id}`, {
                 state: {
-                    resumeHtml: response.resume_html,
-                    resumeHtmlRewrite: response.resume_html_rewrite,
-                    suggestion: response.suggestion,
-                    baselineScore: response.baseline_score,
-                    rewriteScore: response.rewrite_score,
-                    textChanges: response.text_changes,
+                    resumeHtml: rewriteResponse.resume_html,
+                    resumeHtmlRewrite: rewriteResponse.resume_html_rewrite,
+                    suggestion: rewriteResponse.suggestion,
+                    baselineScore: rewriteResponse.baseline_score,
+                    rewriteScore: rewriteResponse.rewrite_score,
                     jobId: id
                 }
             });
         } catch (error) {
-            console.error('Error rewriting resume:', error);
+            console.error('Error optimizing resume:', error);
             let errorMessage;
             if (error.isTimeout) {
                 errorMessage = 'Request timed out. The AI optimization is taking longer than expected. Please try reloading the page in a moment - the optimization may have completed in the background.';

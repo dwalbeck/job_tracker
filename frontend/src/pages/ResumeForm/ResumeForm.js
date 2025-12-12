@@ -23,11 +23,11 @@ const ResumeForm = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [processingSteps, setProcessingSteps] = useState([]);
     const [currentResumeId, setCurrentResumeId] = useState(resumeId || null);
-    const [badList, setBadList] = useState([]);
-    const [showJobTitleConfirm, setShowJobTitleConfirm] = useState(false);
+    //const [badList, setBadList] = useState([]);
+    //const [showJobTitleConfirm, setShowJobTitleConfirm] = useState(false);
     const [currentJobTitle, setCurrentJobTitle] = useState('');
     const [currentLineNumber, setCurrentLineNumber] = useState(0);
-    const [keywords, setKeywords] = useState([]);
+    //const [keywords, setKeywords] = useState([]);
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -159,30 +159,38 @@ const ResumeForm = () => {
             const resumeDetails = await apiService.getResume(newResumeId);
 
             const fileFormat = resumeDetails.original_format;
-            const resumeFileName = resumeDetails.file_name;
 
             // Step 2: Start Processing
             addProcessingStep('Creating a Markdown version...', 'pending');
 
-            // Convert to Markdown
-            const mdResult = await apiService.convertXxxToMarkdown(fileFormat, resumeFileName);
+            // Convert to Markdown using new endpoint
+            //const mdResult = await apiService.convertFile(newResumeId, fileFormat, 'md');
             updateProcessingStep(0, 'done');
 
             // Step 3: Convert to HTML
             addProcessingStep('Creating an HTML version...', 'pending');
 
-            const htmlResult = await apiService.convertXxxToHtml(fileFormat, resumeFileName);
+            const htmlResult = await apiService.convertFile(newResumeId, fileFormat, 'html');
             updateProcessingStep(1, 'done');
 
             // Step 4: Save partial resume_detail
             await apiService.updateResumeDetail({
                     resume_id: newResumeId,
-                    resume_markdown: mdResult.file_content,
+            //        resume_markdown: mdResult.file_content,
                     resume_html: htmlResult.file_content,
                 })
 
+            // Step 5: Update resume.file_name with HTML filename
+            await apiService.updateResume({
+                    resume_id: newResumeId,
+                    file_name: htmlResult.file,
+                    resume_title: resumeTitle || 'Job Resume',
+                    is_baseline: selectedJob ? false : isBaseline,
+                    is_default: isDefault,
+                })
+
             // Step 5: Extract job title and keywords
-            addProcessingStep('Extracting job title and keywords...', 'pending', 'This process could take up to a couple minutes.');
+            addProcessingStep('Extracting job title and reviewing resume...', 'pending', 'This process could take up to a couple minutes.');
 
             await extractJobTitleAndKeywords(newResumeId);
 
@@ -200,53 +208,18 @@ const ResumeForm = () => {
                 bad_list: badTitles,
             });
 
-            setCurrentJobTitle(extractResult.job_title.job_title);
-            setCurrentLineNumber(extractResult.job_title.line_number);
-            setKeywords(extractResult.keywords);
+            setCurrentJobTitle(extractResult.job_title);
             setSuggestions(extractResult.suggestions);
 
-            // Show confirmation
-            setShowJobTitleConfirm(true);
+            // Mark step 3 as done
+            updateProcessingStep(2, 'done');
+
+            // Show suggestions section
+            setShowSuggestions(true);
 
         } catch (error) {
             console.error('Error extracting data:', error);
             alert('Error extracting resume data: ' + error.message);
-        }
-    };
-
-    const handleJobTitleNo = async () => {
-        // Add current job title to bad list
-        const newBadList = [...badList, currentJobTitle];
-        setBadList(newBadList);
-
-        // Re-extract with updated bad list
-        await extractJobTitleAndKeywords(currentResumeId, newBadList);
-    };
-
-    const handleJobTitleYes = async () => {
-        // Hide confirmation
-        setShowJobTitleConfirm(false);
-
-        // Save final data to database
-        try {
-            await apiService.updateResumeDetail({
-                resume_id: currentResumeId,
-                position_title: currentJobTitle,
-                title_line_no: currentLineNumber,
-                resume_keyword: keywords,
-                keyword_count: keywords.length,
-                suggestion: suggestions,
-            });
-
-            // Mark extraction step as done
-            updateProcessingStep(2, 'done');
-
-            // Show suggestions
-            setShowSuggestions(true);
-
-        } catch (error) {
-            console.error('Error saving resume details:', error);
-            alert('Error saving resume details: ' + error.message);
         }
     };
 
@@ -370,21 +343,6 @@ const ResumeForm = () => {
                                     </div>
                                 ))}
                             </div>
-
-                            {showJobTitleConfirm && (
-                                <div className="job-title-confirmation">
-                                    <div className="confirm-question">Is this correct?</div>
-                                    <div className="job-title-display">{currentJobTitle}</div>
-                                    <div className="confirm-buttons">
-                                        <button className="confirm-no-button" onClick={handleJobTitleNo}>
-                                            No
-                                        </button>
-                                        <button className="confirm-yes-button" onClick={handleJobTitleYes}>
-                                            Yes
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
 
                             {showSuggestions && (
                                 <div className="suggestions-section">

@@ -23,7 +23,16 @@ const Personal = () => {
         resume_extract_llm: 'gpt-4.1-mini',
         job_extract_llm: 'gpt-4.1-mini',
         rewrite_llm: 'gpt-4.1-mini',
-        cover_llm: 'gpt-4.1-mini'
+        cover_llm: 'gpt-4.1-mini',
+        openai_api_key: '',
+        tinymce_api_key: '',
+        convertapi_key: '',
+        docx2html: 'docx-parser-converter',
+        odt2html: 'pandoc',
+        pdf2html: 'markitdown',
+        html2docx: 'html4docx',
+        html2odt: 'pandoc',
+        html2pdf: 'weasyprint'
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -136,7 +145,8 @@ const Personal = () => {
         "whisper-1"
     ];
 
-    const fieldLabels = {
+    // Personal Information fields (left column)
+    const personalFields = {
         first_name: 'First Name',
         last_name: 'Last Name',
         email: 'Email',
@@ -150,12 +160,53 @@ const Personal = () => {
         city: 'City',
         state: 'State/Province',
         zip: 'Zip Code',
-        country: 'Country',
+        country: 'Country'
+    };
+
+    // Settings fields (right column)
+    const settingsFields = {
         no_response_week: 'Auto Status Change',
         resume_extract_llm: 'Resume Extract LLM',
         job_extract_llm: 'Job Extraction LLM',
         rewrite_llm: 'Resume Rewrite LLM',
-        cover_llm: 'Cover Letter LLM'
+        cover_llm: 'Cover Letter LLM',
+        openai_api_key: 'OpenAI API Key',
+        tinymce_api_key: 'TinyMCE API Key',
+        convertapi_key: 'ConvertAPI Key',
+        docx2html: 'Docx To HTML',
+        odt2html: 'Odt To HTML',
+        pdf2html: 'PDF To HTML',
+        html2docx: 'HTML To Docx',
+        html2odt: 'HTML To Odt',
+        html2pdf: 'HTML To PDF'
+    };
+
+    // Conversion method options
+    const conversionOptions = {
+        docx2html: [
+            { value: 'docx-parser-converter', label: 'docx-parser-converter' },
+            { value: 'convertapi', label: 'convertapi' },
+            { value: 'docx2html', label: 'Docx2Html' }
+        ],
+        odt2html: [
+            { value: 'pandoc', label: 'pandoc' }
+        ],
+        pdf2html: [
+            { value: 'markitdown', label: 'markitdown' }
+        ],
+        html2docx: [
+            { value: 'html4docx', label: 'html4docx' },
+            { value: 'convertapi', label: 'convertapi' },
+            { value: 'python-docx', label: 'Python-Docx' }
+        ],
+        html2odt: [
+            { value: 'pandoc', label: 'pandoc' },
+            { value: 'convertapi', label: 'convertapi' }
+        ],
+        html2pdf: [
+            { value: 'weasyprint', label: 'weasyprint' },
+            { value: 'convertapi', label: 'convertapi' }
+        ]
     };
 
     useEffect(() => {
@@ -174,7 +225,16 @@ const Personal = () => {
                 resume_extract_llm: data.resume_extract_llm || 'gpt-4.1-mini',
                 job_extract_llm: data.job_extract_llm || 'gpt-4.1-mini',
                 rewrite_llm: data.rewrite_llm || 'gpt-4.1-mini',
-                cover_llm: data.cover_llm || 'gpt-4.1-mini'
+                cover_llm: data.cover_llm || 'gpt-4.1-mini',
+                openai_api_key: data.openai_api_key || '',
+                tinymce_api_key: data.tinymce_api_key || '',
+                convertapi_key: data.convertapi_key || '',
+                docx2html: data.docx2html || 'docx-parser-converter',
+                odt2html: data.odt2html || 'pandoc',
+                pdf2html: data.pdf2html || 'markitdown',
+                html2docx: data.html2docx || 'html4docx',
+                html2odt: data.html2odt || 'pandoc',
+                html2pdf: data.html2pdf || 'weasyprint'
             });
         } catch (err) {
             setError(err.message);
@@ -220,8 +280,87 @@ const Personal = () => {
         return ['resume_extract_llm', 'job_extract_llm', 'rewrite_llm', 'cover_llm'].includes(fieldName);
     };
 
+    const isApiKeyField = (fieldName) => {
+        return ['openai_api_key', 'tinymce_api_key', 'convertapi_key'].includes(fieldName);
+    };
+
+    const isConversionField = (fieldName) => {
+        return ['docx2html', 'odt2html', 'pdf2html', 'html2docx', 'html2odt', 'html2pdf'].includes(fieldName);
+    };
+
     const isWideField = (fieldName) => {
-        return ['email', 'linkedin_url', 'github_url', 'website_url', 'portfolio_url', 'address_1'].includes(fieldName);
+        return ['email', 'linkedin_url', 'github_url', 'website_url', 'portfolio_url', 'address_1', 'openai_api_key', 'tinymce_api_key', 'convertapi_key'].includes(fieldName);
+    };
+
+    const renderField = (fieldName, label) => {
+        return (
+            <div key={fieldName} className="personal-field-row">
+                <label className="personal-label">
+                    {label}
+                </label>
+                {isEditing ? (
+                    <div className="personal-input-wrapper">
+                        {isLlmField(fieldName) ? (
+                            <select
+                                name={fieldName}
+                                value={personalData[fieldName] || ''}
+                                onChange={handleChange}
+                                className="personal-input"
+                            >
+                                <option value="">Select a model...</option>
+                                {llmModels.map((model) => (
+                                    <option key={model} value={model}>
+                                        {model}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : isConversionField(fieldName) ? (
+                            <select
+                                name={fieldName}
+                                value={personalData[fieldName] || ''}
+                                onChange={handleChange}
+                                className="personal-input"
+                            >
+                                {conversionOptions[fieldName].map((option) => (
+                                    <option
+                                        key={option.value}
+                                        value={option.value}
+                                        disabled={option.value === 'convertapi' && !personalData.convertapi_key}
+                                    >
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <>
+                                <input
+                                    type={isApiKeyField(fieldName) ? 'password' : (fieldName === 'no_response_week' ? 'number' : 'text')}
+                                    name={fieldName}
+                                    value={personalData[fieldName] || ''}
+                                    onChange={handleChange}
+                                    className={isWideField(fieldName) ? 'personal-input personal-input-wide' : 'personal-input'}
+                                    min={fieldName === 'no_response_week' ? '1' : undefined}
+                                    max={fieldName === 'no_response_week' ? '52' : undefined}
+                                />
+                                {fieldName === 'no_response_week' && (
+                                    <span className="personal-input-suffix">weeks of no contact</span>
+                                )}
+                            </>
+                        )}
+                    </div>
+                ) : (
+                    <span className="personal-value">
+                        {personalData[fieldName]
+                            ? (isApiKeyField(fieldName)
+                                ? '••••••••'
+                                : (fieldName === 'no_response_week'
+                                    ? `${personalData[fieldName]} weeks of no contact`
+                                    : personalData[fieldName]))
+                            : '-'}
+                    </span>
+                )}
+            </div>
+        );
     };
 
     return (
@@ -237,56 +376,24 @@ const Personal = () => {
 
             {error && <div className="error-message">{error}</div>}
 
-            <div className="personal-content">
-                {Object.keys(fieldLabels).map((fieldName) => (
-                    <div key={fieldName} className="personal-field-row">
-                        <label className="personal-label">
-                            {fieldLabels[fieldName]}
-                        </label>
-                        {isEditing ? (
-                            <div className="personal-input-wrapper">
-                                {isLlmField(fieldName) ? (
-                                    <select
-                                        name={fieldName}
-                                        value={personalData[fieldName] || ''}
-                                        onChange={handleChange}
-                                        className="personal-input"
-                                    >
-                                        <option value="">Select a model...</option>
-                                        {llmModels.map((model) => (
-                                            <option key={model} value={model}>
-                                                {model}
-                                            </option>
-                                        ))}
-                                    </select>
-                                ) : (
-                                    <>
-                                        <input
-                                            type={fieldName === 'no_response_week' ? 'number' : 'text'}
-                                            name={fieldName}
-                                            value={personalData[fieldName] || ''}
-                                            onChange={handleChange}
-                                            className={isWideField(fieldName) ? 'personal-input personal-input-wide' : 'personal-input'}
-                                            min={fieldName === 'no_response_week' ? '1' : undefined}
-                                            max={fieldName === 'no_response_week' ? '52' : undefined}
-                                        />
-                                        {fieldName === 'no_response_week' && (
-                                            <span className="personal-input-suffix">weeks of no contact</span>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        ) : (
-                            <span className="personal-value">
-                {personalData[fieldName]
-                    ? (fieldName === 'no_response_week'
-                        ? `${personalData[fieldName]} weeks of no contact`
-                        : personalData[fieldName])
-                    : '-'}
-              </span>
+            <div className="personal-columns">
+                <div className="personal-column">
+                    <h2 className="column-title">Personal</h2>
+                    <div className="personal-content">
+                        {Object.keys(personalFields).map((fieldName) =>
+                            renderField(fieldName, personalFields[fieldName])
                         )}
                     </div>
-                ))}
+                </div>
+
+                <div className="personal-column">
+                    <h2 className="column-title">Settings</h2>
+                    <div className="personal-content">
+                        {Object.keys(settingsFields).map((fieldName) =>
+                            renderField(fieldName, settingsFields[fieldName])
+                        )}
+                    </div>
+                </div>
             </div>
 
             {isEditing && (

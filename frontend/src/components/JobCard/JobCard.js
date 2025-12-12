@@ -16,7 +16,7 @@ const JobCard = ({job, index, onClick}) => {
                 >
                     <div className="job-title">{job.job_title}</div>
                     <div className="company-name">{job.company}</div>
-                    <div className="last-contact">{calculateLastContact(job.last_contact)}</div>
+                    <div className="last-contact">{calculateLastContact(job.last_activity)}</div>
                     <div className="bottom-row">
                         <div className="score-average">
                             {job.average_score !== null && job.average_score !== undefined

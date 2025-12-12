@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS job (
     PRIMARY KEY (job_id)
 );
 CREATE INDEX IF NOT EXISTS job_job_status_idx ON job (job_status);
-CREATE INDEX IF NOT EXISTS job_last_contact_idx ON job (last_activity);
+CREATE INDEX IF NOT EXISTS job_last_activity_idx ON job (last_activity);
 
 CREATE TABLE IF NOT EXISTS job_detail (
 	job_id                  int NOT NULL REFERENCES job (job_id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -74,12 +74,12 @@ CREATE TABLE IF NOT EXISTS resume_detail (
 	resume_md_rewrite       text,
     resume_html             text,
 	resume_html_rewrite     text,
-	position_title          varchar(128) DEFAULT NULL,
-	title_line_no           smallint DEFAULT NULL,
-	keyword_count           smallint,
-	resume_keyword          varchar(128)[],
+	    position_title          varchar(128) DEFAULT NULL,
+	    title_line_no           smallint DEFAULT NULL,
+	keyword_count           smallint NOT NULL DEFAULT 0,
+    focus_count             smallint NOT NULL DEFAULT 0,
+	resume_keyword          varchar(128)[] DEFAULT NULL,
 	keyword_final           varchar(128)[],
-	focus_count             smallint,
 	focus_final             varchar(128)[],
 	baseline_score          smallint DEFAULT NULL,
 	rewrite_score           smallint DEFAULT NULL,
@@ -208,6 +208,15 @@ CREATE TABLE IF NOT EXISTS personal (
 	job_extract_llm         varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
 	rewrite_llm             varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
 	cover_llm               varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
+    docx2html               varchar(32) NOT NULL DEFAULT 'docx-parser-converter',
+    odt2html                varchar(32) NOT NULL DEFAULT 'pandoc',
+    pdf2html                varchar(32) NOT NULL DEFAULT 'markitdown',
+    html2docx               varchar(32) NOT NULL DEFAULT 'html4docx',
+    html2odt                varchar(32) NOT NULL DEFAULT 'pandoc',
+    html2pdf                varchar(32) NOT NULL DEFAULT 'weasyprint',
+    openai_api_key          varchar(192) DEFAULT NULL,
+    tinymce_api_key         varchar(64) DEFAULT NULL,
+    convertapi_key          varchar(64) DEFAULT NULL,
 	PRIMARY KEY (first_name, last_name)
 );
 

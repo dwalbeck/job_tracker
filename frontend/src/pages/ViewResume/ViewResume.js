@@ -40,11 +40,8 @@ const ViewResume = () => {
         try {
             setDownloading(true);
 
-            // Call convert/final endpoint to generate the file
-            const convertResult = await apiService.convertFinal({
-                resume_id: parseInt(resumeId),
-                output_format: format
-            });
+            // Call convert/file endpoint to generate the file
+            const convertResult = await apiService.convertFile(parseInt(resumeId), 'html', format);
 
             const {file_name} = convertResult;
 
@@ -100,9 +97,30 @@ const ViewResume = () => {
         });
     };
 
-    const handleEditClick = () => {
-        // Navigate to ManuallyEditResume page
-        navigate(`/manually-edit-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
+    const handleEditClick = async () => {
+        try {
+            // Check if TinyMCE API key is configured
+            const personalInfo = await apiService.getPersonalInfo();
+            console.log('Personal Info:', personalInfo);
+            console.log('TinyMCE API Key:', personalInfo.tinymce_api_key);
+
+            const hasTinyMCEKey = personalInfo.tinymce_api_key && personalInfo.tinymce_api_key.trim() !== '';
+            console.log('Has TinyMCE Key:', hasTinyMCEKey);
+
+            if (hasTinyMCEKey) {
+                console.log('Routing to TinyMCE editor (ManuallyEditResume)');
+                // Navigate to ManuallyEditResume page with TinyMCE
+                navigate(`/manually-edit-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
+            } else {
+                console.log('Routing to manual HTML editor (EditResume)');
+                // Navigate to EditResume page for manual HTML editing
+                navigate(`/edit-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
+            }
+        } catch (error) {
+            console.error('Error checking TinyMCE API key:', error);
+            // Fallback to manual editing if there's an error
+            navigate(`/edit-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
+        }
     };
 
     const renderKeywords = () => {

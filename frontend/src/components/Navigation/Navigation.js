@@ -27,7 +27,7 @@ const Navigation = () => {
         <nav className="navigation">
             <div className="nav-logo-container">
                 <img src="/jt_logo-128.png" alt="Job Tracker Logo" className="nav-logo"/>
-                <img src="/job_tracker.png" alt="Job Tracker" className="nav-title-image"/>
+                <img src="/job_track_now.png" alt="Job Tracker" className="nav-title-image" width="120" />
             </div>
             <div className="nav-container">
                 {menuItems.map((item) => (

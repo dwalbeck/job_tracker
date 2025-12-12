@@ -15,12 +15,20 @@ RUN apt-get update \
         build-essential \
         libpq-dev \
         curl \
+        git \
         pandoc \
         texlive-latex-base \
         texlive-latex-recommended \
         texlive-fonts-recommended \
         lmodern \
         vim \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libgdk-pixbuf-2.0-0 \
+        libffi-dev \
+        shared-mime-info \
+        libcairo2 \
+        libpangoft2-1.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better Docker layer caching
@@ -28,7 +36,8 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir git+https://github.com/dfop02/html4docx.git@1.1.1
 
 # Copy application code
 COPY . .
@@ -46,5 +55,7 @@ RUN chmod +x wait-for-db.py
 # Switch to non-root user
 USER appuser
 
-# Run uvicorn directly
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "200", "--timeout-keep-alive", "200"]
+# Run uvicorn with multiple workers for concurrent request handling
+# --workers 4: Run with 4 worker processes for parallel request processing
+# Each worker can handle requests independently, preventing blocking
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--timeout-graceful-shutdown", "200", "--timeout-keep-alive", "200"]
