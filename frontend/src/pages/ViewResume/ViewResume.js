@@ -43,7 +43,7 @@ const ViewResume = () => {
             // Call convert/file endpoint to generate the file
             const convertResult = await apiService.convertFile(parseInt(resumeId), 'html', format);
 
-            const {file_name} = convertResult;
+            const {file} = convertResult;
 
             // Get personal info for custom filename
             const personalInfo = await apiService.getPersonalInfo();
@@ -312,7 +312,7 @@ const ViewResume = () => {
             </div>
 
             <div className="view-resume-footer">
-                <button onClick={handleGoBack} className="done-button">
+                <button onClick={handleGoBack} className="action-button">
                     Done
                 </button>
             </div>

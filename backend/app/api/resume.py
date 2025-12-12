@@ -1110,7 +1110,7 @@ async def resume_full(
 		# Step 3: Create the resume record
 		base_resume_title = f"{job_result.company} - {job_result.job_title}"
 		unique_resume_title = make_unique_resume_title(base_resume_title, db)
-		#file_name = Conversion._set_file(job_result.company, job_result.job_title, 'docx')
+		file_name = Conversion._set_file(job_result.company, job_result.job_title, 'html')
 		baseline_score = calculate_keyword_score(job_result.job_keyword, resume_result.resume_markdown)
 
 		new_resume = Resume(
@@ -1118,7 +1118,7 @@ async def resume_full(
 			job_id=request.job_id,
 			original_format=resume_result.original_format,
 			resume_title=unique_resume_title,
-			#file_name=file_name,
+			file_name=file_name,
 			is_baseline=False,
 			is_default=False,
 			is_active=True
@@ -1147,6 +1147,25 @@ async def resume_full(
 
 		logger.log_database_operation("INSERT", "resume_detail", new_resume.resume_id)
 		logger.debug(f"Resume detail record created", resume_id=new_resume.resume_id)
+
+		# Write HTML content to disk
+		if new_resume.file_name and resume_result.resume_html:
+			try:
+				# Write HTML file to resume directory
+				from pathlib import Path
+				resume_dir = Path(settings.resume_dir)
+				resume_dir.mkdir(parents=True, exist_ok=True)
+
+				html_file_path = resume_dir / new_resume.file_name
+				with open(html_file_path, 'w', encoding='utf-8') as f:
+					f.write(resume_result.resume_html)
+
+				logger.debug(f"Initial HTML file written to disk", file_path=str(html_file_path))
+			except Exception as e:
+				# Log error but don't fail the request - HTML is already in database
+				logger.warning(f"Failed to write initial HTML file to disk", error=str(e), file_name=new_resume.file_name)
+		else:
+			logger.warning(f"No file_name or HTML content available, HTML not written to disk", resume_id=new_resume.resume_id)
 
 		# Step 5: Update job record to associate the new resume
 		job_update_query = text("""
@@ -1265,6 +1284,29 @@ async def rewrite_resume(
 
 		logger.log_database_operation("UPDATE", "resume_detail", result.resume_id)
 		logger.info(f"Updated existing resume successfully", resume_id=result.resume_id, rewrite_score=rewrite_score)
+
+		# Write HTML content to disk
+		# Query to get the file_name from the resume record
+		file_name_query = text("SELECT file_name FROM resume WHERE resume_id = :resume_id")
+		file_name_result = db.execute(file_name_query, {"resume_id": result.resume_id}).first()
+
+		if file_name_result and file_name_result.file_name:
+			try:
+				# Write HTML file to resume directory
+				from pathlib import Path
+				resume_dir = Path(settings.resume_dir)
+				resume_dir.mkdir(parents=True, exist_ok=True)
+
+				html_file_path = resume_dir / file_name_result.file_name
+				with open(html_file_path, 'w', encoding='utf-8') as f:
+					f.write(rewrite_result['resume_html_rewrite'])
+
+				logger.debug(f"HTML file written to disk", file_path=str(html_file_path))
+			except Exception as e:
+				# Log error but don't fail the request - HTML is already in database
+				logger.warning(f"Failed to write HTML file to disk", error=str(e), file_name=file_name_result.file_name)
+		else:
+			logger.warning(f"No file_name found for resume, HTML not written to disk", resume_id=result.resume_id)
 
 		# Step 5: Start background task to get suggestions and return response
 		# Schedule background task to generate suggestions

@@ -492,8 +492,18 @@ async def convert_file(
 
         file_name = result.file_name
 
+        # Check if file_name is None
+        if not file_name:
+            logger.error(f"Resume file_name is NULL", resume_id=request.resume_id)
+            raise HTTPException(status_code=400, detail=f"Resume file_name is missing for resume_id: {request.resume_id}")
+
         # Determine paths based on source format
         resume_dir = settings.resume_dir
+
+        # Check if resume_dir is None
+        if not resume_dir:
+            logger.error(f"RESUME_DIR configuration is missing")
+            raise HTTPException(status_code=500, detail="Server configuration error: RESUME_DIR not configured")
 
         if source_format in ['docx', 'odt', 'pdf']:
             # Baseline resume
@@ -512,6 +522,34 @@ async def convert_file(
                 input_file_name = Conversion.rename_file(file_name, 'md')
 
             input_path = os.path.join(resume_dir, input_file_name)
+
+            # For HTML source, check if file exists on disk
+            # If not, retrieve from database and write to disk
+            if source_format == 'html' and not os.path.exists(input_path):
+                logger.debug(f"HTML file not found on disk, retrieving from database",
+                           resume_id=request.resume_id, file_name=input_file_name)
+
+                # Query to get HTML content from resume_detail
+                html_query = text("""
+                    SELECT resume_html_rewrite
+                    FROM resume_detail
+                    WHERE resume_id = :resume_id
+                """)
+                html_result = db.execute(html_query, {"resume_id": request.resume_id}).first()
+
+                if not html_result or not html_result.resume_html_rewrite:
+                    logger.error(f"No HTML content found in database", resume_id=request.resume_id)
+                    raise HTTPException(status_code=404,
+                                      detail=f"No HTML content found for resume_id: {request.resume_id}")
+
+                # Create directory if it doesn't exist
+                os.makedirs(os.path.dirname(input_path), exist_ok=True)
+
+                # Write HTML content to disk
+                with open(input_path, 'w', encoding='utf-8') as f:
+                    f.write(html_result.resume_html_rewrite)
+
+                logger.debug(f"HTML content written to disk", file_path=input_path)
 
             # Append '-final' to output filename to avoid collision
             base_name = file_name.rsplit('.', 1)[0] if '.' in file_name else file_name

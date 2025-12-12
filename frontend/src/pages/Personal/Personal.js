@@ -39,8 +39,15 @@ const Personal = () => {
 
     // Available LLM models
     const llmModels = [
+        "gpt-5.2",
+        "gpt-5.2-2025-12-11",
+        "gpt-5.2-chat-latest",
+        "gpt-5.2-pro",
+        "gpt-5.2-pro-2025-12-11",
         "gpt-5.1",
         "gpt-5.1-codex",
+        "gpt-5.1-codex-max",
+        "gpt-5.1-codex-mini",
         "gpt-5.1-mini",
         "gpt-5.1-nano",
         "gpt-5.1-chat-latest",
@@ -49,8 +56,6 @@ const Personal = () => {
         "gpt-5-mini-2025-08-07",
         "gpt-5-nano",
         "gpt-5-nano-2025-08-07",
-        "gpt-5.1-codex",
-        "gpt-5.1-codex-mini",
         "gpt-5-codex",
         "gpt-5",
         "gpt-5-2025-08-07",

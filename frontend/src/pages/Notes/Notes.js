@@ -129,7 +129,7 @@ const Notes = () => {
                             </button>
                         )}
                     </div>
-                    <button onClick={handleAddNote} className="add-note-btn">
+                    <button onClick={handleAddNote} className="action-button">
                         + Add Note
                     </button>
                     <ExportMenu label="Export Notes" onExport={handleExport} />

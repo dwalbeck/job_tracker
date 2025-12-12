@@ -132,13 +132,13 @@ const Calendar = () => {
                 <div className="header-controls">
                     <button
                         onClick={handleAddReminder}
-                        className="add-reminder-btn"
+                        className="action-button"
                     >
                         + Add Reminder
                     </button>
                     <button
                         onClick={() => navigate('/calendar-form')}
-                        className="add-appointment-btn"
+                        className="action-button"
                     >
                         + Add Appointment
                     </button>

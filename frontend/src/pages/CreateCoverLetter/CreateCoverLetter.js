@@ -348,7 +348,7 @@ const CreateCoverLetter = () => {
                     <div className="cover-letter-form-row">
                         <div className="form-label"></div>
                         <button
-                            className="generate-button"
+                            className="action-button"
                             onClick={handleGenerateCoverLetter}
                             disabled={isGenerating || !selectedJobId}
                         >
@@ -372,7 +372,7 @@ const CreateCoverLetter = () => {
                                             Cancel
                                         </button>
                                         <button
-                                            className="save-button"
+                                            className="action-button"
                                             onClick={handleSaveEdit}
                                         >
                                             Save
@@ -380,7 +380,7 @@ const CreateCoverLetter = () => {
                                     </>
                                 ) : (
                                     <button
-                                        className="edit-button"
+                                        className="action-button"
                                         onClick={handleEditClick}
                                     >
                                         Edit
@@ -431,7 +431,7 @@ const CreateCoverLetter = () => {
 
                     {letterContent && (
                         <div className="preview-actions">
-                            <button className="download-button" onClick={handleDownload}>
+                            <button className="action-button" onClick={handleDownload}>
                                 Download
                             </button>
                         </div>

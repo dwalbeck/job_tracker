@@ -139,7 +139,7 @@ const CoverLetter = () => {
                             </button>
                         )}
                     </div>
-                    <button className="add-new-button" onClick={handleAddNew}>
+                    <button className="action-button" onClick={handleAddNew}>
                         Add New
                     </button>
                 </div>

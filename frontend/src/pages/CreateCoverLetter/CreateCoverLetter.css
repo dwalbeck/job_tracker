@@ -130,28 +130,6 @@
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.1);
 }
 
-.generate-button {
-  background-color: #4a90e2;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  justify-self: end;
-}
-
-.generate-button:hover:not(:disabled) {
-  background-color: #357abd;
-}
-
-.generate-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
 /* Preview Section */
 .preview-section {
   display: flex;
@@ -168,40 +146,6 @@
 .preview-header-buttons {
   display: flex;
   gap: 10px;
-}
-
-.edit-button,
-.save-button {
-  background-color: #4a90e2;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.edit-button:hover,
-.save-button:hover {
-  background-color: #357abd;
-}
-
-.cancel-button {
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.cancel-button:hover {
-  background-color: #5a6268;
 }
 
 .preview-container {
@@ -261,18 +205,3 @@
   justify-content: flex-end;
 }
 
-.download-button {
-  background-color: #4a90e2;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.download-button:hover {
-  background-color: #357abd;
-}

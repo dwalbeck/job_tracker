@@ -410,7 +410,7 @@ const OptimizedResume = () => {
                 <button onClick={handleCancel} className="cancel-button">
                     Cancel
                 </button>
-                <button onClick={handleAcceptChanges} className="accept-button">
+                <button onClick={handleAcceptChanges} className="action-button">
                     Accept Changes
                 </button>
             </div>
