@@ -3,21 +3,23 @@ services:
   db:
     image: postgres:15.15-trixie
     container_name: psql.jobtracker.com
+    hostname: psql.jobtracker.com
     restart: always
     shm_size: 128mb
     env_file:
       - ./backend/.env
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_USER: apiuser
+      POSTGRES_PASSWORD: "@p!u$$3r70K3n"
+      POSTGRES_DB: jobtracker
     expose:
       - "5432"
     ports:
       - "5432:5432"
     volumes:
-      - type: bind
-        source: ./postgresql
-        target: /var/lib/postgresql/data
-      - type: bind
-        source: ./docs/schema.sql
-        target: /docker-entrypoint-initdb.d/01-schema.sql
+      - postgresql:/var/lib/postgresql/data
+      - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     networks:
       - job_network
     healthcheck:
@@ -32,6 +34,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    container_name: api.jobtracker.com
+    hostname: api.jobtracker.com
     env_file:
       - ./backend/.env
     expose:
@@ -57,6 +61,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
+    container_name: portal.jobtracker.com
+    hostname: portal.jobtracker.com
     env_file:
       - ./frontend/.env
     expose:
