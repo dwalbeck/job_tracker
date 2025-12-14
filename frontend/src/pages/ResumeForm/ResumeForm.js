@@ -353,7 +353,7 @@ const ResumeForm = () => {
                                         ))}
                                     </ul>
                                     <div className="done-button-container">
-                                        <button className="done-button" onClick={handleDone}>
+                                        <button className="action-button" onClick={handleDone}>
                                             Done
                                         </button>
                                     </div>

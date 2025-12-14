@@ -29,52 +29,6 @@
   height: 36px;
 }
 
-.action-button {
-  padding: 8px 16px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  height: 36px;
-}
-
-.action-button:hover {
-  background-color: #2980b9;
-}
-
-.edit-button {
-  padding: 8px 16px;
-  background-color: #f39c12;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  height: 36px;
-}
-
-.edit-button:hover {
-  background-color: #e67e22;
-}
-
-.delete-button {
-  padding: 8px 16px;
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  height: 36px;
-}
-
-.delete-button:hover {
-  background-color: #c0392b;
-}
-
 .job-details-content {
   display: flex;
   flex-direction: column;
@@ -115,14 +69,6 @@
 
 .url-action-button:hover {
   background-color: #2980b9;
-}
-
-.download-button {
-  background-color: #3498db !important;
-}
-
-.download-button:hover {
-  background-color: #2980b9 !important;
 }
 
 .resume-optimization-row {
@@ -369,21 +315,6 @@
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-}
-
-.modal-close-button {
-  padding: 8px 16px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.modal-close-button:hover {
-  background-color: #2980b9;
 }
 
 /* Notes Section */

@@ -107,7 +107,7 @@ const Contacts = () => {
                             </button>
                         )}
                     </div>
-                    <button onClick={handleCreateContact} className="create-contact-btn">
+                    <button onClick={handleCreateContact} className="action-button">
                         + Create Contact
                     </button>
                     <ExportMenu label="Export Contacts" onExport={handleExport} />

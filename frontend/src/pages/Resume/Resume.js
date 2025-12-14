@@ -244,7 +244,7 @@ const Resume = () => {
                             </button>
                         )}
                     </div>
-                    <button onClick={handleAddNew} className="add-new-btn">
+                    <button onClick={handleAddNew} className="action-button">
                         Add New
                     </button>
                     <ExportMenu label="Export Resumes" onExport={handleExport} />

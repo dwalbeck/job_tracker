@@ -192,7 +192,7 @@ const JobTracker = () => {
                             </button>
                         )}
                     </div>
-                    <button onClick={handleAddJob} className="add-job-btn">
+                    <button onClick={handleAddJob} className="action-button">
                         + Add Job
                     </button>
                     <ExportMenu label="Export Jobs" onExport={handleExport} />

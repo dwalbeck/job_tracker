@@ -263,7 +263,7 @@ const JobDetails = () => {
     const handleDownloadResume = async () => {
         try {
             const response = await apiService.convertFile(job.resume_id, 'html', 'docx');
-            const fileName = response.file_name;
+            const fileName = response.file;
 
             // Trigger file download using standardized naming endpoint
             const downloadUrl = `${apiService.baseURL}/v1/files/resumes/${fileName}`;
@@ -657,7 +657,7 @@ const JobDetails = () => {
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>Job Description</h2>
-                            <button onClick={handleCloseModal} className="modal-close-button">
+                            <button onClick={handleCloseModal} className="action-button">
                                 Close
                             </button>
                         </div>
@@ -665,7 +665,7 @@ const JobDetails = () => {
                             {job.job_desc || 'No job description provided'}
                         </div>
                         <div className="modal-footer">
-                            <button onClick={handleCloseModal} className="modal-close-button">
+                            <button onClick={handleCloseModal} className="action-button">
                                 Close
                             </button>
                         </div>

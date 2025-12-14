@@ -185,7 +185,7 @@ const ReminderModal = ({isOpen, onClose, reminder = null, preSelectedJobId = nul
                             <button
                                 type="button"
                                 onClick={handleDelete}
-                                className="reminder-delete-button"
+                                className="delete-button"
                                 disabled={loading}
                             >
                                 Delete
@@ -194,14 +194,14 @@ const ReminderModal = ({isOpen, onClose, reminder = null, preSelectedJobId = nul
                         <button
                             type="button"
                             onClick={handleCancel}
-                            className="reminder-cancel-button"
+                            className="cancel-button"
                             disabled={loading}
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            className="reminder-submit-button"
+                            className="action-button"
                             disabled={loading}
                         >
                             {loading ? 'Saving...' : (isEdit ? 'Update Reminder' : 'Add Reminder')}
