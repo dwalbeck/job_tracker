@@ -81,14 +81,15 @@ class APILogger:
             extras.append(f"IP: {client_ip}")
         if user_id:
             extras.append(f"User: {user_id}")
-
-        extra_info = f" ({', '.join(extras)})" if extras else ""
-        self.info(f"API Request: {method} {path}{extra_info}")
+        if path != '/health':
+            extra_info = f" ({', '.join(extras)})" if extras else ""
+            self.info(f"API Request: {method} {path}{extra_info}")
 
     def log_response(self, method: str, path: str, status_code: int, duration_ms: float = None):
         """Log API response"""
-        duration_info = f" ({duration_ms:.2f}ms)" if duration_ms else ""
-        self.info(f"API Response: {method} {path} - {status_code}{duration_info}")
+        if path != '/health':
+            duration_info = f" ({duration_ms:.2f}ms)" if duration_ms else ""
+            self.info(f"API Response: {method} {path} - {status_code}{duration_info}")
 
     def log_database_operation(self, operation: str, table: str, record_id: int = None):
         """Log database operations"""

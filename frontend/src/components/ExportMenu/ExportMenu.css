@@ -1,0 +1,52 @@
+.export-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.export-menu-trigger {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: #333;
+    line-height: 1;
+    transition: background-color 0.2s;
+    border-radius: 4px;
+}
+
+.export-menu-trigger:hover {
+    background-color: #f0f0f0;
+}
+
+.export-menu-modal {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 6px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    min-width: 160px;
+    z-index: 1000;
+}
+
+.export-menu-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: #333;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.export-menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+.export-menu-item:first-child {
+    border-radius: 4px 4px 0 0;
+}
+
+.export-menu-item:last-child {
+    border-radius: 0 0 4px 4px;
+}

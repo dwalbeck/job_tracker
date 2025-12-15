@@ -18,48 +18,10 @@
   color: #333;
 }
 
-.search-container {
-  position: relative;
+.header-controls {
   display: flex;
   align-items: center;
-}
-
-.search-input {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  width: 250px;
-}
-
-.clear-search {
-  position: absolute;
-  right: 8px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #999;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.clear-search:hover {
-  color: #333;
-}
-
-.add-note-btn {
-  padding: 8px 16px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.add-note-btn:hover {
-  background-color: #2980b9;
+  gap: 50px;
 }
 
 .notes-container {
@@ -171,22 +133,6 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-}
-
-.delete-button {
-  padding: 6px 12px;
-  background-color: #ff0000;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.delete-button:hover {
-  background-color: #cc0000;
 }
 
 @media (max-width: 768px) {

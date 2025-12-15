@@ -1,16 +1,16 @@
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
+--SET statement_timeout = 0;
+--SET lock_timeout = 0;
+--SET idle_in_transaction_session_timeout = 0;
+--SET client_encoding = 'UTF8';
+--SET standard_conforming_strings = on;
+--SELECT pg_catalog.set_config('search_path', '', false);
+--SET check_function_bodies = false;
+--SET xmloption = content;
+--SET client_min_messages = warning;
+--SET row_security = off;
 
 
-USE jobtracker;
+--USE jobtracker;
 
 CREATE TYPE title AS ENUM ('recruiter', 'hiring manager', 'hr', 'engineer', 'vp', 'other');
 CREATE TYPE job_status AS ENUM ('applied', 'interviewing', 'rejected', 'no response');
@@ -21,13 +21,13 @@ CREATE TYPE content_length AS ENUM ('short', 'medium', 'long');
 CREATE TYPE content_tone AS ENUM ('professional', 'casual', 'enthusiastic', 'informational');
 
 CREATE TABLE IF NOT EXISTS job (
-                                   job_id                  serial NOT NULL,
-                                   company                 varchar(64),
+	job_id                  serial NOT NULL,
+	company                 varchar(64),
     job_title               varchar(255),
     salary                  varchar(92),
     location                varchar(128),
     interest_level          smallint NOT NULL DEFAULT 1,
-    average_score           numeric(4, 3) NOT NULL DEFAULT 1,
+    average_score           numeric(4, 3) NOT NULL DEFAULT 5,
     posting_url             text,
     apply_url               text,
     job_status              job_status NOT NULL DEFAULT 'applied',
@@ -40,17 +40,17 @@ CREATE TABLE IF NOT EXISTS job (
     job_directory           varchar(255),
     CHECK (interest_level > 0 AND interest_level < 11),
     PRIMARY KEY (job_id)
-    );
+);
 CREATE INDEX IF NOT EXISTS job_job_status_idx ON job (job_status);
-CREATE INDEX IF NOT EXISTS job_last_contact_idx ON job (last_activity);
+CREATE INDEX IF NOT EXISTS job_last_activity_idx ON job (last_activity);
 
 CREATE TABLE IF NOT EXISTS job_detail (
-                                          job_id                  int NOT NULL REFERENCES job (job_id) ON DELETE CASCADE ON UPDATE CASCADE,
+	job_id                  int NOT NULL REFERENCES job (job_id) ON DELETE CASCADE ON UPDATE CASCADE,
     job_desc                text,
     job_qualification       text,
     job_keyword             varchar(128)[],
     PRIMARY KEY (job_id)
-    );
+);
 
 CREATE TABLE IF NOT EXISTS resume (
     resume_id               serial NOT NULL,
@@ -74,12 +74,12 @@ CREATE TABLE IF NOT EXISTS resume_detail (
 	resume_md_rewrite       text,
     resume_html             text,
 	resume_html_rewrite     text,
-	position_title          varchar(128) DEFAULT NULL,
-	title_line_no           smallint DEFAULT NULL,
-	keyword_count           smallint,
-	resume_keyword          varchar(128)[],
+	    position_title          varchar(128) DEFAULT NULL,
+	    title_line_no           smallint DEFAULT NULL,
+	keyword_count           smallint NOT NULL DEFAULT 0,
+    focus_count             smallint NOT NULL DEFAULT 0,
+	resume_keyword          varchar(128)[] DEFAULT NULL,
 	keyword_final           varchar(128)[],
-	focus_count             smallint,
 	focus_final             varchar(128)[],
 	baseline_score          smallint DEFAULT NULL,
 	rewrite_score           smallint DEFAULT NULL,
@@ -204,6 +204,19 @@ CREATE TABLE IF NOT EXISTS personal (
 	zip                     varchar(10),
 	country                 varchar(2),
 	no_response_week        smallint NOT NULL DEFAULT 6,
+    resume_extract_llm      varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
+	job_extract_llm         varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
+	rewrite_llm             varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
+	cover_llm               varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
+    docx2html               varchar(32) NOT NULL DEFAULT 'docx-parser-converter',
+    odt2html                varchar(32) NOT NULL DEFAULT 'pandoc',
+    pdf2html                varchar(32) NOT NULL DEFAULT 'markitdown',
+    html2docx               varchar(32) NOT NULL DEFAULT 'html4docx',
+    html2odt                varchar(32) NOT NULL DEFAULT 'pandoc',
+    html2pdf                varchar(32) NOT NULL DEFAULT 'weasyprint',
+    openai_api_key          varchar(192) DEFAULT NULL,
+    tinymce_api_key         varchar(64) DEFAULT NULL,
+    convertapi_key          varchar(64) DEFAULT NULL,
 	PRIMARY KEY (first_name, last_name)
 );
 
@@ -211,25 +224,12 @@ ALTER TABLE job
     ADD CONSTRAINT job_resume_fk FOREIGN KEY (resume_id) REFERENCES resume (resume_id) ON DELETE SET NULL ON UPDATE CASCADE,
     ADD CONSTRAINT job_cover_fk FOREIGN KEY (cover_id) REFERENCES cover_letter (cover_id) ON DELETE SET NULL ON UPDATE CASCADE;
 
+ALTER ROLE apiuser WITH PASSWORD 'change_me';
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO apiuser;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO apiuser;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO apiuser;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO apiuser;
 
 

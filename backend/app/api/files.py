@@ -112,3 +112,43 @@ async def download_resume(file_name: str, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error serving file: {str(e)}"
         )
+
+
+@router.get("/files/exports/{file_name}")
+async def download_export(file_name: str):
+    """
+    Serve an export CSV file for download.
+
+    Args:
+        file_name: Name of the export file to download
+
+    Returns:
+        FileResponse with the CSV file
+    """
+    try:
+        file_path = os.path.join(settings.export_dir, file_name)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Export file not found: {file_name}"
+            )
+
+        logger.info(f"Serving export file", file_name=file_name)
+
+        return FileResponse(
+            path=file_path,
+            media_type='text/csv',
+            filename=file_name
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving export file",
+                    file_name=file_name,
+                    error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error serving export file: {str(e)}"
+        )

@@ -74,7 +74,20 @@ async def get_personal_info(db: Session = Depends(get_db)):
                 "state": result.state or "",
                 "zip": result.zip or "",
                 "country": result.country or "",
-                "no_response_week": result.no_response_week
+                "no_response_week": result.no_response_week,
+	            "resume_extract_llm": result.resume_extract_llm or "",
+                "job_extract_llm": result.job_extract_llm or "",
+                "rewrite_llm": result.rewrite_llm or "",
+                "cover_llm": result.cover_llm or "",
+                "openai_api_key": result.openai_api_key or "",
+                "tinymce_api_key": result.tinymce_api_key or "",
+                "convertapi_key": result.convertapi_key or "",
+                "docx2html": result.docx2html or "docx-parser-converter",
+                "odt2html": result.odt2html or "pandoc",
+                "pdf2html": result.pdf2html or "markitdown",
+                "html2docx": result.html2docx or "html4docx",
+                "html2odt": result.html2odt or "pandoc",
+                "html2pdf": result.html2pdf or "weasyprint"
             }
         else:
             # Return empty object
@@ -93,7 +106,20 @@ async def get_personal_info(db: Session = Depends(get_db)):
                 "state": "",
                 "zip": "",
                 "country": "",
-                "no_response_week": None
+                "no_response_week": 4,
+	            "resume_extract_llm": "gpt-4.1-mini",
+                "job_extract_llm": "gpt-4.1-mini",
+                "rewrite_llm": "gpt-4.1-mini",
+                "cover_llm": "gpt-4.1-mini",
+                "openai_api_key": "",
+                "tinymce_api_key": "",
+                "convertapi_key": "",
+                "docx2html": "docx-parser-converter",
+                "odt2html": "pandoc",
+                "pdf2html": "markitdown",
+                "html2docx": "html4docx",
+                "html2odt": "pandoc",
+                "html2pdf": "weasyprint"
             }
 
     except Exception as e:
@@ -143,7 +169,20 @@ async def save_personal_info(personal_data: PersonalCreate, db: Session = Depend
                     state = :state,
                     zip = :zip,
                     country = :country,
-                    no_response_week = :no_response_week
+                    no_response_week = :no_response_week,
+	                resume_extract_llm = :resume_extract_llm,
+                    job_extract_llm = :job_extract_llm,
+                    rewrite_llm = :rewrite_llm,
+                    cover_llm = :cover_llm,
+                    openai_api_key = :openai_api_key,
+                    tinymce_api_key = :tinymce_api_key,
+                    convertapi_key = :convertapi_key,
+                    docx2html = :docx2html,
+                    odt2html = :odt2html,
+                    pdf2html = :pdf2html,
+                    html2docx = :html2docx,
+                    html2odt = :html2odt,
+                    html2pdf = :html2pdf
                 WHERE first_name = :old_first_name AND last_name = :old_last_name
             """)
 
@@ -164,7 +203,20 @@ async def save_personal_info(personal_data: PersonalCreate, db: Session = Depend
                 "state": personal_data.state,
                 "zip": personal_data.zip,
                 "country": personal_data.country,
-                "no_response_week": personal_data.no_response_week
+                "no_response_week": personal_data.no_response_week,
+	            "resume_extract_llm": personal_data.resume_extract_llm,
+                "job_extract_llm": personal_data.job_extract_llm,
+                "rewrite_llm": personal_data.rewrite_llm,
+                "cover_llm": personal_data.cover_llm,
+                "openai_api_key": personal_data.openai_api_key,
+                "tinymce_api_key": personal_data.tinymce_api_key,
+                "convertapi_key": personal_data.convertapi_key,
+                "docx2html": personal_data.docx2html,
+                "odt2html": personal_data.odt2html,
+                "pdf2html": personal_data.pdf2html,
+                "html2docx": personal_data.html2docx,
+                "html2odt": personal_data.html2odt,
+                "html2pdf": personal_data.html2pdf
             })
             db.commit()
 
@@ -176,11 +228,17 @@ async def save_personal_info(personal_data: PersonalCreate, db: Session = Depend
                 INSERT INTO personal (
                     first_name, last_name, email, phone,
                     linkedin_url, github_url, website_url, portfolio_url,
-                    address_1, address_2, city, state, zip, country, no_response_week
+                    address_1, address_2, city, state, zip, country, no_response_week,
+                    resume_extract_llm, job_extract_llm, rewrite_llm, cover_llm,
+                    openai_api_key, tinymce_api_key, convertapi_key,
+                    docx2html, odt2html, pdf2html, html2docx, html2odt, html2pdf
                 ) VALUES (
                     :first_name, :last_name, :email, :phone,
                     :linkedin_url, :github_url, :website_url, :portfolio_url,
-                    :address_1, :address_2, :city, :state, :zip, :country, :no_response_week
+                    :address_1, :address_2, :city, :state, :zip, :country, :no_response_week,
+                    :resume_extract_llm, :job_extract_llm, :rewrite_llm, :cover_llm,
+                    :openai_api_key, :tinymce_api_key, :convertapi_key,
+                    :docx2html, :odt2html, :pdf2html, :html2docx, :html2odt, :html2pdf
                 )
             """)
 
@@ -199,7 +257,20 @@ async def save_personal_info(personal_data: PersonalCreate, db: Session = Depend
                 "state": personal_data.state,
                 "zip": personal_data.zip,
                 "country": personal_data.country,
-                "no_response_week": personal_data.no_response_week
+                "no_response_week": personal_data.no_response_week,
+	            "resume_extract_llm": personal_data.resume_extract_llm,
+                "job_extract_llm": personal_data.job_extract_llm,
+                "rewrite_llm": personal_data.rewrite_llm,
+                "cover_llm": personal_data.cover_llm,
+                "openai_api_key": personal_data.openai_api_key,
+                "tinymce_api_key": personal_data.tinymce_api_key,
+                "convertapi_key": personal_data.convertapi_key,
+                "docx2html": personal_data.docx2html,
+                "odt2html": personal_data.odt2html,
+                "pdf2html": personal_data.pdf2html,
+                "html2docx": personal_data.html2docx,
+                "html2odt": personal_data.html2odt,
+                "html2pdf": personal_data.html2pdf
             })
             db.commit()
 

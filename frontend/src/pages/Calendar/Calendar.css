@@ -18,21 +18,10 @@
   color: #333;
 }
 
-.add-reminder-btn,
-.add-appointment-btn {
-  padding: 8px 16px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.add-reminder-btn:hover,
-.add-appointment-btn:hover {
-  background-color: #2980b9;
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 50px;
 }
 
 .calendar-navigation {

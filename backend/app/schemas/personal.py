@@ -18,7 +18,20 @@ class PersonalBase(BaseModel):
     state: Optional[str] = None
     zip: Optional[str] = None
     country: Optional[str] = None
-    no_response_week:  Optional[int] = None
+    no_response_week: Optional[int] = None
+    resume_extract_llm: Optional[str] = None
+    job_extract_llm: Optional[str] = None
+    rewrite_llm: Optional[str] = None
+    cover_llm: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    tinymce_api_key: Optional[str] = None
+    convertapi_key: Optional[str] = None
+    docx2html: Optional[str] = None
+    odt2html: Optional[str] = None
+    pdf2html: Optional[str] = None
+    html2docx: Optional[str] = None
+    html2odt: Optional[str] = None
+    html2pdf: Optional[str] = None
 
     @field_validator('email')
     @classmethod

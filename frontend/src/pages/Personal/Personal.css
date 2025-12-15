@@ -1,7 +1,28 @@
 .personal-container {
   padding: 20px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+}
+
+.personal-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.personal-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.column-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 15px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #4a90e2;
 }
 
 .personal-header {
@@ -18,22 +39,6 @@
   font-weight: 600;
   color: #333;
   margin: 0;
-}
-
-.edit-button {
-  background-color: #4a90e2;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.edit-button:hover {
-  background-color: #357abd;
 }
 
 .error-message {
@@ -101,6 +106,10 @@
   max-width: 150px;
 }
 
+.personal-input-wrapper .personal-input-wide {
+  max-width: 300px;
+}
+
 .personal-input:focus {
   outline: none;
   border-color: #4a90e2;
@@ -123,18 +132,3 @@
   border-top: 2px solid #e0e0e0;
 }
 
-.save-button {
-  background-color: #28a745;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.save-button:hover {
-  background-color: #218838;
-}

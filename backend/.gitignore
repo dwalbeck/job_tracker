@@ -7,3 +7,9 @@ build
 dist
 job_docs
 venv
+
+api.log
+
+# Supervisord (removed from project, but ignore if accidentally created)
+supervisord.log
+supervisord.pid

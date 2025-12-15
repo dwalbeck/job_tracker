@@ -118,6 +118,8 @@
 
 .schedule-column {
   border-right: 1px solid #b4b4b4;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .hour-slot {
@@ -127,6 +129,8 @@
   cursor: pointer;
   transition: background-color 0.2s;
   padding: 2px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .hour-slot:hover {
@@ -170,6 +174,8 @@
   align-items: flex-start;
   gap: 8px;
   height: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .day-appointment-details {
@@ -199,6 +205,9 @@
   font-weight: 500;
   margin-bottom: 4px;
   color: #2c3e50;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .day-appointment-desc {
@@ -229,6 +238,8 @@
   margin-top: 4px;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .day-reminder-box:hover {
@@ -255,4 +266,7 @@
 
 .day-reminder-message {
   color: #2c3e50;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

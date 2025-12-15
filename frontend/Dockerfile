@@ -11,10 +11,6 @@ RUN npm ci --only=production
 # Copy source code
 COPY . .
 
-# Set build-time environment variables
-ARG REACT_APP_API_BASE_URL=http://api.jobtracker.com
-ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
-
 # Build the app
 RUN npm run build
 
@@ -22,8 +18,8 @@ RUN npm run build
 FROM nginx:alpine
 
 # Create directory and copy built app
-RUN mkdir -p /var/www/jobtracker
-COPY --from=build /app/build /var/www/jobtracker
+RUN mkdir -p /var/www/jobtracker/build
+COPY --from=build /app/build /var/www/jobtracker/build
 
 # Copy nginx configuration
 COPY docker/portal.jobtracker.com.conf /etc/nginx/conf.d/default.conf

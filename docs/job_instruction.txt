@@ -198,7 +198,6 @@ POST /v1/contact
     "contact_note": ""
 }
 
-
 # ===== Calendar =======================================================================================================
 
 The calendar section consists of 3 page views, the month view, the week view and daily view and additionally will have an appointment details page and an add/edit appointment page, for a total of 5 pages. The calendar page is accessed by clicking on "Calendar" from the main navigation menu and will replace the main display area with it's default view of the current month.
@@ -207,12 +206,140 @@ The calendar section consists of 3 page views, the month view, the week view and
 
 The month page starts like the rest, with the page title being "Calendar - month view" and the conditionally displayed arrow icon. Justified to the right is a button titled "+ Add Appointment". Directly below this row should have buttons for navigating through time, so a forward and back arrow button on each end for moving to the next or previous month.  Also have a button labeled "Week", which will switch to the week view calendar. Below the calendar navigation row it will display a grid for the current calendar month.  The current day should be highlighted with the background color of #fbffcd. Use a black color font to number each day of the month and use a light grey for days the bleed into the previous and next months.  The app will make a call to the API service to get scheduled appointments for the month
 
+# ======================================================================================================================
+
+Actually, the new algoritm for finding the diff from the original to rewritten resumes, is more like 20% accurate and not functional enough.  Every word matters and needs to be either matched (in sequence) or flagged as new or removed content.
+
+# ======================================================================================================================
+
+On the View Resume page, let's add another button to the left of the buttons on the top right of the page labeled "Edit".  When this button is clicked on, it will take the user to a new page titled "Manually Edit Resume".  On this page we're going to try something different.  We are going to embed the TinyMCE wysiwyg text editor into the page.  Create a new environment variable named "TINYMCE_API_KEY" and add it to the .env file for use and associate this value to that entry: "7qrgi9by3dbq7a1w58d4mdvcns386w3fmav69z9bnc6yibtd".  The application should make a call to the backend to retrieve the "resume_html_rewrite" value from the "resume_detail" table.  It will then load that content into the embedded editor.  Adjust the editor so that it has a save and cancel button.  The save button will update the same value in the DB from where we grabbed it.  Here's some code that will help you in this task.
+
+Procedure
+1. Use the Vite package and the React SWC plugin to create a new React project named tinymce-react-demo.
+
+# NPM 7+, extra double-dash is needed
+npm create vite@5 tinymce-react-demo -- --template react-swc
+
+2. Change to the newly created directory.
+
+cd tinymce-react-demo
+
+3. Install the @tinymce/tinymce-react package.
+
+npm install @tinymce/tinymce-react
+
+4. Using a text editor, open ./src/App.jsx and replace the contents with:
+
+import { useRef } from 'react';
+import { Editor } from '@tinymce/tinymce-react';
+import './App.css';
+
+export default function App() {
+  const editorRef = useRef(null);
+  const log = () => {
+    if (editorRef.current) {
+      console.log(editorRef.current.getContent());
+    }
+  };
+
+  return (
+    <>
+      <Editor
+        apiKey='no-api-key'
+        onInit={ (_evt, editor) => editorRef.current = editor }
+        initialValue="<p>This is the initial content of the editor.</p>"
+        init={{
+          height: 500,
+          menubar: false,
+          plugins: [
+            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+            'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+          ],
+          toolbar: 'undo redo | blocks | ' +
+            'bold italic forecolor | alignleft aligncenter ' +
+            'alignright alignjustify | bullist numlist outdent indent | ' +
+            'removeformat | help',
+          content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+        }}
+      />
+      <button onClick={log}>Log editor content</button>
+    </>
+  );
+}
+This JavaScript file will create a component “App” containing a TinyMCE editor configured with basic features.
+
+5. Update the apiKey option in the editor element and include your Tiny Cloud API key.
+
+# ======================================================================================================================
+
+So the Optimized Resume page is still missing the majority of differences - matter of fact, I think it's finding even less than before.  Let's change things to work like this:  We can start with sentences, cycling through the original and checking against the rewritten resume, and when the first non-matching sentence is found - then we go into another process.  Break the sentence down into words and now cycle through each word, first against the current rewritten sentence, and then check against the next 2 sentences.  if no match was found, then mark it as removed content.  If a match was found, then we need to see if more matches, so you take the next word from the original and check against the next word from where the match was found in the rewritten.  No match, you stop and move onto the next word.  If a match was found, then keep doing the same until no match was found.  Anything that is matched gets pulled from being checked against again.  This will result in all the removed content
+
+Now do the same thing, only with the rewritten cycled through and checked against the original.  No match, mark it as new and move onto the next word.  If a match was found, find out if more words match in sequence.  Grab the next word from the rewritten and check it against the next word from where the match was found.  No match, then just mark the single word as new content.  No match found, keep adding the next word until no match is found and at that point, mark the match content as new content.
+
+# ======================================================================================================================
+
+You diff utility is still missing like 80% of the differences.  Rather than try to reinvent the wheel, let's use an already established diff utility. Implement the "react-diff-viewer", which is a diff library that also helps out in displaying the diff.
+
+# ======================================================================================================================
+
+Still doesn't have the accuracy wanted.  I did a bit more reasearch and I think this library could be an improvement.  Switch to use this library: react-diff-viewer-continued
+
+# ======================================================================================================================
+
+Let's change the Create Cover Letter page, so when editing the cover letter, it uses the same TinyMCE wysiwyg editor used for editing resumes.
+
+# ======================================================================================================================
+
+Why when adding a new Contact or Editing a Contact, I type in what I want for the Job Title, and it changes it to be "Other".  I want it to save the value that I provided in the form.
+
+# ======================================================================================================================
+
+So what can we do to somehow improve the diff on the resume?  Seems like no matter what is tried, it's a step in a worse direction.  The current implementation of the diff is missing about 95% of the changes.  So what can we do to get this working better?
+
+# ======================================================================================================================
+
+Well, I guess it's a step in the right direction, as it definitely found more differences.  There are a few problems however, the first of which is that if any part of a sentence is different, then the whole sentence is selected. So even if half of the sentence matches, it's all counted as different, when that's not the case.  The display of the differences doesn't render the HTML formatting, which makes it hard to see any styling, as well as hard to read overall - as the HTML tags are mixed in with the content.  This however might be a good starting point to identify differences within a sentence, and then process each sentence to further refine it.
+
+# ======================================================================================================================
+
+Well, sometimes it does well, other times it's half right and then there are times where it's completely wrong.  For example, here's the original:
+
+    | <a href="https://www.davey-walbeck.com/">Website</a></p><h1>Senior Software Architect &amp; Engineering Leader</h1>
+And here's the rewritten:
+    | <a href="https://www.davey-walbeck.com/">Website</a></p><h1>Senior Software Engineer</h1>
+Only the last half was changed, but all of this is selected.
+
+In this one, the original does have a lot of line breaks, which isn't great - especially with the lines so short, which forces the width to be narrow:
+    resilient, scalable systems that enhance performance and reduce<br />
+    complexity. Deliver efficiency through<strong> clean architecture, </strong>modular<br />
+    application programming interfaces<strong> (APIs), </strong>and<strong> open-source<br />
+    integration</strong>. Mentor teams, optimize reliability, and <strong>drive<br />
+    continuous improvement</strong> in environments where communication,<br />
+    creativity, and precision are essential to success.</p>
+And now the rewritten version:
+     resilient, scalable systems that enhance performance and reduce complexity. Deliver efficiency through <strong>clean architecture, modular application programming interfaces (APIs), and open-source integration</strong>. Mentor teams, optimize reliability, and <strong>drive continuous improvement</strong> in environments where communication, creativity, and precision are essential to success.</p>
+Definitely formatted better, but the text is exactly the same.  If it were highlighting the formatting change, then only the break tags should be highlighted.
+
+The rendered view does however make a lot of these things missed much less noticable, and oddly this view is actually more accurate than the source view.  I don't know why that would be, but items that are highlighted incorrectly in the source view, are actually identified and displayed correctly in the rendered view.  There are however some issues, the first being that it smashed the entire page into about 25% of the full width and centered it.  The other issue, which is universally true for all interations using this new library, is that the changed and removed text is not selectable to have it reversed.  This is kind of the whole point of identifying the changes, is so that if they don't want that change, they can revert it back to the original state. 
+
+All-in-all however, the rendered view in this version is the most accurate and best outcome so far.  If the page width is corrected and changes made selectable so that it can be reverted, this may work well enough.
 
 
-# ===== Notes ==========================================================================================================
-# ===== Documents ======================================================================================================
-# ===== Resume =========================================================================================================
-# ===== Cover Letter ===================================================================================================
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+
 
 
 

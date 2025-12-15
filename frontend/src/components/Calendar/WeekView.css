@@ -156,6 +156,8 @@
 
 .day-column {
   border-right: 1px solid #b4b4b4;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .day-column:last-child {
@@ -169,6 +171,8 @@
   cursor: pointer;
   transition: background-color 0.2s;
   padding: 2px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .hour-slot:hover {
@@ -234,6 +238,8 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 4px;
+  min-width: 0;
+  width: 100%;
 }
 
 .week-appointment-time {
@@ -249,6 +255,9 @@
 .week-appointment-company {
   font-style: italic;
   color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .week-score-indicator {
@@ -274,6 +283,8 @@
   gap: 4px;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .week-reminder-box:hover {
@@ -291,6 +302,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .week-reminder-icon {

@@ -1,594 +1,421 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import React, {useState, useEffect, useRef} from 'react';
+import {useParams, useNavigate, useLocation} from 'react-router-dom';
+import HtmlDiff from 'htmldiff-js';
 import apiService from '../../services/api';
 import './OptimizedResume.css';
 
 const OptimizedResume = () => {
-  const { id: resumeId } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const baselineIframeRef = useRef(null);
-  const rewriteIframeRef = useRef(null);
+    const {id: resumeId} = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
 
-  const [baselineScore, setBaselineScore] = useState(0);
-  const [rewriteScore, setRewriteScore] = useState(0);
-  const [originalHtml, setOriginalHtml] = useState('');
-  const [rewrittenHtml, setRewrittenHtml] = useState('');
-  const [textChanges, setTextChanges] = useState([]);
-  const [jobId, setJobId] = useState(null);
-  const [editedRewrittenHtml, setEditedRewrittenHtml] = useState('');
-  const [removedAdditions, setRemovedAdditions] = useState([]);
-  const [restoredRemovals, setRestoredRemovals] = useState([]);
+    const [baselineScore, setBaselineScore] = useState(0);
+    const [rewriteScore, setRewriteScore] = useState(0);
+    const [htmlDiff, setHtmlDiff] = useState('');
+    const [changeStates, setChangeStates] = useState({}); // Track accepted/rejected changes
+    const [jobId, setJobId] = useState(null);
+    const [fromViewResume, setFromViewResume] = useState(false);
+    const [originalRewriteHtml, setOriginalRewriteHtml] = useState(''); // Store original complete HTML
+    const diffContainerRef = useRef(null);
 
-  useEffect(() => {
-    console.log('=== OptimizedResume: Received location.state ===');
-    console.log('Has location.state:', !!location.state);
-    if (location.state) {
-      console.log('resumeHtml length:', (location.state.resumeHtml || '').length);
-      console.log('resumeHtmlRewrite length:', (location.state.resumeHtmlRewrite || '').length);
-      console.log('baselineScore:', location.state.baselineScore);
-      console.log('rewriteScore:', location.state.rewriteScore);
+    // Helper function to extract body content only (for diffing)
+    const extractBodyContent = (html) => {
+        if (!html) return '';
 
-      setOriginalHtml(location.state.resumeHtml || '');
-      setRewrittenHtml(location.state.resumeHtmlRewrite || '');
-      setEditedRewrittenHtml(location.state.resumeHtmlRewrite || '');
-      setBaselineScore(location.state.baselineScore || 0);
-      setRewriteScore(location.state.rewriteScore || 0);
-      setTextChanges(location.state.textChanges || []);
-      setJobId(location.state.jobId || null);
-    } else {
-      console.log('No location.state received!');
-    }
-  }, [location.state]);
-
-  useEffect(() => {
-    console.log('=== OptimizedResume: Loading iframes ===');
-    console.log('originalHtml length:', originalHtml.length);
-    console.log('editedRewrittenHtml length:', editedRewrittenHtml.length);
-    console.log('Has baselineIframeRef:', !!baselineIframeRef.current);
-    console.log('Has rewriteIframeRef:', !!rewriteIframeRef.current);
-
-    // Load HTML content into iframes after state is set
-    if (originalHtml && editedRewrittenHtml && baselineIframeRef.current) {
-      console.log('Loading baseline iframe with removal highlighting...');
-      const iframeDoc = baselineIframeRef.current.contentDocument;
-      iframeDoc.open();
-      iframeDoc.write(highlightRemovals(originalHtml, editedRewrittenHtml));
-      iframeDoc.close();
-    }
-
-    if (editedRewrittenHtml && rewriteIframeRef.current) {
-      console.log('Loading rewrite iframe with addition highlighting...');
-      const iframeDoc = rewriteIframeRef.current.contentDocument;
-      iframeDoc.open();
-      iframeDoc.write(highlightAdditions(originalHtml, editedRewrittenHtml));
-      iframeDoc.close();
-    }
-  }, [originalHtml, editedRewrittenHtml, removedAdditions, restoredRemovals]);
-
-  useEffect(() => {
-    // Listen for messages from iframes
-    const handleMessage = (event) => {
-      if (event.data.type === 'removeAddition') {
-        handleRemoveAddition(event.data.text);
-      } else if (event.data.type === 'restoreRemoval') {
-        handleRestoreRemoval(event.data.text);
-      }
+        // Extract only content between <body> and </body>
+        const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+        return bodyMatch ? bodyMatch[1] : html;
     };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [editedRewrittenHtml, originalHtml]);
+    // Helper function to normalize whitespace for diffing
+    const normalizeWhitespace = (html) => {
+        if (!html) return '';
 
-  const handleRemoveAddition = (text) => {
-    console.log('Removing addition:', text);
-
-    // Find the text in editedRewrittenHtml and remove it, replacing with original version
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(editedRewrittenHtml, 'text/html');
-    const originalDoc = parser.parseFromString(originalHtml, 'text/html');
-
-    // Get text content from both
-    const editedText = extractTextContent(editedRewrittenHtml);
-    const originalText = extractTextContent(originalHtml);
-
-    // Simple approach: replace the addition text with empty string or find corresponding original text
-    const normalizedRemovalText = normalizeText(text);
-
-    // Remove the text from the edited HTML by finding and removing spans with that text
-    const removeTextFromNode = (node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const nodeText = node.textContent;
-        const normalizedNodeText = normalizeText(nodeText);
-
-        if (normalizedNodeText.includes(normalizedRemovalText)) {
-          // Remove this text
-          const newText = nodeText.replace(new RegExp(text, 'gi'), '');
-          if (newText.trim().length === 0) {
-            // Remove the entire text node
-            node.parentNode.removeChild(node);
-          } else {
-            node.textContent = newText;
-          }
-        }
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        Array.from(node.childNodes).forEach(removeTextFromNode);
-      }
+        // Normalize whitespace while preserving HTML structure
+        return html
+            // Remove whitespace between tags (but preserve content whitespace)
+            .replace(/>\s+</g, '><')
+            // Normalize multiple spaces/newlines to single space within text content
+            .replace(/\s+/g, ' ')
+            // Remove leading/trailing whitespace from the entire string
+            .trim();
     };
 
-    removeTextFromNode(doc.body);
+    // Helper function to convert text-based bullets into HTML lists
+    const convertBulletsToLists = (html) => {
+        if (!html) return '';
 
-    const newHtml = doc.documentElement.outerHTML;
-    setEditedRewrittenHtml(newHtml);
-    setRemovedAdditions(prev => [...prev, text]);
-  };
+        // Process each paragraph that contains bullet lists
+        return html.replace(/(<p[^>]*>)([\s\S]*?)(<\/p>)/gi, (match, openTag, content, closeTag) => {
+            // Check if this paragraph contains bullets: <br>- or <br>-&nbsp;
+            const hasBullets = /<br\s*\/?>\s*-\s*(&nbsp;)?/i.test(content);
 
-  const handleRestoreRemoval = (text) => {
-    console.log('Restoring removal:', text);
+            if (!hasBullets) {
+                return match; // No bullets, return unchanged
+            }
 
-    // Find where this text was removed and add it back to editedRewrittenHtml
-    // This is complex - we need to find the position in the original and insert it into the edited version
-    // For now, we'll track that this removal should be restored
-    setRestoredRemovals(prev => [...prev, text]);
+            // Split content by the bullet pattern to identify list items
+            const bulletPattern = /(<br\s*\/?>\s*-\s*(?:&nbsp;)?)/gi;
+            const parts = content.split(bulletPattern);
 
-    // Find the text in original HTML and insert it into edited HTML
-    // This is a simplified approach - just append it for now
-    // A more sophisticated approach would find the exact location
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(editedRewrittenHtml, 'text/html');
+            let result = '';
+            let inList = false;
+            let listItems = [];
 
-    // Find a suitable place to insert - for now just add to end of body
-    const textNode = document.createTextNode(' ' + text);
-    doc.body.appendChild(textNode);
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
 
-    const newHtml = doc.documentElement.outerHTML;
-    setEditedRewrittenHtml(newHtml);
-  };
+                // Check if this part is a bullet marker
+                if (bulletPattern.test(part)) {
+                    if (!inList) {
+                        // First bullet item - add <br> to end of preceding text if there is any
+                        if (result.trim()) {
+                            result += '<br>';
+                        }
+                        inList = true;
+                        listItems = [];
+                    }
+                    // Skip the bullet marker itself, we'll add proper list tags
+                    continue;
+                }
 
-  const extractTextContent = (html) => {
-    // Create a temporary div to parse HTML and extract text
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-    const text = temp.textContent || temp.innerText || '';
+                if (inList) {
+                    // This is list item content
+                    listItems.push(part.trim());
+                } else {
+                    // This is content before the first bullet
+                    result += part;
+                }
+            }
 
-    // Normalize whitespace: replace all whitespace (including newlines) with single spaces
-    return text.replace(/\s+/g, ' ').trim();
-  };
+            // If we found list items, wrap them in <ul>
+            if (inList && listItems.length > 0) {
+                result += '<ul>';
+                listItems.forEach(item => {
+                    if (item) {
+                        result += `<li>${item}</li>`;
+                    }
+                });
+                result += '</ul>';
+            }
 
-  const stripMarkdown = (text) => {
-    // Remove common markdown syntax
-    return text
-      .replace(/\*\*([^*]+)\*\*/g, '$1')  // Bold: **text** -> text
-      .replace(/\*([^*]+)\*/g, '$1')      // Italic: *text* -> text
-      .replace(/__([^_]+)__/g, '$1')      // Bold: __text__ -> text
-      .replace(/_([^_]+)_/g, '$1')        // Italic: _text_ -> text
-      .replace(/~~([^~]+)~~/g, '$1')      // Strikethrough: ~~text~~ -> text
-      .replace(/`([^`]+)`/g, '$1')        // Inline code: `text` -> text
-      .replace(/>\s*/g, '')               // Blockquote: > text -> text
-      .replace(/[-*+]\s+/g, '')           // List markers: - text -> text
-      .replace(/\d+\.\s+/g, '')           // Numbered lists: 1. text -> text
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // Links: [text](url) -> text
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1') // Images: ![alt](url) -> alt
-      .replace(/#{1,6}\s+/g, '');         // Headers: # text -> text
-  };
-
-  const normalizeText = (text) => {
-    // Strip markdown first, then normalize text for comparison: lowercase, collapse whitespace
-    const withoutMarkdown = stripMarkdown(text);
-    return withoutMarkdown.toLowerCase().replace(/\s+/g, ' ').trim();
-  };
-
-  const splitIntoSentences = (text) => {
-    // Split text into sentences and clean them
-    return text
-      .split(/[.!?]+/)
-      .map(s => normalizeText(s))
-      .filter(s => s.length > 20); // Filter out very short fragments
-  };
-
-  const findTextDifferences = (originalHtml, rewrittenHtml) => {
-    // Extract and normalize text content from both HTML documents
-    const originalText = extractTextContent(originalHtml);
-    const rewrittenText = extractTextContent(rewrittenHtml);
-
-    console.log('Original text length:', originalText.length);
-    console.log('Rewritten text length:', rewrittenText.length);
-
-    // Normalize for comparison
-    const originalNormalized = normalizeText(originalText);
-    const rewrittenNormalized = normalizeText(rewrittenText);
-
-    // Split into sentences for better comparison
-    const originalSentences = splitIntoSentences(originalText);
-    const rewrittenSentences = splitIntoSentences(rewrittenText);
-
-    console.log('Original sentences:', originalSentences.length);
-    console.log('Rewritten sentences:', rewrittenSentences.length);
-
-    // Find phrases/sentences that appear in rewritten but not in original
-    const additions = [];
-    const removals = [];
-
-    // Find additions - sentences in rewritten that don't exist in original
-    rewrittenSentences.forEach(sentence => {
-      // Check if this sentence exists in original
-      const existsInOriginal = originalSentences.some(orig => {
-        // Use similarity check - sentences are similar if one contains most of the other
-        const similarity = calculateSimilarity(orig, sentence);
-        return similarity > 0.8; // 80% similar
-      });
-
-      if (!existsInOriginal) {
-        // This is a genuinely new sentence
-        // Split into phrases for more granular highlighting
-        const phrases = sentence.split(/[,;]+/).map(p => p.trim()).filter(p => p.length > 15);
-        phrases.forEach(phrase => {
-          // Check if phrase exists in original (normalized)
-          if (!originalNormalized.includes(phrase)) {
-            additions.push(phrase);
-          }
+            // Return with opening tag and closing paragraph tag
+            return openTag + result + closeTag;
         });
-      }
-    });
+    };
 
-    // Find removals - sentences in original that don't exist in rewritten
-    originalSentences.forEach(sentence => {
-      const existsInRewritten = rewrittenSentences.some(rew => {
-        const similarity = calculateSimilarity(rew, sentence);
-        return similarity > 0.8;
-      });
+    // Helper function to remove unwanted <br /> tags while preserving bullet list breaks
+    const removeUnwantedBreaks = (html) => {
+        if (!html) return '';
 
-      if (!existsInRewritten) {
-        removals.push(sentence);
-      }
-    });
+        // Split by <br /> tags to analyze context
+        const parts = html.split(/(<br\s*\/?>)/gi);
+        let result = '';
 
-    console.log('Total additions found:', additions.length);
-    console.log('Total removals found:', removals.length);
-    console.log('Sample additions:', additions.slice(0, 5));
-    console.log('Sample removals:', removals.slice(0, 5));
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
 
-    return { additions, removals };
-  };
+            // If this is a <br /> tag, decide whether to keep it
+            if (/<br\s*\/?>/i.test(part)) {
+                const prevPart = i > 0 ? parts[i - 1] : '';
+                const nextPart = i < parts.length - 1 ? parts[i + 1] : '';
 
-  const calculateSimilarity = (text1, text2) => {
-    // Calculate word-based similarity between two texts
-    const words1 = text1.split(' ').filter(w => w.length > 3);
-    const words2 = text2.split(' ').filter(w => w.length > 3);
+                // Extract text content around the break (strip HTML tags)
+                const prevText = prevPart.replace(/<[^>]*>/g, '').trim();
+                const nextText = nextPart.replace(/<[^>]*>/g, '').trim();
 
-    if (words1.length === 0 || words2.length === 0) return 0;
+                // Keep the <br /> if:
+                // 1. Current line (before break) starts with "- " (has a bullet)
+                // 2. OR next line (after break) starts with "- " (next line has a bullet)
+                const keepBreak = prevText.startsWith('- ') || nextText.startsWith('- ');
 
-    // Count matching words
-    const matches = words1.filter(w => words2.includes(w)).length;
-    const maxLength = Math.max(words1.length, words2.length);
-
-    return matches / maxLength;
-  };
-
-  const highlightAdditions = (originalHtml, rewrittenHtml) => {
-    if (!originalHtml || !rewrittenHtml) {
-      console.log('Missing HTML content for diff');
-      return rewrittenHtml;
-    }
-
-    // Find differences between original and rewritten
-    const { additions } = findTextDifferences(originalHtml, rewrittenHtml);
-
-    console.log('Found additions to highlight:', additions.length);
-
-    // Create a temporary DOM to manipulate
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(rewrittenHtml, 'text/html');
-
-    // Add style for highlighting
-    const styleTag = doc.createElement('style');
-    styleTag.textContent = `
-      .change-highlight-add {
-        background-color: #90EE90 !important;
-        padding: 2px 4px;
-        border-radius: 2px;
-        cursor: pointer;
-      }
-      .change-highlight-add:hover {
-        background-color: #7FDD7F !important;
-      }
-    `;
-    if (doc.head) {
-      doc.head.appendChild(styleTag);
-    } else {
-      doc.body.insertBefore(styleTag, doc.body.firstChild);
-    }
-
-    if (additions && additions.length > 0) {
-      console.log('Applying highlighting for', additions.length, 'additions');
-
-      // Remove duplicates and sort by length (longest first)
-      const sortedAdditions = [...new Set(additions)]
-        .filter(phrase => phrase && phrase.trim().length > 10)
-        .sort((a, b) => b.length - a.length);
-
-      let highlightCount = 0;
-
-      // Walk through all text nodes and highlight matching phrases
-      const walkTextNodes = (node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const text = node.textContent;
-          const normalizedText = normalizeText(text);
-
-          // Check each addition phrase
-          for (const phrase of sortedAdditions) {
-            if (normalizedText.includes(phrase)) {
-              // Found a match - need to highlight it
-              // Create a case-insensitive search for the original text
-              const words = phrase.split(' ').filter(w => w.length > 3);
-              if (words.length === 0) continue;
-
-              // Build regex to find the phrase in original casing
-              const pattern = words.map(w => {
-                // Escape special chars and match word boundaries
-                const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                return `\\b${escaped}\\w*`;
-              }).join('\\s+');
-
-              const regex = new RegExp(`(${pattern})`, 'gi');
-              const match = text.match(regex);
-
-              if (match) {
-                // Replace text node with highlighted version
-                const span = document.createElement('span');
-                span.className = 'change-highlight-add';
-
-                // Split the text and wrap matched portion
-                const parts = text.split(regex);
-                const fragment = document.createDocumentFragment();
-
-                parts.forEach((part, index) => {
-                  if (index % 2 === 0) {
-                    // Regular text
-                    if (part) fragment.appendChild(document.createTextNode(part));
-                  } else {
-                    // Matched text - highlight it
-                    const highlightSpan = document.createElement('span');
-                    highlightSpan.className = 'change-highlight-add';
-                    highlightSpan.textContent = part;
-                    fragment.appendChild(highlightSpan);
-                    highlightCount++;
-                  }
-                });
-
-                node.parentNode.replaceChild(fragment, node);
-                break; // Move to next text node
-              }
+                if (keepBreak) {
+                    result += part;
+                }
+                // Otherwise, skip the <br /> tag (don't add it to result)
+            } else {
+                // Not a <br /> tag, keep the content
+                result += part;
             }
-          }
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          // Don't highlight inside script or style tags
-          if (node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
-            Array.from(node.childNodes).forEach(walkTextNodes);
-          }
         }
-      };
 
-      walkTextNodes(doc.body);
-      console.log('Total highlights applied:', highlightCount);
-    } else {
-      console.log('No additions found to highlight');
-    }
+        return result;
+    };
 
-    // Add click handler script for additions
-    const scriptTag = doc.createElement('script');
-    scriptTag.textContent = `
-      document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('change-highlight-add')) {
-          const text = e.target.textContent;
-          window.parent.postMessage({ type: 'removeAddition', text: text }, '*');
-        }
-      });
-    `;
-    doc.body.appendChild(scriptTag);
+    useEffect(() => {
+        if (location.state) {
+            const origHtml = location.state.resumeHtml || '';
+            const rewrHtml = location.state.resumeHtmlRewrite || '';
 
-    return doc.documentElement.outerHTML;
-  };
+            // Store the original complete rewritten HTML
+            setOriginalRewriteHtml(rewrHtml);
 
-  const highlightRemovals = (originalHtml, rewrittenHtml) => {
-    if (!originalHtml || !rewrittenHtml) {
-      console.log('Missing HTML content for diff');
-      return originalHtml;
-    }
+            // Generate HTML diff with inline highlights (only for body content)
+            try {
+                // Extract only body content for diffing (preserves full document structure)
+                let origBodyContent = extractBodyContent(origHtml);
+                let rewrBodyContent = extractBodyContent(rewrHtml);
 
-    // Find differences between original and rewritten
-    const { removals } = findTextDifferences(originalHtml, rewrittenHtml);
+                // Process body content for better diff visualization
+                origBodyContent = convertBulletsToLists(origBodyContent);
+                origBodyContent = removeUnwantedBreaks(origBodyContent);
+                origBodyContent = normalizeWhitespace(origBodyContent);
 
-    console.log('Found removals to highlight:', removals.length);
+                rewrBodyContent = convertBulletsToLists(rewrBodyContent);
+                rewrBodyContent = removeUnwantedBreaks(rewrBodyContent);
+                rewrBodyContent = normalizeWhitespace(rewrBodyContent);
 
-    // Create a temporary DOM to manipulate
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(originalHtml, 'text/html');
-
-    // Add style for highlighting removals
-    const styleTag = doc.createElement('style');
-    styleTag.textContent = `
-      .change-highlight-remove {
-        background-color: #FFB84D !important;
-        padding: 2px 4px;
-        border-radius: 2px;
-        cursor: pointer;
-      }
-      .change-highlight-remove:hover {
-        background-color: #FFA733 !important;
-      }
-    `;
-    if (doc.head) {
-      doc.head.appendChild(styleTag);
-    } else {
-      doc.body.insertBefore(styleTag, doc.body.firstChild);
-    }
-
-    if (removals && removals.length > 0) {
-      console.log('Applying highlighting for', removals.length, 'removals');
-
-      // Remove duplicates and sort by length (longest first)
-      const sortedRemovals = [...new Set(removals)]
-        .filter(phrase => phrase && phrase.trim().length > 10)
-        .sort((a, b) => b.length - a.length);
-
-      let highlightCount = 0;
-
-      // Walk through all text nodes and highlight matching phrases
-      const walkTextNodes = (node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const text = node.textContent;
-          const normalizedText = normalizeText(text);
-
-          // Check each removal phrase
-          for (const phrase of sortedRemovals) {
-            if (normalizedText.includes(phrase)) {
-              // Found a match - need to highlight it
-              // Create a case-insensitive search for the original text
-              const words = phrase.split(' ').filter(w => w.length > 3);
-              if (words.length === 0) continue;
-
-              // Build regex to find the phrase in original casing
-              const pattern = words.map(w => {
-                // Escape special chars and match word boundaries
-                const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                return `\\b${escaped}\\w*`;
-              }).join('\\s+');
-
-              const regex = new RegExp(`(${pattern})`, 'gi');
-              const match = text.match(regex);
-
-              if (match) {
-                // Replace text node with highlighted version
-                const parts = text.split(regex);
-                const fragment = document.createDocumentFragment();
-
-                parts.forEach((part, index) => {
-                  if (index % 2 === 0) {
-                    // Regular text
-                    if (part) fragment.appendChild(document.createTextNode(part));
-                  } else {
-                    // Matched text - highlight it
-                    const highlightSpan = document.createElement('span');
-                    highlightSpan.className = 'change-highlight-remove';
-                    highlightSpan.textContent = part;
-                    fragment.appendChild(highlightSpan);
-                    highlightCount++;
-                  }
-                });
-
-                node.parentNode.replaceChild(fragment, node);
-                break; // Move to next text node
-              }
+                const diff = HtmlDiff.execute(origBodyContent, rewrBodyContent);
+                setHtmlDiff(diff);
+            } catch (error) {
+                console.error('Error generating HTML diff:', error);
+                setHtmlDiff('');
             }
-          }
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          // Don't highlight inside script or style tags
-          if (node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
-            Array.from(node.childNodes).forEach(walkTextNodes);
-          }
+
+            setBaselineScore(location.state.baselineScore || 0);
+            setRewriteScore(location.state.rewriteScore || 0);
+            setJobId(location.state.jobId || null);
+            setFromViewResume(location.state.fromViewResume || false);
         }
-      };
+    }, [location.state]);
 
-      walkTextNodes(doc.body);
-      console.log('Total removal highlights applied:', highlightCount);
-    } else {
-      console.log('No removals found to highlight');
-    }
+    // Make diff changes interactive
+    useEffect(() => {
+        if (diffContainerRef.current) {
+            const container = diffContainerRef.current;
 
-    // Add click handler script for removals
-    const scriptTag = doc.createElement('script');
-    scriptTag.textContent = `
-      document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('change-highlight-remove')) {
-          const text = e.target.textContent;
-          window.parent.postMessage({ type: 'restoreRemoval', text: text }, '*');
+            // Find all ins and del elements
+            const insElements = container.querySelectorAll('ins');
+            const delElements = container.querySelectorAll('del');
+
+            // Add unique IDs and click handlers (skip single-character changes)
+            insElements.forEach((el, index) => {
+                // Skip single-character changes (likely artifacts)
+                if (el.textContent.length <= 1) {
+                    el.style.display = 'none'; // Hide single-char artifacts
+                    return;
+                }
+
+                const changeId = `ins-${index}`;
+                el.setAttribute('data-change-id', changeId);
+                el.style.cursor = 'pointer';
+                el.title = 'Click to reject this addition';
+
+                el.onclick = () => toggleChange(changeId, 'ins', el);
+            });
+
+            delElements.forEach((el, index) => {
+                // Skip single-character changes (likely artifacts)
+                if (el.textContent.length <= 1) {
+                    el.style.display = 'none'; // Hide single-char artifacts
+                    return;
+                }
+
+                const changeId = `del-${index}`;
+                el.setAttribute('data-change-id', changeId);
+                el.style.cursor = 'pointer';
+                el.title = 'Click to keep this (reject deletion)';
+
+                el.onclick = () => toggleChange(changeId, 'del', el);
+            });
         }
-      });
-    `;
-    doc.body.appendChild(scriptTag);
+    }, [htmlDiff]);
 
-    return doc.documentElement.outerHTML;
-  };
+    const toggleChange = (changeId, changeType, element) => {
+        setChangeStates(prev => {
+            const newState = {...prev};
+            const currentState = newState[changeId] || 'accepted';
 
-  const handleCancel = () => {
-    if (jobId) {
-      navigate(`/job-details/${jobId}`);
-    } else {
-      navigate('/job-tracker');
-    }
-  };
+            if (currentState === 'accepted') {
+                // Reject the change
+                newState[changeId] = 'rejected';
+                if (changeType === 'ins') {
+                    // Hide the inserted text
+                    element.style.display = 'none';
+                } else {
+                    // Show deleted text normally (remove strikethrough)
+                    element.style.textDecoration = 'none';
+                    element.style.backgroundColor = '#fff3cd';
+                    element.title = 'Click to accept deletion';
+                }
+            } else {
+                // Accept the change
+                newState[changeId] = 'accepted';
+                if (changeType === 'ins') {
+                    // Show the inserted text
+                    element.style.display = 'inline';
+                } else {
+                    // Show as deleted (strikethrough)
+                    element.style.textDecoration = 'line-through';
+                    element.style.backgroundColor = '#ffa8a8';
+                    element.title = 'Click to keep this (reject deletion)';
+                }
+            }
 
-  const handleAcceptChanges = async () => {
-    try {
-      // Use the edited rewritten HTML (with user's modifications)
-      await apiService.updateResumeDetail({
-        resume_id: parseInt(resumeId),
-        resume_html_rewrite: editedRewrittenHtml
-      });
+            return newState;
+        });
+    };
 
-      // Redirect without alert
-      if (jobId) {
-        navigate(`/job-details/${jobId}`);
-      } else {
-        navigate('/resume');
-      }
-    } catch (error) {
-      console.error('Error saving resume changes:', error);
-      alert('Failed to save changes. Please try again.');
-    }
-  };
+    const handleCancel = () => {
+        if (fromViewResume) {
+            navigate(`/view-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
+        } else if (jobId) {
+            navigate(`/job-details/${jobId}`);
+        } else {
+            navigate('/job-tracker');
+        }
+    };
 
-  return (
-    <div className="optimized-resume">
-      <div className="resume-header">
-        <h1 className="page-title">Optimized Resume</h1>
-        <div className="score-display">
-          <div className="score-item">
-            <span className="score-label">baseline:</span>
-            <span className="score-value">{baselineScore}%</span>
-          </div>
-          <div className="score-item">
-            <span className="score-label">rewrite:</span>
-            <span className="score-value">{rewriteScore}%</span>
-          </div>
+    const reconstructHtml = () => {
+        if (!diffContainerRef.current || !originalRewriteHtml) {
+            return originalRewriteHtml || htmlDiff;
+        }
+
+        // Clone the diff container to work with
+        const diffClone = diffContainerRef.current.cloneNode(true);
+
+        // Find the html-diff-content div and get its content
+        const diffContentDiv = diffClone.querySelector('.html-diff-content');
+        if (!diffContentDiv) {
+            console.error('Could not find .html-diff-content div');
+            return originalRewriteHtml;
+        }
+
+        // Process all changes based on their state
+        const insElements = diffContentDiv.querySelectorAll('ins');
+        const delElements = diffContentDiv.querySelectorAll('del');
+
+        insElements.forEach((el) => {
+            const changeId = el.getAttribute('data-change-id');
+            const state = changeStates[changeId] || 'accepted';
+
+            if (state === 'accepted') {
+                // Keep the insertion - unwrap the <ins> tag but keep its content
+                while (el.firstChild) {
+                    el.parentNode.insertBefore(el.firstChild, el);
+                }
+                el.remove();
+            } else {
+                // Reject the insertion - remove it entirely
+                el.remove();
+            }
+        });
+
+        delElements.forEach((el) => {
+            const changeId = el.getAttribute('data-change-id');
+            const state = changeStates[changeId] || 'accepted';
+
+            if (state === 'accepted') {
+                // Accept the deletion - remove the element
+                el.remove();
+            } else {
+                // Reject the deletion - unwrap the <del> tag but keep its content
+                while (el.firstChild) {
+                    el.parentNode.insertBefore(el.firstChild, el);
+                }
+                el.remove();
+            }
+        });
+
+        // Clean up any remaining ins/del tags (single-character artifacts)
+        diffContentDiv.querySelectorAll('ins, del').forEach(el => {
+            if (el.textContent.length <= 1) {
+                el.remove();
+            } else {
+                // Unwrap any remaining tags
+                while (el.firstChild) {
+                    el.parentNode.insertBefore(el.firstChild, el);
+                }
+                el.remove();
+            }
+        });
+
+        // Get the processed body content (without wrapper divs)
+        const processedBodyContent = diffContentDiv.innerHTML;
+
+        // Now reconstruct the full HTML document with the original structure
+        // Parse the original HTML to get DOCTYPE, head (including styles), etc.
+        const parser = new DOMParser();
+        const originalDoc = parser.parseFromString(originalRewriteHtml, 'text/html');
+
+        // Replace the body content with our processed content
+        if (originalDoc.body) {
+            originalDoc.body.innerHTML = processedBodyContent;
+        }
+
+        // Serialize back to string with proper document structure
+        const serializer = new XMLSerializer();
+        let finalHtml = serializer.serializeToString(originalDoc);
+
+        // Clean up XML artifacts from serializer (it adds xmlns)
+        finalHtml = finalHtml.replace(/ xmlns="[^"]*"/g, '');
+
+        return finalHtml;
+    };
+
+    const handleAcceptChanges = async () => {
+        try {
+            // Reconstruct HTML based on user's change selections
+            const finalHtml = reconstructHtml();
+
+            await apiService.updateResumeDetail({
+                resume_id: parseInt(resumeId),
+                resume_html_rewrite: finalHtml
+            });
+
+            if (fromViewResume) {
+                navigate(`/view-resume?resume_id=${resumeId}&job_id=${jobId || ''}`);
+            } else if (jobId) {
+                navigate(`/job-details/${jobId}`);
+            } else {
+                navigate('/resume');
+            }
+        } catch (error) {
+            console.error('Error saving resume changes:', error);
+            alert('Failed to save changes. Please try again.');
+        }
+    };
+
+    return (
+        <div className="optimized-resume">
+            <div className="resume-header">
+                <h1 className="page-title">Resume Comparison</h1>
+                <div className="score-display">
+                    <div className="score-item">
+                        <span className="score-label">baseline:</span>
+                        <span className="score-value">{baselineScore}%</span>
+                    </div>
+                    <div className="score-item">
+                        <span className="score-label">optimized:</span>
+                        <span className="score-value">{rewriteScore}%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="diff-help-text">
+                Click on any highlighted change to toggle it. Green = additions, Red with strikethrough = deletions.
+                Clicking toggles between accepting and rejecting each change.
+            </div>
+
+            <div className="diff-container">
+                <div className="rendered-diff-container" ref={diffContainerRef}>
+                    <div
+                        className="html-diff-content"
+                        dangerouslySetInnerHTML={{__html: htmlDiff}}
+                    />
+                </div>
+            </div>
+
+            <div className="button-container">
+                <button onClick={handleCancel} className="cancel-button">
+                    Cancel
+                </button>
+                <button onClick={handleAcceptChanges} className="action-button">
+                    Accept Changes
+                </button>
+            </div>
         </div>
-      </div>
-
-      <div className="resume-comparison">
-        <div className="resume-section">
-          <h2 className="section-title">Baseline Resume</h2>
-          <div className="iframe-container">
-            <iframe
-              ref={baselineIframeRef}
-              title="Baseline Resume"
-              className="resume-iframe"
-            />
-          </div>
-        </div>
-
-        <div className="resume-section">
-          <h2 className="section-title">Optimized Resume (Changes Highlighted)</h2>
-          <div className="iframe-container">
-            <iframe
-              ref={rewriteIframeRef}
-              title="Optimized Resume"
-              className="resume-iframe"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="button-container">
-        <button onClick={handleCancel} className="cancel-button">
-          Cancel
-        </button>
-        <button onClick={handleAcceptChanges} className="accept-button">
-          Accept Changes
-        </button>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default OptimizedResume;
