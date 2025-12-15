@@ -168,13 +168,15 @@ async def list_reminders(request: ReminderListRequest, db: Session = Depends(get
             end_date = request.start_date + timedelta(days=29)
 
         # Build query based on whether job_id is provided
+        # NOTE: We don't filter by reminder_dismissed here because:
+        # - Calendar views need to show all reminders (even dismissed ones)
+        # - ReminderContext will filter dismissed reminders client-side for popup alerts
         if request.job_id is not None:
             query = text("""
-                SELECT reminder_id, reminder_date, reminder_time, reminder_message, job_id
+                SELECT reminder_id, reminder_date, reminder_time, reminder_message, job_id, reminder_dismissed
                 FROM reminder
                 WHERE reminder_date BETWEEN :start_date AND :end_date
                   AND job_id = :job_id
-                  AND (reminder_dismissed IS NULL OR reminder_dismissed = FALSE)
                 ORDER BY reminder_date DESC, reminder_time DESC
             """)
 
@@ -185,10 +187,9 @@ async def list_reminders(request: ReminderListRequest, db: Session = Depends(get
             })
         else:
             query = text("""
-                SELECT reminder_id, reminder_date, reminder_time, reminder_message, job_id
+                SELECT reminder_id, reminder_date, reminder_time, reminder_message, job_id, reminder_dismissed
                 FROM reminder
                 WHERE reminder_date BETWEEN :start_date AND :end_date
-                  AND (reminder_dismissed IS NULL OR reminder_dismissed = FALSE)
                 ORDER BY reminder_date DESC, reminder_time DESC
             """)
 
@@ -204,7 +205,8 @@ async def list_reminders(request: ReminderListRequest, db: Session = Depends(get
                 "reminder_date": row.reminder_date,
                 "reminder_time": row.reminder_time,
                 "reminder_message": row.reminder_message,
-                "job_id": row.job_id
+                "job_id": row.job_id,
+                "reminder_dismissed": row.reminder_dismissed
             })
 
         logger.log_database_operation("SELECT", "reminder")

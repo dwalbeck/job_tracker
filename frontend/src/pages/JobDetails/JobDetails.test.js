@@ -807,7 +807,7 @@ describe('JobDetails Component', () => {
             apiService.getJob.mockResolvedValue(jobWithResume);
             apiService.getResumeDetail.mockResolvedValue(mockResumeDetail);
             apiService.getResume.mockResolvedValue({ baseline_resume_id: 5 });
-            apiService.convertFile.mockResolvedValue({ file_name: 'resume.docx' });
+            apiService.convertFile.mockResolvedValue({ file: 'resume.docx' });
             apiService.getAppointments.mockResolvedValue([]);
             apiService.getReminderList.mockResolvedValue([]);
             apiService.getNotes.mockResolvedValue([]);

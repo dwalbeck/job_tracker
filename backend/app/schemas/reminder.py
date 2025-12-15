@@ -14,7 +14,7 @@ class DurationType(str, Enum):
 class ReminderCreate(BaseModel):
     """Schema for creating or updating a reminder"""
     reminder_date: date
-    reminder_time: time
+    reminder_time: Optional[time] = None
     reminder_message: str
     reminder_dismissed: bool = False
     job_id: Optional[int] = None
@@ -35,3 +35,4 @@ class ReminderListResponse(BaseModel):
     reminder_time: Optional[time]
     reminder_message: str
     job_id: Optional[int] = None
+    reminder_dismissed: bool = False

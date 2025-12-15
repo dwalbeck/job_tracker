@@ -318,8 +318,7 @@ class AiAgent:
         keyword_final: list,
         focus_final: list,
         job_title: str,
-        position_title: str,
-        title_line_no: int
+        position_title: str
     ) -> dict:
         """
         Rewrite a resume based on job description and keywords using AI.
@@ -331,7 +330,6 @@ class AiAgent:
             focus_final: List of focus areas to emphasize
             job_title: Target job title
             position_title: Current position title in resume
-            title_line_no: Line number of position title
 
         Returns:
             Dictionary containing:
@@ -355,7 +353,7 @@ class AiAgent:
         prompt = prompt.replace('{focus_final}', focus_final_str)
         prompt = prompt.replace('{job_title}', job_title or '')
         prompt = prompt.replace('{position_title}', position_title or '')
-        prompt = prompt.replace('{title_line_no}', str(title_line_no) if title_line_no is not None else '0')
+
 
         # Log prompt size for debugging
         prompt_size = len(prompt)

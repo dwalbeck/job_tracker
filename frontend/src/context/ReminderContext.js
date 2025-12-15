@@ -20,14 +20,22 @@ export const ReminderProvider = ({children}) => {
     const fetchTodayReminders = useCallback(async () => {
         try {
             setLoading(true);
-            const today = new Date().toISOString().split('T')[0];
+            // Use local date, not UTC, to avoid timezone issues
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const today = `${year}-${month}-${day}`;
 
             const response = await apiService.getReminderList({
                 duration: 'day',
                 start_date: today
             });
 
-            setReminders(response || []);
+            // Filter out dismissed reminders for popup alerts
+            // (Calendar views will show all reminders including dismissed ones)
+            const activeReminders = (response || []).filter(r => !r.reminder_dismissed);
+            setReminders(activeReminders);
         } catch (error) {
             console.error('Error fetching today\'s reminders:', error);
             setReminders([]);

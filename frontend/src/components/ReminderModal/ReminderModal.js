@@ -37,6 +37,14 @@ const ReminderModal = ({isOpen, onClose, reminder = null, preSelectedJobId = nul
                     reminder_time: '',
                     reminder_message: ''
                 });
+            } else {
+                // Adding mode without pre-selected job - clear form
+                setFormData({
+                    job_id: '',
+                    reminder_date: '',
+                    reminder_time: '',
+                    reminder_message: ''
+                });
             }
         }
     }, [isOpen, reminder, preSelectedJobId]);
@@ -67,7 +75,7 @@ const ReminderModal = ({isOpen, onClose, reminder = null, preSelectedJobId = nul
         try {
             const submitData = {
                 reminder_date: formData.reminder_date,
-                reminder_time: formData.reminder_time,
+                reminder_time: formData.reminder_time || null,
                 reminder_message: formData.reminder_message,
                 reminder_dismissed: false,
                 job_id: formData.job_id ? parseInt(formData.job_id) : null

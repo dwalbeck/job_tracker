@@ -304,7 +304,7 @@ describe('ViewResume Component', () => {
     describe('Download Functionality', () => {
         test('downloads resume in different formats', async () => {
             apiService.getResumeDetail.mockResolvedValue(mockResumeDetail);
-            apiService.convertFile.mockResolvedValue({ file_name: 'resume.docx' });
+            apiService.convertFile.mockResolvedValue({ file: 'resume.docx' });
             apiService.getPersonalInfo.mockResolvedValue({
                 first_name: 'John',
                 last_name: 'Doe'

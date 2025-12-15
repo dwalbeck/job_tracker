@@ -5,7 +5,7 @@ import {getWeekStart, formatDateForAPI, formatTimeDisplay, getHours, isBusinessH
 import AppointmentModal from './AppointmentModal';
 import './WeekView.css';
 
-const WeekView = ({currentDate, onDateChange, onReminderClick}) => {
+const WeekView = ({currentDate, onDateChange, onReminderClick, refreshTrigger}) => {
     const [appointments, setAppointments] = useState([]);
     const [reminders, setReminders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -26,7 +26,7 @@ const WeekView = ({currentDate, onDateChange, onReminderClick}) => {
         fetchAppointments();
         fetchReminders();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentDate]);
+    }, [currentDate, refreshTrigger]);
 
     // Auto-scroll to 8am on component mount and when date changes
     useEffect(() => {

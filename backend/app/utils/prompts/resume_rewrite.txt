@@ -34,8 +34,8 @@ GUIDELINES:
     
 2. **Job Position Title**:
     - The same job position title used in the job description, should be used as the job title in the resume
-    - Use the "RESUME JOB TITLE" and "RESUME JOB TITLE LINE #" values (if set) to correctly identify and replace with "JOB TITLE" value
-    - Keep any formatting designation for the job title
+    - Use the "RESUME JOB TITLE" values to correctly identify and replace with "JOB TITLE", so that the resume matches the Job posting
+    - Keep the same formatting designation from the resume for overwritten job title
     - If the JOB TITLE includes text contained with parenthesis, then do not use or include the parenthesis or text contained within
     - If the JOB TITLE includes the use of a comma, then exclude the comma and all text following it from being used
 
