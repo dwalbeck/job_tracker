@@ -1,24 +1,25 @@
 services:
   # PostgreSQL Database Service
   db:
-    image: postgres:12
+    image: postgres:15.15-trixie
     container_name: psql.jobtracker.com
-    hostname: psql.jobtracker.com
     restart: always
-    environment:
-      POSTGRES_DB: jobtracker
-      POSTGRES_USER: apiuser
-      POSTGRES_PASSWORD: '@p!u$$3r70K3n'
-      PGDATA: /var/lib/postgresql/data
-      POSTGRES_HOST_AUTH_METHOD: trust
+    shm_size: 128mb
+    env_file:
+      - ./backend/.env
     expose:
       - "5432"
     ports:
       - "5432:5432"
     volumes:
-      - ./postgresql:/var/lib/postgresql/data
-      - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-    network_mode: "host"
+      - type: bind
+        source: ./postgresql
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: ./docs/schema.sql
+        target: /docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - job_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U apiuser -d jobtracker"]
       interval: 10s
@@ -30,35 +31,22 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: api.jobtracker.com
-    hostname: api.jobtracker.com
     restart: unless-stopped
     env_file:
       - ./backend/.env
-    environment:
-      DATABASE_URL: postgresql://apiuser:%40p%21u%243r70K3n@psql.jobtracker.com:5432/jobtracker
-      DATABASE_HOST: psql.jobtracker.com
-      DATABASE_USER: apiuser
-      DATABASE_PASS: '@p!u$$3r70K3n'
-      DATABASE_DB: jobtracker
-      DATABASE_PORT: 5432
-      APP_NAME: Job Tracker API
-      APP_VERSION: 1.0.0
-      DEBUG: "true"
-      ALLOWED_ORIGINS: '["http://localhost:3000", "http://portal.jobtracker.com:3000", "http://portal.jobtracker.com", "http://localhost:80", "http://localhost"]'
-      RESUME_DIR: /app/job_docs/resumes
-      COVER_LETTER_DIR: /app/job_docs/cover_letters
     expose:
       - "8000"
-      - "80"
+    ports:
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
-    network_mode: "host"
+    networks:
+      - job_network
     volumes:
       - job_docs:/app/job_docs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -68,24 +56,21 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        REACT_APP_API_BASE_URL: http://api.jobtracker.com
-    container_name: portal.jobtracker.com
-    hostname: portal.jobtracker.com
     restart: unless-stopped
-    environment:
-      NODE_ENV: production
+    env_file:
+      - ./frontend/.env
     expose:
       - "3000"
       - "443"
       - "80"
     ports:
-      - "3000:3000"
       - "80:80"
+      - "3000:3000"
     depends_on:
       - backend
       - db
-    network_mode: "host"
+    networks:
+      - job_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
@@ -94,8 +79,12 @@ services:
 
 # Named volumes for data persistence
 volumes:
-  postgres_data:
-    driver: local
   job_docs:
     driver: local
+  postgresql:
+    driver: local
 
+
+networks:
+  job_network:
+    driver: bridge
