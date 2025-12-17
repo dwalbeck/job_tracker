@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .core.config import settings
-from .api import jobs, contacts, calendar, notes, resume, convert, personal, letter, files, reminder, export
+from .api import jobs, contacts, calendar, notes, resume, convert, personal, letter, files, reminder, export, process
 from .middleware import LoggingMiddleware
 from .utils.logger import logger
 
@@ -97,10 +97,11 @@ async def general_exception_handler(request: Request, exc: Exception):
 app.add_middleware(
 	CORSMiddleware,
 	allow_origins=["*"],  # Allow all origins
-	allow_credentials=True,
-	allow_methods=["*"],  # Allow all methods
+	allow_credentials=False,
+	allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # Explicit methods
 	allow_headers=["*"],  # Allow all headers
-	expose_headers=["Content-Length", "Content-Range", "Authorization", "Accept", "Keep-Alive", "Content-Type"],
+	expose_headers=["*"],  # Expose all headers
+	max_age=0,  # Disable preflight caching for debugging
 )
 
 # Add logging middleware (must be added after CORS for proper request/response logging)
@@ -118,7 +119,7 @@ app.include_router(letter.router, prefix="/v1", tags=["letter"])
 app.include_router(files.router, prefix="/v1", tags=["files"])
 app.include_router(reminder.router, prefix="/v1", tags=["reminder"])
 app.include_router(export.router, prefix="/v1", tags=["export"])
-
+app.include_router(process.router, prefix="/v1/process", tags=["process"])
 
 @app.get("/")
 async def root():

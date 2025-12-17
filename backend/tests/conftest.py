@@ -49,6 +49,7 @@ def test_db(test_engine):
         session.execute(text("DELETE FROM job_detail"))
         session.execute(text("DELETE FROM resume"))
         session.execute(text("DELETE FROM job"))
+        session.execute(text("DELETE FROM process"))
         session.execute(text("DELETE FROM personal"))
         session.commit()
     except Exception:

@@ -220,6 +220,20 @@ CREATE TABLE IF NOT EXISTS personal (
 	PRIMARY KEY (first_name, last_name)
 );
 
+CREATE TABLE IF NOT EXISTS process (
+    process_id              serial NOT NULL,
+    endpoint_called         varchar(128),
+    running_method          varchar(64),
+    running_class           varchar(64),
+    started                 timestamp(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed               timestamp(0) WITHOUT TIME ZONE DEFAULT NULL,
+    confirmed               boolean NOT NULL DEFAULT false,
+    failed                  boolean NOT NULL DEFAULT false,
+    PRIMARY KEY (process_id)
+);
+CREATE RULE get_pkey_on_insert AS ON INSERT TO process DO SELECT currval('process_process_id_seq'::text) AS process_id;
+
+
 ALTER TABLE job
     ADD CONSTRAINT job_resume_fk FOREIGN KEY (resume_id) REFERENCES resume (resume_id) ON DELETE SET NULL ON UPDATE CASCADE,
     ADD CONSTRAINT job_cover_fk FOREIGN KEY (cover_id) REFERENCES cover_letter (cover_id) ON DELETE SET NULL ON UPDATE CASCADE;

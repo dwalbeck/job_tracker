@@ -407,23 +407,27 @@ const JobAnalysis = () => {
         try {
             // Step 1: Create the resume record with baseline data
             const fullResponse = await apiService.resumeFull(id, resumeId, keywordFinal, focusFinal);
+            const newResumeId = fullResponse.resume_id;
 
-            setLoadingMessage('Running AI rewrite of resume (can take several minutes)...');
+            setLoadingMessage('Running AI rewrite of resume (polling for completion)...');
 
-            // Step 2: AI rewrite the resume
-            const rewriteResponse = await apiService.rewriteResume(id);
+            // Step 2: Initiate AI rewrite (returns immediately with process_id)
+            const rewriteResponse = await apiService.request('/v1/resume/rewrite', {
+                method: 'POST',
+                body: JSON.stringify({ job_id: id }),
+                timeout: 30000
+            });
+            console.log('rewriteResponse - process_id:', rewriteResponse.process_id);
 
-            setLoadingMessage('Running AI rewrite of resume (can take several minutes)... completed');
+            // Step 3: Navigate immediately to OptimizedResume page with process_id
+            // The OptimizedResume page will handle polling in a clean execution context
+            console.log('Navigating to OptimizedResume page with process_id:', rewriteResponse.process_id);
 
-            // Navigate to the optimized resume page
-            navigate(`/optimized-resume/${rewriteResponse.resume_id}`, {
+            navigate(`/optimized-resume/${newResumeId}`, {
                 state: {
-                    resumeHtml: rewriteResponse.resume_html,
-                    resumeHtmlRewrite: rewriteResponse.resume_html_rewrite,
-                    suggestion: rewriteResponse.suggestion,
-                    baselineScore: rewriteResponse.baseline_score,
-                    rewriteScore: rewriteResponse.rewrite_score,
-                    jobId: id
+                    processId: rewriteResponse.process_id,
+                    jobId: id,
+                    isPolling: true  // Flag to tell OptimizedResume to poll
                 }
             });
         } catch (error) {

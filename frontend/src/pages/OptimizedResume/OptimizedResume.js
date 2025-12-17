@@ -18,6 +18,10 @@ const OptimizedResume = () => {
     const [originalRewriteHtml, setOriginalRewriteHtml] = useState(''); // Store original complete HTML
     const diffContainerRef = useRef(null);
 
+    // Polling state
+    const [isPolling, setIsPolling] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('');
+
     // Helper function to extract body content only (for diffing)
     const extractBodyContent = (html) => {
         if (!html) return '';
@@ -142,8 +146,126 @@ const OptimizedResume = () => {
         return result;
     };
 
+    // Polling logic for long-running AI resume rewrite process
     useEffect(() => {
-        if (location.state) {
+        // Check if we need to poll for process completion
+        if (location.state?.isPolling && location.state?.processId) {
+            const processId = location.state.processId;
+            const jobIdFromState = location.state.jobId;
+
+            console.log('OptimizedResume: Starting polling for process_id:', processId);
+            setIsPolling(true);
+            setLoadingMessage('AI is rewriting your resume based on the job posting... Please wait.');
+            setJobId(jobIdFromState);
+
+            // Start polling
+            const pollProcess = async () => {
+                const maxAttempts = 120; // 10 minutes max (120 * 5 seconds)
+                let attempts = 0;
+
+                const poll = async () => {
+                    attempts++;
+                    console.log(`Polling attempt ${attempts}/${maxAttempts} for process_id: ${processId}`);
+
+                    try {
+                        const pollResponse = await apiService.request(`/v1/process/poll/${processId}`, {
+                            method: 'GET',
+                            timeout: 10000
+                        });
+                        console.log("Process state:", pollResponse.process_state);
+
+                        if (pollResponse.process_state === 'complete' || pollResponse.process_state === 'confirmed') {
+                            console.log('Process completed successfully');
+                            setLoadingMessage('Resume rewrite complete! Loading results...');
+
+                            // Fetch the completed resume data
+                            try {
+                                const resumeData = await apiService.request(`/v1/resume/rewrite/${jobIdFromState}`, {
+                                    method: 'GET',
+                                    timeout: 30000
+                                });
+
+                                console.log('Resume data retrieved:', resumeData);
+
+                                // Populate the state with the resume data
+                                const origHtml = resumeData.resume_html || '';
+                                const rewrHtml = resumeData.resume_html_rewrite || '';
+
+                                setOriginalRewriteHtml(rewrHtml);
+
+                                // Generate HTML diff (same logic as existing useEffect)
+                                try {
+                                    let origBodyContent = extractBodyContent(origHtml);
+                                    let rewrBodyContent = extractBodyContent(rewrHtml);
+
+                                    origBodyContent = convertBulletsToLists(origBodyContent);
+                                    origBodyContent = removeUnwantedBreaks(origBodyContent);
+                                    origBodyContent = normalizeWhitespace(origBodyContent);
+
+                                    rewrBodyContent = convertBulletsToLists(rewrBodyContent);
+                                    rewrBodyContent = removeUnwantedBreaks(rewrBodyContent);
+                                    rewrBodyContent = normalizeWhitespace(rewrBodyContent);
+
+                                    const diff = HtmlDiff.execute(origBodyContent, rewrBodyContent);
+                                    setHtmlDiff(diff);
+                                } catch (error) {
+                                    console.error('Error generating HTML diff:', error);
+                                    setHtmlDiff('');
+                                }
+
+                                setBaselineScore(resumeData.baseline_score || 0);
+                                setRewriteScore(resumeData.rewrite_score || 0);
+
+                                setIsPolling(false);
+                                setLoadingMessage('');
+                            } catch (error) {
+                                console.error('Error fetching resume data:', error);
+                                setIsPolling(false);
+                                setLoadingMessage('');
+                                alert('Failed to load resume data after completion. Please try again.');
+                                navigate(`/job-details/${jobIdFromState}`);
+                            }
+                            return;
+                        } else if (pollResponse.process_state === 'failed') {
+                            console.error('Process failed');
+                            setIsPolling(false);
+                            setLoadingMessage('');
+                            alert('Resume rewrite process failed. Please try again.');
+                            navigate(`/job-details/${jobIdFromState}`);
+                            return;
+                        }
+
+                        // Still running, continue polling
+                        if (attempts >= maxAttempts) {
+                            console.error('Polling timeout');
+                            setIsPolling(false);
+                            setLoadingMessage('');
+                            alert('Resume rewrite is taking longer than expected. Please check back later.');
+                            navigate(`/job-details/${jobIdFromState}`);
+                            return;
+                        }
+
+                        console.log('Process still running, retrying in 5 seconds...');
+                        setTimeout(poll, 5000);
+                    } catch (error) {
+                        console.error('Poll request failed:', error);
+                        setIsPolling(false);
+                        setLoadingMessage('');
+                        alert('Failed to check resume rewrite status. Please try again.');
+                        navigate(`/job-details/${jobIdFromState}`);
+                    }
+                };
+
+                // Start the polling loop
+                poll();
+            };
+
+            pollProcess();
+        }
+    }, [location.state, navigate]); // Dependencies
+
+    useEffect(() => {
+        if (location.state && !location.state.isPolling) {
             const origHtml = location.state.resumeHtml || '';
             const rewrHtml = location.state.resumeHtmlRewrite || '';
 
@@ -375,6 +497,49 @@ const OptimizedResume = () => {
             alert('Failed to save changes. Please try again.');
         }
     };
+
+    // Show loading screen while polling
+    if (isPolling) {
+        return (
+            <div className="optimized-resume">
+                <div className="resume-header">
+                    <h1 className="page-title">Processing Resume</h1>
+                </div>
+                <div className="loading-container" style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '400px',
+                    padding: '40px'
+                }}>
+                    <div className="spinner" style={{
+                        border: '4px solid #f3f3f3',
+                        borderTop: '4px solid #3498db',
+                        borderRadius: '50%',
+                        width: '50px',
+                        height: '50px',
+                        animation: 'spin 1s linear infinite',
+                        marginBottom: '20px'
+                    }}></div>
+                    <p style={{fontSize: '18px', color: '#555', textAlign: 'center'}}>
+                        {loadingMessage}
+                    </p>
+                    <p style={{fontSize: '14px', color: '#888', marginTop: '10px'}}>
+                        This may take a few minutes...
+                    </p>
+                </div>
+                <style>
+                    {`
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    `}
+                </style>
+            </div>
+        );
+    }
 
     return (
         <div className="optimized-resume">

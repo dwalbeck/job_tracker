@@ -292,3 +292,17 @@ class Personal(Base):
     html2docx = Column(String(32))
     html2odt = Column(String(32))
     html2pdf = Column(String(32))
+
+class Process(Base):
+	__tablename__ = "process"
+
+	process_id = Column(Integer, primary_key=True, index=True)
+	endpoint_called = Column(String(128))
+	running_method = Column(String(64))
+	running_class = Column(String(64))
+	started = Column(DateTime(timezone=False), server_default=func.current_timestamp())
+	completed = Column(DateTime(timezone=False))
+	confirmed = Column(Boolean, default=False, nullable=False)
+	failed = Column(Boolean, default=False, nullable=False)
+
+

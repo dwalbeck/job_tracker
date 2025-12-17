@@ -328,7 +328,50 @@ All-in-all however, the rendered view in this version is the most accurate and b
 
 # ======================================================================================================================
 
+When trying to build the frontend application, this error happens:
+
+ => CANCELED [backend 3/8] RUN apt-get update     && apt-get install -y --no-install-recommends         build-essential         libpq-dev         curl         git         pandoc         texlive-latex-base         texlive-latex-recommended         texlive-fonts-recommended         lmodern           15.5s
+------
+ > [frontend build 6/6] RUN npm run build:
+0.590
+0.590 > job-tracker-frontend@0.1.0 build
+0.590 > react-scripts build
+0.590
+1.341 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+2.154 Creating an optimized production build...
+14.03 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+15.43 Failed to compile.
+15.43
+15.43 [eslint]
+15.43 src/pages/ViewResume/ViewResume.js
+15.43   Line 59:76:  'file_name' is not defined  no-undef
+15.43
+15.43 Search for the keywords to learn more about each error.
+15.43
+15.43
+------
+Dockerfile:15
+
+--------------------
+
+  13 |
+
+  14 |     # Build the app
+
+  15 | >>> RUN npm run build
+
+  16 |
+
+  17 |     # Production stage
+
+--------------------
+
+target frontend: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+
 # ======================================================================================================================
+
+For the testing frameworks, I'm not confortable 
+
 
 # ======================================================================================================================
 

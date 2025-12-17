@@ -5,6 +5,7 @@ import difflib
 from pathlib import Path
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, BackgroundTasks
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
@@ -163,7 +164,6 @@ def validate_file_format(extension: str) -> str:
 			detail=f"Invalid file format '{extension}'. Allowed formats: {', '.join(valid_formats)}"
 		)
 	return extension
-
 
 def make_unique_resume_title(base_title: str, db: Session) -> str:
 	"""
@@ -1196,7 +1196,54 @@ async def resume_full(
 			detail=f"Error creating resume records: {str(e)}"
 		)
 
-@router.post("/resume/rewrite", response_model=ResumeRewriteResponse)
+@router.get("/resume/rewrite/{job_id}", response_model=ResumeRewriteResponse)
+async def get_rewrite_data(job_id: int, db: Session = Depends(get_db)):
+	"""
+	Retrieve the resume rewrite data for a given job.
+
+	This endpoint returns the resume data after the rewrite process has completed.
+	It should be called after polling indicates the process is complete.
+
+	Args:
+		job_id: ID of the job
+		db: Database session
+
+	Returns:
+		ResumeRewriteResponse with resume data including HTML, suggestions, and scores
+	"""
+	try:
+		logger.debug(f"Start resume/rewrite data retrieval", job_id=job_id)
+
+		query = text("""
+			SELECT rd.resume_id, rd.resume_html, rd.resume_html_rewrite, rd.suggestion,
+			       rd.baseline_score, rd.rewrite_score
+			FROM job j
+			LEFT JOIN resume_detail rd ON (j.resume_id = rd.resume_id)
+			WHERE j.job_id = :job_id
+		""")
+		result = db.execute(query, {"job_id": job_id}).first()
+
+		if not result:
+			logger.warning(f"Job resume not found", job_id=job_id)
+			raise HTTPException(status_code=404, detail="Job resume not found")
+
+		logger.info(f"Resume rewrite data retrieved successfully", job_id=job_id, resume_id=result.resume_id)
+
+		return ResumeRewriteResponse(
+			resume_id=result.resume_id,
+			resume_html=result.resume_html or "",
+			resume_html_rewrite=result.resume_html_rewrite or "",
+			suggestion=result.suggestion or [],
+			baseline_score=result.baseline_score or 0,
+			rewrite_score=result.rewrite_score or 0
+		)
+	except HTTPException:
+		raise
+	except Exception as e:
+		logger.error(f"Error retrieving resume rewrite data", job_id=job_id, error=str(e))
+		raise HTTPException(status_code=500, detail=f"Error retrieving resume data: {str(e)}")
+
+@router.post("/resume/rewrite", status_code=status.HTTP_202_ACCEPTED)
 async def rewrite_resume(
 	request: ResumeRewriteRequest,
 	background_tasks: BackgroundTasks,
@@ -1206,137 +1253,84 @@ async def rewrite_resume(
 	Rewrite resume using baseline resume for a specific job using AI.
 
 	This endpoint performs the following operations:
-	1. Retrieves the baseline resume and job details
-	2. Uses AI to rewrite the resume based on job requirements
-	3. Calculate and set other resume_detail data based on rewrite
-	4. Update the resume_detail record with new values
-	5. Start background task to get suggestions and return response
+	1. Create process record entry to DB
+	2. Start background process resume_rewrite_process
+	3. Return 202 with process_id
 
-	JSON body:
-	- job_id: ID of the target job
-	- baseline_resume_id: ID of the baseline resume to rewrite
-	- keyword_final: Final list of keywords to incorporate
-	- focus_final: Final list of focus areas to emphasize
+	The rewrite process runs asynchronously. Use the /v1/process/poll endpoint
+	to check the status, then call GET /v1/resume/rewrite/{job_id} to retrieve results.
+
+	Args:
+		request: ResumeRewriteRequest with job_id
+		background_tasks: FastAPI background tasks
+		db: Database session
 
 	Returns:
-	- resume_id: ID of the newly created resume
+		202 Accepted with process_id
 	"""
-	logger.info(f"Rewriting resume", job_id=request.job_id)
-
 	try:
-		# Step 1: Retrieve baseline resume data and verify it's a baseline resume
-		query = text("""
-			SELECT jd.job_desc, jd.job_keyword, j.job_title, j.resume_id, rd.resume_html, rd.keyword_final, rd.focus_final, rd.position_title, rd.title_line_no, rd.baseline_score 
-			FROM job j JOIN job_detail jd ON (j.job_id=jd.job_id) 
-				JOIN resume_detail rd ON (j.resume_id=rd.resume_id)
+		logger.info(f"Initiating resume rewrite", job_id=request.job_id)
+
+		# Verify the job exists and has a resume
+		verify_query = text("""
+			SELECT j.resume_id
+			FROM job j
 			WHERE j.job_id = :job_id
 		""")
-		result = db.execute(query, {"job_id": request.job_id}).first()
-		if not result:
-			logger.warning(f"Job posting resume not found", job_id=request.job_id)
-			raise HTTPException(status_code=404, detail="Job posting resume not found")
+		job_result = db.execute(verify_query, {"job_id": request.job_id}).first()
 
-		if not result.job_desc:
-			logger.error(f"Job description is empty", job_id=request.job_id)
-			raise HTTPException(status_code=400, detail="Job description is required")
+		if not job_result:
+			logger.warning(f"Job not found", job_id=request.job_id)
+			raise HTTPException(status_code=404, detail="Job not found")
 
-		# Step 2: AI agent rewrite resume
-		ai_agent = AiAgent(db)
-		logger.debug(f"Calling AI rewrite")
+		if not job_result.resume_id:
+			logger.warning(f"Job has no resume associated", job_id=request.job_id)
+			raise HTTPException(status_code=400, detail="Job has no resume associated")
 
-		# Call AI agent to rewrite resume from baseline resume
-		rewrite_result = ai_agent.resume_rewrite(
-			resume_html=result.resume_html,
-			job_desc=result.job_desc,
-			keyword_final=result.keyword_final,
-			focus_final=result.focus_final,
-			job_title=result.job_title,
-			position_title=result.position_title,  # Already replaced in previous rewrite
-			title_line_no=result.title_line_no
+		# Create process record using ORM to get the auto-generated process_id
+		from ..models.models import Process
+		new_process = Process(
+			endpoint_called="/v1/resume/rewrite",
+			running_method="resume_rewrite_process",
+			running_class="AiAgent"
 		)
-		logger.debug(f"AI rewrite completed (re-run)")
-
-		# Step 3: Get resume_detail data based on rewrite version
-		# Calculate new rewrite_score using regex matching
-		rewrite_score = calculate_keyword_score(result.job_keyword, rewrite_result['resume_html_rewrite'])
-		logger.debug(f"Calculated new rewrite_score", rewrite_score=rewrite_score)
-
-		# Convert rewritten HTML to markdown
-		resume_md_rewrite = Conversion.html2md(rewrite_result['resume_html_rewrite'])
-		logger.debug(f"Generated Markdown version")
-
-		# Step 4: Update the existing resume_detail record with updated values
-		update_query = text("""
-            UPDATE resume_detail
-            SET resume_md_rewrite   = :resume_md_rewrite,
-                resume_html_rewrite = :resume_html_rewrite,
-                rewrite_score       = :rewrite_score
-            WHERE resume_id = :resume_id
-        """)
-
-		db.execute(update_query, {
-			"resume_id": result.resume_id,
-			"resume_md_rewrite": resume_md_rewrite,
-			"resume_html_rewrite": rewrite_result['resume_html_rewrite'],
-			"rewrite_score": rewrite_score
-		})
+		db.add(new_process)
 		db.commit()
+		db.refresh(new_process)
 
-		logger.log_database_operation("UPDATE", "resume_detail", result.resume_id)
-		logger.info(f"Updated existing resume successfully", resume_id=result.resume_id, rewrite_score=rewrite_score)
+		process_id = new_process.process_id
+		logger.debug(f"Created process record", process_id=process_id)
 
-		# Write HTML content to disk
-		# Query to get the file_name from the resume record
-		file_name_query = text("SELECT file_name FROM resume WHERE resume_id = :resume_id")
-		file_name_result = db.execute(file_name_query, {"resume_id": result.resume_id}).first()
+		# Start background task for AI rewrite in a separate thread
+		# This prevents blocking the event loop during the long-running OpenAI API call
+		# IMPORTANT: The thread must NOT use the request-scoped database session
+		# to avoid keeping the HTTP connection open
+		import threading
+		from ..core.database import SessionLocal
 
-		if file_name_result and file_name_result.file_name:
+		def run_rewrite():
+			# Create a new database session for the thread
+			# DO NOT use the request-scoped 'db' session
+			thread_db = SessionLocal()
 			try:
-				# Write HTML file to resume directory
-				from pathlib import Path
-				resume_dir = Path(settings.resume_dir)
-				resume_dir.mkdir(parents=True, exist_ok=True)
+				thread_ai_agent = AiAgent(thread_db)
+				thread_ai_agent.resume_rewrite_process(request.job_id, process_id)
+			finally:
+				thread_db.close()
 
-				html_file_path = resume_dir / file_name_result.file_name
-				with open(html_file_path, 'w', encoding='utf-8') as f:
-					f.write(rewrite_result['resume_html_rewrite'])
+		# Run in separate thread to avoid blocking the event loop
+		thread = threading.Thread(target=run_rewrite, daemon=True)
+		thread.start()
 
-				logger.debug(f"HTML file written to disk", file_path=str(html_file_path))
-			except Exception as e:
-				# Log error but don't fail the request - HTML is already in database
-				logger.warning(f"Failed to write HTML file to disk", error=str(e), file_name=file_name_result.file_name)
-		else:
-			logger.warning(f"No file_name found for resume, HTML not written to disk", resume_id=result.resume_id)
+		logger.info(f"Resume rewrite process started", job_id=request.job_id, process_id=process_id)
 
-		# Step 5: Start background task to get suggestions and return response
-		# Schedule background task to generate suggestions
-		background_tasks.add_task(
-			ai_agent.resume_suggestion,
-			rewrite_result['resume_html_rewrite'],
-			result.resume_id
-		)
-
-		# Return updated response
-		return ResumeRewriteResponse(
-			resume_id=result.resume_id,
-			resume_html=result.resume_html,
-			resume_html_rewrite=rewrite_result['resume_html_rewrite'],
-			suggestion=[],  # Will be populated by background task
-			baseline_score=result.baseline_score,
-			rewrite_score=rewrite_score
-		)
+		return {"process_id": process_id}
 
 	except HTTPException:
-		# Re-raise HTTP exceptions
 		raise
-	except ValueError as e:
-		# Handle AI parsing errors
-		logger.error(f"AI processing error", error=str(e))
-		raise HTTPException(status_code=500, detail=f"AI processing error: {str(e)}")
 	except Exception as e:
-		# Handle unexpected errors
-		logger.error(f"Error rewriting resume", error=str(e))
-		raise HTTPException(
-			status_code=500,
-			detail=f"Error rewriting resume: {str(e)}"
-		)
+		logger.error(f"Error initiating resume rewrite", job_id=request.job_id, error=str(e))
+		raise HTTPException(status_code=500, detail=f"Error initiating resume rewrite: {str(e)}")
+
+
+

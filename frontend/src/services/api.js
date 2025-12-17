@@ -7,6 +7,7 @@ class ApiService {
     }
 
     async request(endpoint, options = {}) {
+        console.log('[API] request() called with options:', JSON.stringify(options, null, 2));
         const url = `${API_BASE_URL}${endpoint}`;
         const method = options.method || 'GET';
         const startTime = performance.now();
@@ -18,10 +19,15 @@ class ApiService {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+        // Only set Content-Type for requests with a body (POST, PUT, PATCH)
+        const headers = {};
+        if (method !== 'GET' && method !== 'HEAD' && method !== 'DELETE') {
+            headers['Content-Type'] = 'application/json';
+        }
+
         const config = {
             headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
+                ...headers,
                 ...options.headers,
             },
             signal: controller.signal,
@@ -36,8 +42,19 @@ class ApiService {
             logger.logAPIRequest(method, endpoint, options.body);
         }
 
+        // Debug: Log the actual URL and method being requested
+        console.log(`[API] Fetching: ${method} ${url}`);
+        console.log('[API] Config:', JSON.stringify({
+            method: config.method,
+            headers: config.headers,
+            hasSignal: !!config.signal,
+            hasBody: !!config.body
+        }));
+
+        console.log('[API] About to call fetch...');
         try {
             const response = await fetch(url, config);
+            console.log('[API] Fetch returned, status:', response.status);
             clearTimeout(timeoutId); // Clear timeout on successful response
             const duration = performance.now() - startTime;
 
@@ -325,14 +342,57 @@ class ApiService {
     }
 
     async rewriteResume(jobId) {
-        return this.request('/v1/resume/rewrite', {
+        // Step 1: Initiate the resume rewrite process
+        return await this.request('/v1/resume/rewrite', {
             method: 'POST',
             body: JSON.stringify({
                 job_id: jobId,
             }),
-            timeout: 360000, // 360 second (6 minute) timeout for resume rewrite
+            timeout: 30000, // 30 second timeout for initiating the process
         });
     }
+        /*const processId = initiateResponse.process_id;
+
+        // Step 2: Poll for completion
+        const pollInterval = 5000; // 5 seconds
+        const maxAttempts = 120; // 10 minutes maximum (120 * 5 seconds)
+        let attempts = 0;
+
+        while (attempts < maxAttempts) {
+            // Wait before polling
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+            attempts++;
+            console.log('attempts: ', attempts);
+
+            // Poll the process status
+            const pollResponse = await this.request('/v1/process/poll' + processId, {
+                method: 'GET',
+                timeout: 10000
+                //body: JSON.stringify({
+                //    process_id: processId,
+                //})//,
+                //timeout: 10000, // 10 second timeout for polling
+            });
+            console.log("Response State: ", pollResponse.process_state);
+
+            if (pollResponse.process_state === 'complete' || pollResponse.process_state === 'confirmed') {
+                // Step 3: Retrieve the resume data
+                const resumeData = await this.request(`/v1/resume/rewrite/${jobId}`, {
+                    method: 'GET',
+                    timeout: 30000,
+                });
+                return resumeData;
+            } else if (pollResponse.process_state === 'failed') {
+                throw new Error('Resume rewrite process failed');
+            }
+
+            // Continue polling if state is 'running'
+        }
+
+        // If we exceeded max attempts, throw timeout error
+        throw new Error('Resume rewrite process timed out after 10 minutes');
+    }
+         */
 
     async updateResumeDetail(detailData) {
         return this.request('/v1/resume/detail', {

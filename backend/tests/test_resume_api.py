@@ -545,55 +545,113 @@ class TestResumeExtraction:
 
 
 class TestResumeRewrite:
-    """Test suite for POST /v1/resume/rewrite endpoint."""
+    """Test suite for POST /v1/resume/rewrite endpoint (async version)."""
 
-    @patch('app.utils.ai_agent.AiAgent.resume_rewrite')
-    def test_rewrite_resume_success(self, mock_rewrite, client, test_db):
-        """Test successful resume rewrite."""
+    def test_rewrite_resume_initiates_process(self, client, test_db):
+        """Test that resume rewrite initiates a background process and returns 202 with process_id."""
+        # Create test job with job_detail
+        test_db.execute(text("""
+            INSERT INTO job (job_id, company, job_title, job_status, job_active, job_directory)
+            VALUES (1, 'Test Co', 'Engineer', 'applied', true, 'test_co_engineer')
+        """))
+        test_db.execute(text("""
+            INSERT INTO job_detail (job_id, job_desc, job_keyword)
+            VALUES (1, 'Test job description', ARRAY['Python', 'AWS'])
+        """))
+        # Create baseline resume and associate with job
+        test_db.execute(text("""
+            INSERT INTO resume (resume_id, resume_title, file_name, original_format, is_baseline, is_default, is_active)
+            VALUES (1, 'Baseline', 'baseline.html', 'html', true, true, true)
+        """))
+        test_db.execute(text("""
+            INSERT INTO resume_detail (resume_id, resume_html, keyword_final, focus_final, baseline_score)
+            VALUES (1, '<h1>Resume Content</h1>', ARRAY['Python'], ARRAY['AWS'], 75)
+        """))
+        test_db.execute(text("""
+            UPDATE job SET resume_id = 1 WHERE job_id = 1
+        """))
+        test_db.commit()
+
+        rewrite_data = {
+            'job_id': 1
+        }
+
+        response = client.post("/v1/resume/rewrite", json=rewrite_data)
+
+        # Should return 202 Accepted with process_id
+        assert response.status_code == 202
+        data = response.json()
+        assert 'process_id' in data
+        assert isinstance(data['process_id'], int)
+
+        # Verify process record was created
+        process = test_db.execute(
+            text("SELECT * FROM process WHERE process_id = :pid"),
+            {"pid": data['process_id']}
+        ).first()
+        assert process is not None
+        assert process.endpoint_called == '/v1/resume/rewrite'
+        assert process.running_method == 'resume_rewrite_process'
+        assert process.running_class == 'AiAgent'
+
+    def test_rewrite_resume_job_not_found(self, client, test_db):
+        """Test rewrite with non-existent job."""
+        response = client.post("/v1/resume/rewrite", json={'job_id': 999})
+
+        assert response.status_code == 404
+
+    def test_rewrite_resume_no_resume_associated(self, client, test_db):
+        """Test rewrite with job that has no resume."""
+        # Create job without resume
+        test_db.execute(text("""
+            INSERT INTO job (job_id, company, job_title, job_status, job_active, job_directory)
+            VALUES (1, 'Test Co', 'Engineer', 'applied', true, 'test_co_engineer')
+        """))
+        test_db.commit()
+
+        response = client.post("/v1/resume/rewrite", json={'job_id': 1})
+
+        assert response.status_code == 400
+        assert 'no resume' in response.json()['detail'].lower()
+
+
+class TestGetRewriteData:
+    """Test suite for GET /v1/resume/rewrite/{job_id} endpoint."""
+
+    def test_get_rewrite_data_success(self, client, test_db):
+        """Test retrieving resume rewrite data after process completes."""
         # Create test job
         test_db.execute(text("""
             INSERT INTO job (job_id, company, job_title, job_status, job_active, job_directory)
             VALUES (1, 'Test Co', 'Engineer', 'applied', true, 'test_co_engineer')
         """))
-        # Create baseline resume
+        # Create resume with rewrite data
         test_db.execute(text("""
             INSERT INTO resume (resume_id, resume_title, file_name, original_format, is_baseline, is_default, is_active)
-            VALUES (1, 'Baseline', 'baseline.pdf', 'pdf', true, true, true)
+            VALUES (1, 'Test Resume', 'test.html', 'html', false, false, true)
         """))
         test_db.execute(text("""
-            INSERT INTO resume_detail (resume_id, resume_markdown, keyword_final, focus_final)
-            VALUES (1, '# Resume Content', ARRAY['Python'], ARRAY['AWS'])
+            INSERT INTO resume_detail (resume_id, resume_html, resume_html_rewrite, suggestion, baseline_score, rewrite_score)
+            VALUES (1, '<h1>Original</h1>', '<h1>Rewritten</h1>', ARRAY['Suggestion 1', 'Suggestion 2'], 75, 92)
+        """))
+        test_db.execute(text("""
+            UPDATE job SET resume_id = 1 WHERE job_id = 1
         """))
         test_db.commit()
 
-        # Mock AI rewrite
-        mock_rewrite.return_value = {
-            'rewritten_markdown': '# Improved Resume Content',
-            'rewritten_html': '<h1>Improved Resume Content</h1>',
-            'diff': ['+ Improved'],
-            'baseline_score': 75,
-            'rewrite_score': 92
-        }
-
-        rewrite_data = {
-            'job_id': 1,
-            'baseline_resume_id': 1
-        }
-
-        response = client.post("/v1/resume/rewrite", json=rewrite_data)
+        response = client.get("/v1/resume/rewrite/1")
 
         assert response.status_code == 200
         data = response.json()
-
-        assert 'resume_id' in data
+        assert data['resume_id'] == 1
+        assert data['resume_html'] == '<h1>Original</h1>'
+        assert data['resume_html_rewrite'] == '<h1>Rewritten</h1>'
+        assert data['suggestion'] == ['Suggestion 1', 'Suggestion 2']
         assert data['baseline_score'] == 75
         assert data['rewrite_score'] == 92
 
-    def test_rewrite_resume_job_not_found(self, client, test_db):
-        """Test rewrite with non-existent job."""
-        response = client.post("/v1/resume/rewrite", json={
-            'job_id': 999,
-            'baseline_resume_id': 1
-        })
+    def test_get_rewrite_data_job_not_found(self, client, test_db):
+        """Test retrieving data for non-existent job."""
+        response = client.get("/v1/resume/rewrite/999")
 
         assert response.status_code == 404

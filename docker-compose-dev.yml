@@ -1,27 +1,20 @@
 services:
   # PostgreSQL Database Service
   db:
-    image: postgres:15.15-trixie
+    image: postgres:12
     container_name: psql.jobtracker.com
     hostname: psql.jobtracker.com
     restart: always
-    shm_size: 128mb
     env_file:
       - ./backend/.env
-    environment:
-      PGDATA: /var/lib/postgresql/data
-      POSTGRES_USER: apiuser
-      POSTGRES_PASSWORD: "@p!u$$3r70K3n"
-      POSTGRES_DB: jobtracker
     expose:
       - "5432"
-    ports:
-      - "5432:5432"
     volumes:
-      - postgresql:/var/lib/postgresql/data
-      - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - /var/lib/postgresql-docker/12/main:/var/lib/postgresql/data
+      - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     networks:
-      - job_network
+      job_tracker_network:
+        ipv4_address: 172.20.0.15
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U apiuser -d jobtracker"]
       interval: 10s
@@ -33,9 +26,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    restart: unless-stopped
     container_name: api.jobtracker.com
     hostname: api.jobtracker.com
+    restart: unless-stopped
     env_file:
       - ./backend/.env
     expose:
@@ -46,9 +39,10 @@ services:
       db:
         condition: service_healthy
     networks:
-      - job_network
+      job_tracker_network:
+        ipv4_address: 172.20.0.10
     volumes:
-      - job_docs:/app/job_docs
+      - ./backend/job_docs:/app/job_docs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -60,9 +54,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile-dev
-    restart: unless-stopped
+      args:
+        REACT_APP_API_BASE_URL: http://api.jobtracker.com
     container_name: portal.jobtracker.com
     hostname: portal.jobtracker.com
+    restart: unless-stopped
     env_file:
       - ./frontend/.env
     expose:
@@ -71,26 +67,33 @@ services:
       - "80"
     ports:
       - "80:80"
-      - "3000:3000"
     depends_on:
       - backend
       - db
     networks:
-      - job_network
+      job_tracker_network:
+        ipv4_address: 172.20.0.5
+    volumes:
+      - ./frontend:/var/www/jobtracker
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 # Named volumes for data persistence
 volumes:
+  main:
+  #postgres_data:
+  #  driver: local
   job_docs:
     driver: local
-  postgresql:
-    driver: local
 
-
+# Custom network for service communication
 networks:
-  job_network:
+  job_tracker_network:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16

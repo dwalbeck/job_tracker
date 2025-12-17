@@ -56,7 +56,7 @@ const ViewResume = () => {
                 : `resume-${firstName}.${format}`.toLowerCase().replace(/ /g, '_');
 
             // Download the file
-            const downloadUrl = `${API_BASE_URL}/v1/file/download/resume/${file_name}`;
+            const downloadUrl = `${API_BASE_URL}/v1/file/download/resume/${file}`;
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = downloadFileName;

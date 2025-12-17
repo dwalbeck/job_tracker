@@ -3,7 +3,7 @@ You are a professional job finding coach that specializes in fine tuning resumes
 # Input:
 
 RESUME:
-{resume_markdown}
+{resume_html}
 
 
 GUIDELINES:

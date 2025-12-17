@@ -2,13 +2,17 @@ import os
 import json
 import sys
 import time
+from fastapi import HTTPException, BackgroundTasks
 from pathlib import Path
 from openai import OpenAI
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from starlette.responses import JSONResponse
+
 from ..core.config import settings
 from ..core.database import SessionLocal
 from ..utils.logger import logger
+from ..utils.conversion import Conversion
 
 
 class AiAgent:
@@ -318,8 +322,7 @@ class AiAgent:
         keyword_final: list,
         focus_final: list,
         job_title: str,
-        position_title: str,
-        title_line_no: int
+        position_title: str
     ) -> dict:
         """
         Rewrite a resume based on job description and keywords using AI.
@@ -331,7 +334,6 @@ class AiAgent:
             focus_final: List of focus areas to emphasize
             job_title: Target job title
             position_title: Current position title in resume
-            title_line_no: Line number of position title
 
         Returns:
             Dictionary containing:
@@ -355,7 +357,6 @@ class AiAgent:
         prompt = prompt.replace('{focus_final}', focus_final_str)
         prompt = prompt.replace('{job_title}', job_title or '')
         prompt = prompt.replace('{position_title}', position_title or '')
-        prompt = prompt.replace('{title_line_no}', str(title_line_no) if title_line_no is not None else '0')
 
         # Log prompt size for debugging
         prompt_size = len(prompt)
@@ -620,13 +621,156 @@ class AiAgent:
             print(f"DEBUG write_cover_letter: Full response:\n{response_text[:2000]}", file=sys.stderr, flush=True)
             raise ValueError(f"Failed to parse AI response as JSON: {str(e)}")
 
-    def resume_suggestion(self, resume_markdown: str, resume_id: int) -> None:
+    def resume_rewrite_process(self, job_id: int, process_id: int) -> None:
+        """
+        Background process to rewrite resume using AI.
+
+        This method runs as a background task and performs the following operations:
+        1. Retrieves the baseline resume and job details
+        2. Uses AI to rewrite the resume based on job requirements
+        3. Calculate and set other resume_detail data based on rewrite
+        4. Update the resume_detail record with new values
+        5. Generate suggestions for the resume
+        6. Mark process as completed or failed
+
+        Args:
+            job_id: ID of the target job
+            process_id: The primary key for the process DB record
+        """
+        # Create a new database session for this background task
+        db = SessionLocal()
+
+        try:
+            logger.info(f"Starting background process AI Agent resume rewrite process", job_id=job_id, process_id=process_id)
+
+            # Step 1: Retrieve baseline resume data and verify it exists
+            query = text("""
+                SELECT jd.job_desc, jd.job_keyword, j.job_title, j.resume_id, rd.resume_html, rd.keyword_final,
+                    rd.focus_final, rd.position_title, rd.title_line_no, rd.baseline_score
+                FROM job j
+                    JOIN job_detail jd ON (j.job_id = jd.job_id)
+                    JOIN resume_detail rd ON (j.resume_id = rd.resume_id)
+                WHERE j.job_id = :job_id
+            """)
+            result = db.execute(query, {"job_id": job_id}).first()
+
+            if not result:
+                logger.error(f"Job posting resume not found", job_id=job_id, process_id=process_id)
+                self._mark_process_failed(db, process_id, "Job posting resume not found")
+                return
+
+            if not result.job_desc:
+                logger.error(f"Job description is empty", job_id=job_id, process_id=process_id)
+                self._mark_process_failed(db, process_id, "Job description is required")
+                return
+            logger.debug(f"Retrieved Job and Resume data successfully", resume_id=result.resume_id)
+
+            # Step 2: Call AI to rewrite the resume
+            logger.debug(f"Call AI Agent for resume rewrite")
+            rewrite_result = self.resume_rewrite(
+                resume_html=result.resume_html,
+                job_desc=result.job_desc,
+                keyword_final=result.keyword_final,
+                focus_final=result.focus_final,
+                job_title=result.job_title,
+                position_title=result.position_title
+            )
+
+            logger.debug(f"AI rewrite completed", job_id=job_id, process_id=process_id)
+
+            # Step 3: Calculate new rewrite_score using keyword matching
+            # Import here to avoid circular dependency
+            from ..api.resume import calculate_keyword_score
+            rewrite_score = calculate_keyword_score(result.job_keyword, rewrite_result['resume_html_rewrite'])
+            logger.debug(f"Calculated new rewrite_score", rewrite_score=rewrite_score, process_id=process_id)
+
+            # Step 4: Update the existing resume_detail record with updated values
+            update_query = text("""
+                UPDATE resume_detail
+                SET resume_html_rewrite = :resume_html_rewrite,
+                    rewrite_score       = :rewrite_score
+                WHERE resume_id = :resume_id
+            """)
+
+            db.execute(update_query, {
+                "resume_id": result.resume_id,
+                "resume_html_rewrite": rewrite_result['resume_html_rewrite'],
+                "rewrite_score": rewrite_score
+            })
+            db.commit()
+
+            logger.log_database_operation("UPDATE", "resume_detail", result.resume_id)
+            logger.info(f"Updated resume_detail with HTML rewrite/score", resume_id=result.resume_id,
+                        rewrite_score=rewrite_score, process_id=process_id)
+
+            # Step 5: Write HTML content to disk
+            file_name_query = text("SELECT file_name FROM resume WHERE resume_id = :resume_id")
+            file_name_result = db.execute(file_name_query, {"resume_id": result.resume_id}).first()
+
+            if file_name_result and file_name_result.file_name:
+                try:
+                    resume_dir = Path(settings.resume_dir)
+                    resume_dir.mkdir(parents=True, exist_ok=True)
+
+                    html_file_path = resume_dir / file_name_result.file_name
+                    with open(html_file_path, 'w', encoding='utf-8') as f:
+                        f.write(rewrite_result['resume_html_rewrite'])
+
+                    logger.debug(f"HTML file written to disk", file_path=str(html_file_path), process_id=process_id)
+                except Exception as e:
+                    # Log error but don't fail - HTML is already in database
+                    logger.warning(f"Failed to write HTML file to disk", error=str(e),
+                                   file_name=file_name_result.file_name, process_id=process_id)
+            else:
+                logger.warning(f"No file_name found for resume, HTML not written to disk",
+                               resume_id=result.resume_id, process_id=process_id)
+
+            # Step 6: Generate suggestions (synchronously since we're already in background)
+            try:
+                logger.debug(f"Generating resume suggestions", resume_id=result.resume_id, process_id=process_id)
+                self.resume_suggestion(rewrite_result['resume_html_rewrite'], result.resume_id)
+                logger.debug(f"Resume suggestions generated", resume_id=result.resume_id, process_id=process_id)
+            except Exception as e:
+                # Log error but don't fail the whole process
+                logger.warning(f"Failed to generate suggestions", error=str(e), resume_id=result.resume_id, process_id=process_id)
+
+            # Step 7: Mark process as completed
+            update_process_query = text("UPDATE process SET completed = CURRENT_TIMESTAMP WHERE process_id = :process_id")
+            db.execute(update_process_query, {"process_id": process_id})
+            db.commit()
+
+            logger.info(f"Resume rewrite process completed successfully", job_id=job_id, process_id=process_id)
+
+        except Exception as e:
+            logger.error(f"Error in resume rewrite process", job_id=job_id, process_id=process_id, error=str(e))
+            self._mark_process_failed(db, process_id, str(e))
+
+        finally:
+            db.close()
+
+    def _mark_process_failed(self, db: Session, process_id: int, error_message: str) -> None:
+        """Mark a process as failed in the database."""
+        try:
+            update_query = text("""
+                UPDATE process
+                SET failed = true,
+                    completed = CURRENT_TIMESTAMP
+                WHERE process_id = :process_id
+            """)
+            db.execute(update_query, {"process_id": process_id})
+            db.commit()
+            logger.error(f"Process marked as failed", process_id=process_id, error=error_message)
+        except Exception as e:
+            logger.error(f"Failed to mark process as failed", process_id=process_id, error=str(e))
+            db.rollback()
+
+    def resume_suggestion(self, resume_html: str, resume_id: int) -> None:
         """
         Generate improvement suggestions for a resume using AI and update the database.
         This method is designed to run in the background after the resume rewrite response.
 
         Args:
-            resume_markdown: The markdown content of the resume to analyze
+            resume_html: The HTML content of the resume to analyze
             resume_id: The resume_id to update with suggestions
 
         Returns:
@@ -640,7 +784,7 @@ class AiAgent:
             prompt_template = self._load_prompt('suggestion')
 
             # Format the prompt with the resume markdown
-            prompt = prompt_template.replace('{resume_markdown}', resume_markdown)
+            prompt = prompt_template.replace('{resume_html}', resume_html)
 
             # Make API call to OpenAI
             response = self.client.chat.completions.create(
