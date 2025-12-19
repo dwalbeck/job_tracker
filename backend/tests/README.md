@@ -9,29 +9,29 @@ This directory contains unit tests for the Job Tracker backend application.
 To run tests inside the backend container:
 
 ```bash
-docker exec -it api.jobtracker.com pytest
+docker exec -it api.jobtracknow.com pytest
 ```
 
 ### Run Specific Test Files
 
 ```bash
 # Test conversion utilities
-docker exec -it api.jobtracker.com pytest tests/test_conversion.py
+docker exec -it api.jobtracknow.com pytest tests/test_conversion.py
 
 # Test convert API endpoints
-docker exec -it api.jobtracker.com pytest tests/test_convert_api.py
+docker exec -it api.jobtracknow.com pytest tests/test_convert_api.py
 ```
 
 ### Run Tests with Verbose Output
 
 ```bash
-docker exec -it api.jobtracker.com pytest -v
+docker exec -it api.jobtracknow.com pytest -v
 ```
 
 ### Run Tests with Coverage
 
 ```bash
-docker exec -it api.jobtracker.com pytest --cov=app --cov-report=html
+docker exec -it api.jobtracknow.com pytest --cov=app --cov-report=html
 ```
 
 ## Test Structure

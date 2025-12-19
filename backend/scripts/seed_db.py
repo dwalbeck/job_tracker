@@ -3,7 +3,7 @@ import csv
 from pathlib import Path
 
 conn = psycopg2.connect(database="jobtracker",
-                        host="psql.jobtracker.com",
+                        host="psql.jobtracknow.com",
                         user="apiuser",
                         password="@p!u$3r70K3n",
                         port="5432")

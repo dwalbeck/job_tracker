@@ -56,8 +56,8 @@ python run.py
 ```
 
 The API will be available at:
-- **API**: http://api.jobtracker.com or http://localhost:8000
-- **Documentation**: http://api.jobtracker.com/docs or http://localhost:8000/docs
+- **API**: http://api.jobtracknow.com or http://localhost:8000
+- **Documentation**: http://api.jobtracknow.com/docs or http://localhost:8000/docs
 
 NOTE: it is important that you complete the "Personal" section by entering in your personal information upon 
 first use, as it uses this information for file naming and cover letter creation. It also let's you customize 

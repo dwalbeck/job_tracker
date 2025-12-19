@@ -288,17 +288,13 @@ describe('JobAnalysis Component', () => {
             expect(global.alert).toHaveBeenCalledWith('Please select at least one keyword or focus area');
         });
 
-        test('processes finalization successfully', async () => {
+        test('processes finalization successfully with polling', async () => {
             apiService.extractJobData.mockResolvedValue(mockJobData);
             apiService.getJob.mockResolvedValue(mockJobDetails);
             apiService.resumeFull.mockResolvedValue({ resume_id: 10 });
+            // New polling behavior: rewriteResume returns process_id
             apiService.rewriteResume.mockResolvedValue({
-                resume_id: 10,
-                resume_html: '<html><body>Original</body></html>',
-                resume_html_rewrite: '<html><body>Rewritten</body></html>',
-                suggestion: ['Improve formatting'],
-                baseline_score: 75,
-                rewrite_score: 92
+                process_id: 42
             });
 
             renderWithRouter(<JobAnalysis />);
@@ -320,16 +316,15 @@ describe('JobAnalysis Component', () => {
                 expect(apiService.rewriteResume).toHaveBeenCalledWith('1');
             });
 
+            // Should navigate to OptimizedResume with polling state
             await waitFor(() => {
                 expect(mockNavigate).toHaveBeenCalledWith(
                     '/optimized-resume/10',
                     expect.objectContaining({
                         state: expect.objectContaining({
-                            resumeHtml: '<html><body>Original</body></html>',
-                            resumeHtmlRewrite: '<html><body>Rewritten</body></html>',
-                            baselineScore: 75,
-                            rewriteScore: 92,
-                            jobId: '1'
+                            processId: 42,
+                            jobId: '1',
+                            isPolling: true
                         })
                     })
                 );
@@ -435,12 +430,7 @@ describe('JobAnalysis Component', () => {
             apiService.getJob.mockResolvedValue(mockJobDetails);
             apiService.resumeFull.mockResolvedValue({ resume_id: 10 });
             apiService.rewriteResume.mockResolvedValue({
-                resume_id: 10,
-                resume_html: '<html></html>',
-                resume_html_rewrite: '<html></html>',
-                suggestion: [],
-                baseline_score: 75,
-                rewrite_score: 92
+                process_id: 42
             });
 
             renderWithRouter(<JobAnalysis />);
@@ -532,12 +522,7 @@ describe('JobAnalysis Component', () => {
             apiService.getJob.mockResolvedValue(mockJobDetails);
             apiService.resumeFull.mockResolvedValue({ resume_id: 10 });
             apiService.rewriteResume.mockResolvedValue({
-                resume_id: 10,
-                resume_html: '<html></html>',
-                resume_html_rewrite: '<html></html>',
-                suggestion: [],
-                baseline_score: 75,
-                rewrite_score: 92
+                process_id: 42
             });
 
             renderWithRouter(<JobAnalysis />, '1', '42');

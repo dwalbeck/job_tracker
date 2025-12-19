@@ -81,7 +81,6 @@ const Calendar = () => {
             link.click();
             document.body.removeChild(link);
 
-            console.log(`Calendar exported to: ${calendar_export_dir}/${calendar_export_file}`);
         } catch (error) {
             console.error('Error exporting calendar:', error);
             alert('Failed to export calendar');

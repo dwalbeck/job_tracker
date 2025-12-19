@@ -18,11 +18,11 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh
 
 # Copy package files
 COPY package*.json ./
-COPY docker/portal.jobtracker.com.conf /etc/nginx/sites-available/portal.jobtracker.com.conf
+COPY docker/portal.jobtracknow.com.conf /etc/nginx/sites-available/portal.jobtracknow.com.conf
 
 # Install all dependencies (including dev dependencies)
 RUN npm install && \
-    ln -s /etc/nginx/sites-available/portal.jobtracker.com.conf /etc/nginx/sites-enabled/portal.jobtracker.com.conf && \
+    ln -s /etc/nginx/sites-available/portal.jobtracknow.com.conf /etc/nginx/sites-enabled/portal.jobtracknow.com.conf && \
     rm /etc/nginx/sites-enabled/default && \
     service nginx stop
 

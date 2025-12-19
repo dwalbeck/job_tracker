@@ -153,7 +153,6 @@ const OptimizedResume = () => {
             const processId = location.state.processId;
             const jobIdFromState = location.state.jobId;
 
-            console.log('OptimizedResume: Starting polling for process_id:', processId);
             setIsPolling(true);
             setLoadingMessage('AI is rewriting your resume based on the job posting... Please wait.');
             setJobId(jobIdFromState);
@@ -165,17 +164,14 @@ const OptimizedResume = () => {
 
                 const poll = async () => {
                     attempts++;
-                    console.log(`Polling attempt ${attempts}/${maxAttempts} for process_id: ${processId}`);
 
                     try {
                         const pollResponse = await apiService.request(`/v1/process/poll/${processId}`, {
                             method: 'GET',
                             timeout: 10000
                         });
-                        console.log("Process state:", pollResponse.process_state);
 
                         if (pollResponse.process_state === 'complete' || pollResponse.process_state === 'confirmed') {
-                            console.log('Process completed successfully');
                             setLoadingMessage('Resume rewrite complete! Loading results...');
 
                             // Fetch the completed resume data
@@ -184,8 +180,6 @@ const OptimizedResume = () => {
                                     method: 'GET',
                                     timeout: 30000
                                 });
-
-                                console.log('Resume data retrieved:', resumeData);
 
                                 // Populate the state with the resume data
                                 const origHtml = resumeData.resume_html || '';
@@ -245,7 +239,6 @@ const OptimizedResume = () => {
                             return;
                         }
 
-                        console.log('Process still running, retrying in 5 seconds...');
                         setTimeout(poll, 5000);
                     } catch (error) {
                         console.error('Poll request failed:', error);

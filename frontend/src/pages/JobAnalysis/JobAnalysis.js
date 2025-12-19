@@ -27,8 +27,6 @@ const JobAnalysis = () => {
             setLoading(true);
             setLoadingMessage('Analyzing job description with AI...');
 
-            console.log('JobAnalysis: job_id =', id, ', resume_id =', resumeId);
-
             // Validate job_id
             if (!id || id === 'undefined' || id === 'null') {
                 throw new Error('Invalid job ID');
@@ -417,11 +415,9 @@ const JobAnalysis = () => {
                 body: JSON.stringify({ job_id: id }),
                 timeout: 30000
             });
-            console.log('rewriteResponse - process_id:', rewriteResponse.process_id);
 
             // Step 3: Navigate immediately to OptimizedResume page with process_id
             // The OptimizedResume page will handle polling in a clean execution context
-            console.log('Navigating to OptimizedResume page with process_id:', rewriteResponse.process_id);
 
             navigate(`/optimized-resume/${newResumeId}`, {
                 state: {

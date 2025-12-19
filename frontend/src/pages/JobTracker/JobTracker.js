@@ -166,7 +166,6 @@ const JobTracker = () => {
             link.click();
             document.body.removeChild(link);
 
-            console.log(`Jobs exported to: ${job_export_dir}/${job_export_file}`);
         } catch (error) {
             console.error('Error exporting jobs:', error);
             alert('Failed to export jobs');

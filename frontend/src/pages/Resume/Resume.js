@@ -145,17 +145,13 @@ const Resume = () => {
     };
 
     const handleTailor = (jobId, baselineResumeId) => {
-        console.log('Tailor clicked: jobId=', jobId, ', baselineResumeId=', baselineResumeId);
         if (jobId && baselineResumeId) {
             const url = `/job-analysis/${jobId}?resume_id=${baselineResumeId}`;
-            console.log('Navigating to:', url);
             window.location.href = url;
         } else if (jobId) {
             const url = `/job-analysis/${jobId}`;
-            console.log('Navigating to:', url);
             window.location.href = url;
         } else {
-            console.error('No job ID provided');
             alert('Cannot tailor resume: Job information is missing');
         }
     };
@@ -188,7 +184,6 @@ const Resume = () => {
             link.click();
             document.body.removeChild(link);
 
-            console.log(`Resumes exported to: ${resume_export_dir}/${resume_export_file}`);
         } catch (error) {
             console.error('Error exporting resumes:', error);
             alert('Failed to export resumes');

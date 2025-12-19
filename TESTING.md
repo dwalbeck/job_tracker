@@ -99,7 +99,7 @@ Tests must be run from within the Docker container or with dependencies installe
 **Option 1: Run in Docker Container**
 ```bash
 # Shell into the frontend container
-docker exec -it portal.jobtracker.com sh
+docker exec -it portal.jobtracknow.com sh
 
 # Navigate to app directory
 cd /app
@@ -409,7 +409,7 @@ markers =
 
 Tests use a **separate test database** to avoid affecting production data.
 
-**Test Database:** `postgresql://apiuser:change_me@psql.jobtracker.com:5432/jobtracker_test`
+**Test Database:** `postgresql://apiuser:change_me@psql.jobtracknow.com:5432/jobtracker_test`
 
 **Fixtures** (from `conftest.py`):
 - `test_engine`: Session-scoped database engine
@@ -428,7 +428,7 @@ Tests must be run from within the Docker container or with dependencies installe
 **Option 1: Run in Docker Container**
 ```bash
 # Shell into the backend container
-docker exec -it api.jobtracker.com bash
+docker exec -it api.jobtracknow.com bash
 
 # Navigate to app directory
 cd /app
@@ -443,7 +443,7 @@ pip install -r requirements.txt  # Install dependencies first
 **Important:** Ensure the test database exists:
 ```bash
 # Inside the PostgreSQL container
-docker exec -it psql.jobtracker.com bash
+docker exec -it psql.jobtracknow.com bash
 psql -U apiuser -d postgres
 CREATE DATABASE jobtracker_test;
 \q
@@ -1377,10 +1377,10 @@ pytest --lf
 
 ```bash
 # Run backend tests in container
-docker exec -it api.jobtracker.com bash -c "cd /app && pytest -v"
+docker exec -it api.jobtracknow.com bash -c "cd /app && pytest -v"
 
 # Run frontend tests in container
-docker exec -it portal.jobtracker.com sh -c "cd /app && npm test -- --watchAll=false"
+docker exec -it portal.jobtracknow.com sh -c "cd /app && npm test -- --watchAll=false"
 
 # Run tests via docker compose
 docker compose -f docker-compose.test.yml up --abort-on-container-exit

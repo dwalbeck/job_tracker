@@ -700,7 +700,7 @@ class AiAgent:
             db.commit()
 
             logger.log_database_operation("UPDATE", "resume_detail", result.resume_id)
-            logger.info(f"Updated resume_detail with HTML rewrite/score", resume_id=result.resume_id,
+            logger.debug(f"Updated resume_detail with HTML rewrite/score", resume_id=result.resume_id,
                         rewrite_score=rewrite_score, process_id=process_id)
 
             # Step 5: Write HTML content to disk

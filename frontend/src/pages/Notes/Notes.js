@@ -90,7 +90,6 @@ const Notes = () => {
             link.click();
             document.body.removeChild(link);
 
-            console.log(`Notes exported to: ${note_export_dir}/${note_export_file}`);
         } catch (error) {
             console.error('Error exporting notes:', error);
             alert('Failed to export notes');

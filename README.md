@@ -11,19 +11,19 @@ The Job Tracker is built as a **3-tier containerized application**:
 ### **Frontend Service** (React + Nginx)
 - **Technology**: React 18 with TypeScript-style components
 - **Features**: Responsive UI, real-time search, drag-and-drop job management
-- **URL**: http://portal.jobtracker.com or http://localhost
+- **URL**: http://portal.jobtracknow.com or http://localhost
 - **Purpose**: User interface for interacting with job data
 
 ### **Backend Service** (FastAPI + Python)
 - **Technology**: FastAPI with SQLAlchemy ORM
 - **Features**: RESTful API, automatic documentation, data validation
-- **URL**: http://api.jobtracker.com or http://localhost:8000
+- **URL**: http://api.jobtracknow.com or http://localhost:8000
 - **Purpose**: Business logic and database operations
 
 ### **Database Service** (PostgreSQL)
 - **Technology**: PostgreSQL 15 with persistent storage
 - **Features**: Relational data storage, ACID compliance
-- **URL**: http://psql.jobtracker.com:5432 or http://localhost:5432
+- **URL**: http://psql.jobtracknow.com:5432 or http://localhost:5432
 - **Purpose**: Data persistence and complex querying
 
 ## 🚀 Quick Start with Docker
@@ -78,9 +78,9 @@ The Job Tracker is built as a **3-tier containerized application**:
 5. **Edit DNS Routing**
     ```bash
    # Skip this step for Windows and MacOS
-   echo "172.20.0.5      portal.jobtracker.com
-   172.20.0.10     api.jobtracker.com
-   172.20.0.15     psql.jobtracker.com" >> /etc/hosts
+   echo "172.20.0.5      portal.jobtracknow.com
+   172.20.0.10     api.jobtracknow.com
+   172.20.0.15     psql.jobtracknow.com" >> /etc/hosts
    
    # this will effectively return these values upon DNS request for the sub-domains defined
     ```
@@ -90,16 +90,16 @@ The Job Tracker is built as a **3-tier containerized application**:
    docker compose ps
    
    # You should see the following:
-   api.jobtracker.com      job_tracker-backend    "python -m uvicorn a…"   backend    18 minutes ago   Up 18 minutes (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
-   portal.jobtracker.com   job_tracker-frontend   "/usr/local/bin/dock…"   frontend   18 minutes ago   Up 18 minutes (healthy)   443/tcp, 0.0.0.0:80->80/tcp, [::]:80->80/tcp, 3000/tcp
-   psql.jobtracker.com     postgres:12            "docker-entrypoint.s…"   db         18 minutes ago   Up 18 minutes (healthy)   5432/tcp
+   api.jobtracknow.com      job_tracker-backend    "python -m uvicorn a…"   backend    18 minutes ago   Up 18 minutes (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+   portal.jobtracknow.com   job_tracker-frontend   "/usr/local/bin/dock…"   frontend   18 minutes ago   Up 18 minutes (healthy)   443/tcp, 0.0.0.0:80->80/tcp, [::]:80->80/tcp, 3000/tcp
+   psql.jobtracknow.com     postgres:12            "docker-entrypoint.s…"   db         18 minutes ago   Up 18 minutes (healthy)   5432/tcp
    ```
 
 7. **Access the Application**
-   - **Frontend**: http://portal.jobtracker.com
-   - **Backend API**: http://api.jobtracker.com
-   - **API Documentation**: http://api.jobtracker.com/docs
-   - **Database**: postgresql://apiuser:change_me@psql.jobtracker.com:5432/jobtracker
+   - **Frontend**: http://portal.jobtracknow.com
+   - **Backend API**: http://api.jobtracknow.com
+   - **API Documentation**: http://api.jobtracknow.com/docs
+   - **Database**: postgresql://apiuser:change_me@psql.jobtracknow.com:5432/jobtracker
 
     or for Windows and MacOS use:
    - **Frontend**: http://localhost (preferred) or http://localhost:3000
@@ -283,8 +283,8 @@ Create a `.env` file to customize:
 
 ```bash
 # Database Configuration
-DATABASE_URL=postgresql://apiuser:change_me@psql.jobtracker.com:5432/jobtracker
-POSTGRES_HOST=psql.jobtracker.com
+DATABASE_URL=postgresql://apiuser:change_me@psql.jobtracknow.com:5432/jobtracker
+POSTGRES_HOST=psql.jobtracknow.com
 POSTGRES_PASSWORD=change_me
 POSTGRES_USER=apiuser
 POSTGRES_DB=jobtracker
@@ -308,7 +308,7 @@ LOG_LEVEL=DEBUG
 LOG_FILE=api.log
 
 # CORS Configuration
-ALLOWED_ORIGINS=["http://localhost:3000", "http://portal.jobtracker.com:3000"]
+ALLOWED_ORIGINS=["http://localhost:3000", "http://portal.jobtracknow.com:3000"]
 
 # AI Configuration
 AI_MODEL=gpt-4o-mini
@@ -320,7 +320,7 @@ OPENAI_PROJECT=<open_ai_project_name>
 
 ```bash
 # API Configuration
-REACT_APP_API_BASE_URL=http://api.jobtracker.com
+REACT_APP_API_BASE_URL=http://api.jobtracknow.com
 
 # Logging Configuration
 REACT_APP_LOG_LEVEL=DEBUG
@@ -380,7 +380,7 @@ the shell connection is established, you should be placed in the document root f
 file is named **api.log**
 
 ```bash
-docker exec -it api.jobtracker.com bash
+docker exec -it api.jobtracknow.com bash
 
 # You shouldn't need to do this, but in case wondered off and got lost
 cd /app
@@ -482,7 +482,7 @@ localStorage.removeItem('portal.log')
     container and execute the SQL to set the credentials.
     ```bash
     # First let's shell into the PostgreSQL database container
-    docker exec -it psql.jobtracker.com bash
+    docker exec -it psql.jobtracknow.com bash
   
     # Next we'll login to the database using the PostgreSQL console
     # NOTE: no password is needed, as the DB is configured to trust local connections.
@@ -552,17 +552,17 @@ between the different versions.  You can change the LLM used for different opera
 ## 📚 API Documentation
 
 Once running, visit:
-- **Interactive API Docs**: http://api.jobtracker.com or http://localhost:8000/docs
+- **Interactive API Docs**: http://api.jobtracknow.com or http://localhost:8000/docs
 
 ## 🧪 Testing
 
 ```bash
 # Test backend endpoints
-curl http://api.jobtracker.com/health
+curl http://api.jobtracknow.com/health
 curl http://localhost:8000/health
 
 # Test frontend
-curl http://portal.jobtracker.com
+curl http://portal.jobtracknow.com
 curl http://localhost
 
 # Test database connection

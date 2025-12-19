@@ -104,14 +104,14 @@ within the backend container, so there isn't really any advantage to changing th
 to have set correctly and will depend entirely on the Docker setup used.  Networking is very different for Linux users, 
 which Docker has great capabilities that allow for static IP assigning.  On Windows and MacOS however, these same capabilities 
 are not possible, so things are setup differently using port mappings.  In a nutshell, if you using Linux, then the host 
-should be set to **psql.jobtracker.com** and for Windows and MacOS it would be simply **db**.
+should be set to **psql.jobtracknow.com** and for Windows and MacOS it would be simply **db**.
 
 Linux users will want to additionally make an entry to your **/etc/hosts** file to override DNS.  This will allow you to use 
 the fake domain naming used for the services.
 ```bash
-echo "172.20.0.5      portal.jobtracker.com
-172.20.0.10     api.jobtracker.com
-172.20.0.15     psql.jobtracker.com" >> /etc/hosts
+echo "172.20.0.5      portal.jobtracknow.com
+172.20.0.10     api.jobtracknow.com
+172.20.0.15     psql.jobtracknow.com" >> /etc/hosts
 ```
 
 #### Building the Containers
@@ -145,10 +145,10 @@ to fix failed builds.  The Docker stack to start all the services once it has bu
 ### Accessing the Application
 
 For Linux:
-- **Frontend**: http://portal.jobtracker.com
-- **Backend API**: http://api.jobtracker.com
-- **API Documentation**: http://api.jobtracker.com/docs
-- **Database**: postgresql://apiuser:change_me@psql.jobtracker.com:5432/jobtracker
+- **Frontend**: http://portal.jobtracknow.com
+- **Backend API**: http://api.jobtracknow.com
+- **API Documentation**: http://api.jobtracknow.com/docs
+- **Database**: postgresql://apiuser:change_me@psql.jobtracknow.com:5432/jobtracker
 
 or for Windows and MacOS use:
 - **Frontend**: http://localhost (preferred) or http://localhost:3000

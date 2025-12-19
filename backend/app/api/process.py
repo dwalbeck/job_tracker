@@ -26,7 +26,6 @@ async def poll_status(process_id: int, db: Session = Depends(get_db)):
     Returns:
         PollResponse with process_state: string (running, complete, confirmed, failed)
     """
-    logger.debug(f"Polling process status", process_id=process_id)
 
     process = db.query(Process).filter(Process.process_id == process_id).first()
     if not process:
@@ -48,9 +47,7 @@ async def poll_status(process_id: int, db: Session = Depends(get_db)):
     if process_state == "complete" and not process.confirmed:
         process.confirmed = True
         db.commit()
-        logger.debug(f"Process marked as confirmed", process_id=process_id)
 
-    logger.debug(f"Process state", process_id=process_id, process_state=process_state)
     return PollResponse(process_state=process_state)
 
 

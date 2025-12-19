@@ -124,7 +124,7 @@ app.include_router(process.router, prefix="/v1/process", tags=["process"])
 @app.get("/")
 async def root():
 	logger.info("Root endpoint accessed")
-	return {"message": "Job Tracker API", "version": settings.app_version}
+	return {"message": "Job Track Now API", "version": settings.app_version}
 
 
 @app.get("/health")

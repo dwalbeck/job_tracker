@@ -545,7 +545,7 @@ class TestResumeExtraction:
 
 
 class TestResumeRewrite:
-    """Test suite for POST /v1/resume/rewrite endpoint (async version)."""
+    """Test suite for POST /v1/resume/rewrite endpoint (async version with background threading)."""
 
     def test_rewrite_resume_initiates_process(self, client, test_db):
         """Test that resume rewrite initiates a background process and returns 202 with process_id."""
@@ -613,6 +613,58 @@ class TestResumeRewrite:
 
         assert response.status_code == 400
         assert 'no resume' in response.json()['detail'].lower()
+
+    def test_rewrite_returns_immediately_without_blocking(self, client, test_db):
+        """
+        Test that the rewrite endpoint returns 202 immediately without waiting for
+        the background thread to complete, ensuring HTTP connection is not blocked.
+        """
+        import time
+
+        # Create test job with job_detail
+        test_db.execute(text("""
+            INSERT INTO job (job_id, company, job_title, job_status, job_active, job_directory)
+            VALUES (1, 'Test Co', 'Engineer', 'applied', true, 'test_co_engineer')
+        """))
+        test_db.execute(text("""
+            INSERT INTO job_detail (job_id, job_desc, job_keyword)
+            VALUES (1, 'Test job description', ARRAY['Python', 'AWS'])
+        """))
+        # Create baseline resume and associate with job
+        test_db.execute(text("""
+            INSERT INTO resume (resume_id, resume_title, file_name, original_format, is_baseline, is_default, is_active)
+            VALUES (1, 'Baseline', 'baseline.html', 'html', true, true, true)
+        """))
+        test_db.execute(text("""
+            INSERT INTO resume_detail (resume_id, resume_html, keyword_final, focus_final, baseline_score)
+            VALUES (1, '<h1>Resume Content</h1>', ARRAY['Python'], ARRAY['AWS'], 75)
+        """))
+        test_db.execute(text("""
+            UPDATE job SET resume_id = 1 WHERE job_id = 1
+        """))
+        test_db.commit()
+
+        # Measure response time
+        start_time = time.time()
+        response = client.post("/v1/resume/rewrite", json={'job_id': 1})
+        response_time = time.time() - start_time
+
+        # Should return 202 Accepted immediately (within 2 seconds)
+        assert response.status_code == 202
+        assert response_time < 2.0, f"Response took {response_time}s - endpoint is blocking!"
+
+        data = response.json()
+        assert 'process_id' in data
+
+        # Verify process record exists and is in running state
+        process = test_db.execute(
+            text("SELECT * FROM process WHERE process_id = :pid"),
+            {"pid": data['process_id']}
+        ).first()
+        assert process is not None
+        assert process.endpoint_called == '/v1/resume/rewrite'
+        # Process should not be completed yet since AI call takes time
+        assert process.completed is None
 
 
 class TestGetRewriteData:

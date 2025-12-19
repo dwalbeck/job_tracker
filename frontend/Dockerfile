@@ -22,7 +22,7 @@ RUN mkdir -p /var/www/jobtracker/build
 COPY --from=build /app/build /var/www/jobtracker/build
 
 # Copy nginx configuration
-COPY docker/portal.jobtracker.com.conf /etc/nginx/conf.d/default.conf
+COPY docker/portal.jobtracknow.com.conf /etc/nginx/conf.d/default.conf
 
 # Expose ports
 EXPOSE 3000

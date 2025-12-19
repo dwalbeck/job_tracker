@@ -2,8 +2,8 @@ services:
   # PostgreSQL Database Service
   db:
     image: postgres:12
-    container_name: psql.jobtracker.com
-    hostname: psql.jobtracker.com
+    container_name: psql.jobtracknow.com
+    hostname: psql.jobtracknow.com
     restart: always
     env_file:
       - ./backend/.env
@@ -26,8 +26,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: api.jobtracker.com
-    hostname: api.jobtracker.com
+    container_name: api.jobtracknow.com
+    hostname: api.jobtracknow.com
     restart: unless-stopped
     env_file:
       - ./backend/.env
@@ -55,9 +55,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_BASE_URL: http://api.jobtracker.com
-    container_name: portal.jobtracker.com
-    hostname: portal.jobtracker.com
+        REACT_APP_API_BASE_URL: http://api.jobtrackernow.com
+    container_name: portal.jobtracknow.com
+    hostname: portal.jobtracknow.com
     restart: unless-stopped
     env_file:
       - ./frontend/.env

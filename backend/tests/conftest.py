@@ -11,7 +11,7 @@ from pathlib import Path
 
 # Test database URL - use PostgreSQL to match production
 # Note: This requires a test PostgreSQL database to be available
-TEST_DATABASE_URL = "postgresql://apiuser:change_me@psql.jobtracker.com:5432/jobtracker_test"
+TEST_DATABASE_URL = "postgresql://apiuser:change_me@psql.jobtracknow.com:5432/jobtracker_test"
 
 
 @pytest.fixture(scope="session")

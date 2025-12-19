@@ -405,4 +405,210 @@ describe('OptimizedResume Component', () => {
             expect(screen.getByText('Resume Comparison')).toBeInTheDocument();
         });
     });
+
+    describe('Polling for Background Process', () => {
+        beforeEach(() => {
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.runOnlyPendingTimers();
+            jest.useRealTimers();
+        });
+
+        test('starts polling when isPolling state is provided', async () => {
+            apiService.request = jest.fn()
+                .mockResolvedValueOnce({ process_state: 'running' })
+                .mockResolvedValueOnce({ process_state: 'complete' });
+
+            apiService.request.mockResolvedValueOnce({
+                resume_html: '<html><body>Original</body></html>',
+                resume_html_rewrite: '<html><body>Rewritten</body></html>',
+                baseline_score: 75,
+                rewrite_score: 92,
+                suggestion: []
+            });
+
+            renderWithRouter(<OptimizedResume />, {
+                isPolling: true,
+                processId: 42,
+                jobId: 1
+            });
+
+            // Should show loading message
+            expect(screen.getByText(/AI is rewriting your resume/)).toBeInTheDocument();
+
+            // First poll
+            await waitFor(() => {
+                expect(apiService.request).toHaveBeenCalledWith(
+                    '/v1/process/poll/42',
+                    expect.objectContaining({ method: 'GET' })
+                );
+            });
+
+            // Advance timers for next poll
+            jest.advanceTimersByTime(5000);
+
+            // Second poll should detect completion
+            await waitFor(() => {
+                expect(apiService.request).toHaveBeenCalledWith(
+                    '/v1/resume/rewrite/1',
+                    expect.objectContaining({ method: 'GET' })
+                );
+            });
+
+            jest.runOnlyPendingTimers();
+
+            // Should eventually show comparison page
+            await waitFor(() => {
+                expect(screen.getByText('Resume Comparison')).toBeInTheDocument();
+            });
+        });
+
+        test('handles process completion on first poll', async () => {
+            apiService.request = jest.fn()
+                .mockResolvedValueOnce({ process_state: 'complete' })
+                .mockResolvedValueOnce({
+                    resume_html: '<html><body>Original</body></html>',
+                    resume_html_rewrite: '<html><body>Rewritten</body></html>',
+                    baseline_score: 75,
+                    rewrite_score: 92,
+                    suggestion: []
+                });
+
+            renderWithRouter(<OptimizedResume />, {
+                isPolling: true,
+                processId: 42,
+                jobId: 1
+            });
+
+            await waitFor(() => {
+                expect(apiService.request).toHaveBeenCalledWith(
+                    '/v1/process/poll/42',
+                    expect.any(Object)
+                );
+            });
+
+            await waitFor(() => {
+                expect(apiService.request).toHaveBeenCalledWith(
+                    '/v1/resume/rewrite/1',
+                    expect.any(Object)
+                );
+            });
+
+            jest.runOnlyPendingTimers();
+
+            await waitFor(() => {
+                expect(screen.getByText('Resume Comparison')).toBeInTheDocument();
+            });
+        });
+
+        test('handles failed process state', async () => {
+            apiService.request = jest.fn()
+                .mockResolvedValueOnce({ process_state: 'failed' });
+
+            renderWithRouter(<OptimizedResume />, {
+                isPolling: true,
+                processId: 42,
+                jobId: 1
+            });
+
+            await waitFor(() => {
+                expect(global.alert).toHaveBeenCalledWith(
+                    expect.stringContaining('Resume rewrite process failed')
+                );
+            });
+
+            await waitFor(() => {
+                expect(mockNavigate).toHaveBeenCalledWith('/job-details/1');
+            });
+        });
+
+        test('handles polling timeout after max attempts', async () => {
+            apiService.request = jest.fn()
+                .mockResolvedValue({ process_state: 'running' });
+
+            renderWithRouter(<OptimizedResume />, {
+                isPolling: true,
+                processId: 42,
+                jobId: 1
+            });
+
+            // Simulate max attempts (120 polls)
+            for (let i = 0; i < 120; i++) {
+                jest.advanceTimersByTime(5000);
+                await waitFor(() => {}, { timeout: 100 });
+            }
+
+            await waitFor(() => {
+                expect(global.alert).toHaveBeenCalledWith(
+                    expect.stringContaining('timed out after 10 minutes')
+                );
+            });
+        });
+
+        test('handles polling error', async () => {
+            apiService.request = jest.fn()
+                .mockRejectedValueOnce(new Error('Network error'));
+
+            renderWithRouter(<OptimizedResume />, {
+                isPolling: true,
+                processId: 42,
+                jobId: 1
+            });
+
+            await waitFor(() => {
+                expect(global.alert).toHaveBeenCalledWith(
+                    expect.stringContaining('Error during polling')
+                );
+            });
+
+            await waitFor(() => {
+                expect(mockNavigate).toHaveBeenCalledWith('/job-details/1');
+            });
+        });
+
+        test('displays loading message during polling', () => {
+            apiService.request = jest.fn()
+                .mockImplementation(() => new Promise(() => {}));
+
+            renderWithRouter(<OptimizedResume />, {
+                isPolling: true,
+                processId: 42,
+                jobId: 1
+            });
+
+            expect(screen.getByText(/AI is rewriting your resume/)).toBeInTheDocument();
+        });
+
+        test('polls at 5 second intervals', async () => {
+            apiService.request = jest.fn()
+                .mockResolvedValue({ process_state: 'running' });
+
+            renderWithRouter(<OptimizedResume />, {
+                isPolling: true,
+                processId: 42,
+                jobId: 1
+            });
+
+            // Wait for first poll
+            await waitFor(() => {
+                expect(apiService.request).toHaveBeenCalledTimes(1);
+            });
+
+            // Advance 5 seconds
+            jest.advanceTimersByTime(5000);
+
+            await waitFor(() => {
+                expect(apiService.request).toHaveBeenCalledTimes(2);
+            });
+
+            // Advance another 5 seconds
+            jest.advanceTimersByTime(5000);
+
+            await waitFor(() => {
+                expect(apiService.request).toHaveBeenCalledTimes(3);
+            });
+        });
+    });
 });

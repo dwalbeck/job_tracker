@@ -74,7 +74,6 @@ const Contacts = () => {
             link.click();
             document.body.removeChild(link);
 
-            console.log(`Contacts exported to: ${contact_export_dir}/${contact_export_file}`);
         } catch (error) {
             console.error('Error exporting contacts:', error);
             alert('Failed to export contacts');

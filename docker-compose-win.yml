@@ -2,8 +2,8 @@ services:
   # PostgreSQL Database Service
   db:
     image: postgres:15.15-trixie
-    container_name: psql.jobtracker.com
-    hostname: psql.jobtracker.com
+    container_name: psql.jobtracknow.com
+    hostname: psql.jobtracknow.com
     restart: always
     shm_size: 128mb
     env_file:
@@ -34,8 +34,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    container_name: api.jobtracker.com
-    hostname: api.jobtracker.com
+    container_name: api.jobtracknow.com
+    hostname: api.jobtracknow.com
     env_file:
       - ./backend/.env
     expose:
@@ -61,8 +61,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile-dev
     restart: unless-stopped
-    container_name: portal.jobtracker.com
-    hostname: portal.jobtracker.com
+    container_name: portal.jobtracknow.com
+    hostname: portal.jobtracknow.com
     env_file:
       - ./frontend/.env
     expose:

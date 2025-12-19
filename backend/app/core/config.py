@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 	)
 
 	# Application Configuration
-	app_name: str = "Job Tracker"
+	app_name: str = "Job Track Now"
 	app_version: str = "1.0.0"
 	debug: bool = False
 
@@ -42,7 +42,7 @@ class Settings(BaseSettings):
 	openai_project: str
 
 	# LLM Settings from database (defaults)
-	resume_extract_llm: str = "gpt-4.1-mini"
+	resume_extract_llm: str = "gpt-5.2"
 	job_extract_llm: str = "gpt-4.1-mini"
 	rewrite_llm: str = "gpt-4.1-mini"
 	cover_llm: str = "gpt-4.1-mini"

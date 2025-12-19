@@ -196,7 +196,6 @@ const CreateCoverLetter = () => {
             link.click();
             document.body.removeChild(link);
 
-            console.log(`Cover letter downloaded`);
         } catch (error) {
             console.error('Error downloading cover letter:', error);
             alert('Failed to download cover letter. Please try again.');
