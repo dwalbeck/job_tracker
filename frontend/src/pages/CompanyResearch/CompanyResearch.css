@@ -1,0 +1,267 @@
+.company-research-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.company-research-container h1 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.content-wrapper {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    margin-bottom: 30px;
+}
+
+.form-section {
+    flex: 0 0 400px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-section h2 {
+    color: #444;
+    margin-bottom: 20px;
+    font-size: 1.3em;
+}
+
+.company-search-form .form-group {
+    margin-bottom: 15px;
+}
+
+.company-search-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+}
+
+.company-search-form label .required {
+    color: #e74c3c;
+    margin-left: 3px;
+}
+
+.company-search-form input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.company-search-form input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.cancel-btn,
+.search-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.cancel-btn {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background-color: #7f8c8d;
+}
+
+.search-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.search-btn:hover:not(:disabled) {
+    background-color: #2980b9;
+}
+
+.search-btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.search-message {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 20px;
+    color: #856404;
+    font-weight: 500;
+    min-height: 100px;
+}
+
+.results-section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.results-section h2 {
+    color: #444;
+    margin-bottom: 20px;
+    font-size: 1.3em;
+}
+
+.no-results {
+    text-align: center;
+    padding: 40px;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.results-table thead {
+    background-color: #f8f9fa;
+}
+
+.results-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.results-table td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.clickable-row:hover {
+    background-color: #e3f2fd;
+}
+
+.results-table a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.results-table a:hover {
+    text-decoration: underline;
+}
+
+.results-table img {
+    display: block;
+}
+
+.research-section {
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    text-align: center;
+}
+
+.research-message {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.complete-text {
+    color: #3498db;
+    font-weight: bold;
+}
+
+.report-ready-message {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 25px;
+}
+
+.display-report-container {
+    display: flex;
+    justify-content: center;
+}
+
+.display-report-btn {
+    padding: 12px 30px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.display-report-btn:hover {
+    background-color: #2980b9;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+    .content-wrapper {
+        flex-direction: column;
+    }
+
+    .form-section {
+        flex: 1;
+        width: 100%;
+    }
+
+    .search-message {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .company-research-container {
+        padding: 10px;
+    }
+
+    .results-table {
+        font-size: 12px;
+    }
+
+    .results-table th,
+    .results-table td {
+        padding: 8px;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .cancel-btn,
+    .search-btn {
+        width: 100%;
+    }
+}

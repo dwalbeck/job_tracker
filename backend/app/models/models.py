@@ -280,9 +280,11 @@ class Personal(Base):
     zip = Column(String(16))
     country = Column(String(64))
     no_response_week = Column(SmallInteger)
+    resume_extract_llm = Column(String(32))
     job_extract_llm = Column(String(32))
     rewrite_llm = Column(String(32))
     cover_llm = Column(String(32))
+    company_llm = Column(String(32))
     openai_api_key = Column(String(255))
     tinymce_api_key = Column(String(255))
     convertapi_key = Column(String(255))
@@ -304,5 +306,25 @@ class Process(Base):
 	completed = Column(DateTime(timezone=False))
 	confirmed = Column(Boolean, default=False, nullable=False)
 	failed = Column(Boolean, default=False, nullable=False)
+
+
+class Company(Base):
+	__tablename__ = "company"
+
+	company_id = Column(Integer, primary_key=True, index=True)
+	company_name = Column(String(128), nullable=False)
+	website_url = Column(String(255))
+	hq_city = Column(String(128))
+	hq_state = Column(String(128))
+	industry = Column(String(128))
+	logo_file = Column(String(128))
+	linkedin_url = Column(String(255))
+	job_id = Column(Integer, ForeignKey("job.job_id", ondelete="CASCADE"))
+	report_html = Column(Text)
+	report_created = Column(DateTime(timezone=False))
+	company_created = Column(DateTime(timezone=False), server_default=func.current_timestamp())
+
+	# Relationships
+	job = relationship("Job", foreign_keys=[job_id])
 
 

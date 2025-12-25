@@ -14,6 +14,7 @@ const Calendar = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [showReminderModal, setShowReminderModal] = useState(false);
     const [selectedReminder, setSelectedReminder] = useState(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const {selectedJobId} = useJob();
     const navigate = useNavigate();
 
@@ -55,6 +56,11 @@ const Calendar = () => {
         setShowReminderModal(false);
         setSelectedReminder(null);
 
+        // Trigger a refresh of calendar data if reminder was saved/deleted
+        if (success) {
+            setRefreshTrigger(prev => prev + 1);
+        }
+
         // If coming from job details and reminder was saved, redirect back
         if (success && jobIdParam) {
             navigate(`/job-details/${jobIdParam}`);
@@ -95,6 +101,7 @@ const Calendar = () => {
                         currentDate={currentDate}
                         onDateChange={handleDateChange}
                         onReminderClick={handleReminderClick}
+                        refreshTrigger={refreshTrigger}
                     />
                 );
             case 'day':
@@ -103,6 +110,7 @@ const Calendar = () => {
                         currentDate={currentDate}
                         onDateChange={handleDateChange}
                         onReminderClick={handleReminderClick}
+                        refreshTrigger={refreshTrigger}
                     />
                 );
             default:
@@ -112,6 +120,7 @@ const Calendar = () => {
                         onDateChange={handleDateChange}
                         onViewChange={handleViewChange}
                         onReminderClick={handleReminderClick}
+                        refreshTrigger={refreshTrigger}
                     />
                 );
         }

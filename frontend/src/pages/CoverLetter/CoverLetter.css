@@ -34,7 +34,7 @@
 
 .letter-card {
   width: 280px;
-  height: 194px;
+  height: 204px;
   background-color: white;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -111,31 +111,6 @@
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid #eee;
-}
-
-.letter-action-btn {
-  background: none;
-  border: none;
-  color: #666;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  transition: color 0.2s;
-}
-
-.letter-action-btn.delete-btn:hover {
-  color: #e74c3c;
-}
-
-.letter-action-btn.download-btn:hover {
-  color: #4a90e2;
-}
-
-.letter-action-btn .icon {
-  font-size: 14px;
 }
 
 .no-letters {

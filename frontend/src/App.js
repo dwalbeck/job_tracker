@@ -26,6 +26,8 @@ import CreateCoverLetter from './pages/CreateCoverLetter/CreateCoverLetter';
 import Personal from './pages/Personal/Personal';
 import JobAnalysis from './pages/JobAnalysis/JobAnalysis';
 import OptimizedResume from './pages/OptimizedResume/OptimizedResume';
+import CompanyResearch from './pages/CompanyResearch/CompanyResearch';
+import ViewCompanyReport from './pages/ViewCompanyReport/ViewCompanyReport';
 import logger from './utils/logger';
 import './styles/App.css';
 
@@ -65,6 +67,8 @@ const AppContent = () => {
                         <Route path="/personal" element={<Personal/>}/>
                         <Route path="/job-analysis/:id" element={<JobAnalysis/>}/>
                         <Route path="/optimized-resume/:id" element={<OptimizedResume/>}/>
+                        <Route path="/company-research" element={<CompanyResearch/>}/>
+                        <Route path="/company-report/:id" element={<ViewCompanyReport/>}/>
                     </Routes>
                 </div>
 

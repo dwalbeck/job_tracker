@@ -1,0 +1,202 @@
+.view-company-report-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+}
+
+.header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.back-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #3498db;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s;
+}
+
+.back-button:hover {
+    color: #2980b9;
+}
+
+.header-section h1 {
+    color: #333;
+    margin: 0;
+    font-size: 1.8em;
+}
+
+.report-content {
+    flex: 1;
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    height: 90%;
+}
+
+.loading-message {
+    text-align: center;
+    padding: 50px;
+    font-size: 18px;
+    color: #7f8c8d;
+}
+
+/* Styling for HTML content inside the report */
+.report-content h1,
+.report-content h2,
+.report-content h3,
+.report-content h4,
+.report-content h5,
+.report-content h6 {
+    color: #2c3e50;
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
+.report-content h1 {
+    font-size: 2em;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+.report-content h2 {
+    font-size: 1.6em;
+    color: #34495e;
+}
+
+.report-content h3 {
+    font-size: 1.3em;
+    color: #555;
+}
+
+.report-content p {
+    line-height: 1.8;
+    margin: 10px 0;
+    color: #444;
+}
+
+.report-content ul,
+.report-content ol {
+    margin: 15px 0;
+    padding-left: 30px;
+}
+
+.report-content li {
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+.report-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.report-content th,
+.report-content td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+.report-content th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.report-content tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.report-content blockquote {
+    border-left: 4px solid #3498db;
+    padding-left: 20px;
+    margin: 20px 0;
+    font-style: italic;
+    color: #555;
+    background-color: #f8f9fa;
+    padding: 15px 20px;
+}
+
+.report-content code {
+    background-color: #f4f4f4;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.report-content pre {
+    background-color: #f4f4f4;
+    padding: 15px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+.report-content a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.report-content a:hover {
+    text-decoration: underline;
+}
+
+.report-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 15px 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .view-company-report-container {
+        padding: 10px;
+        height: calc(100vh - 60px);
+    }
+
+    .header-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .header-left {
+        width: 100%;
+    }
+
+    .header-section h1 {
+        font-size: 1.4em;
+    }
+
+    .download-btn {
+        width: 100%;
+    }
+
+    .report-content {
+        padding: 15px;
+    }
+}

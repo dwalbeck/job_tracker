@@ -5,10 +5,10 @@ import {getMonthCalendarDays, formatMonthForAPI, formatTimeDisplay} from '../../
 import AppointmentModal from './AppointmentModal';
 import './MonthView.css';
 
-const MonthView = ({currentDate, onDateChange, onViewChange, onReminderClick}) => {
+const MonthView = ({currentDate, onDateChange, onViewChange, onReminderClick, refreshTrigger}) => {
     const [appointments, setAppointments] = useState([]);
     const [reminders, setReminders] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState(null);
     const navigate = useNavigate();
 
@@ -16,7 +16,7 @@ const MonthView = ({currentDate, onDateChange, onViewChange, onReminderClick}) =
         fetchAppointments();
         fetchReminders();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentDate]);
+    }, [currentDate, refreshTrigger]);
 
     const fetchAppointments = async () => {
         try {

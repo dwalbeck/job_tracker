@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS personal (
 	job_extract_llm         varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
 	rewrite_llm             varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
 	cover_llm               varchar(32) NOT NULL DEFAULT 'gpt-4.1-mini',
+    compsny_llm             varchar(32) NOT NULL DEFAULT 'gpt-5-search-api',
     docx2html               varchar(32) NOT NULL DEFAULT 'docx-parser-converter',
     odt2html                varchar(32) NOT NULL DEFAULT 'pandoc',
     pdf2html                varchar(32) NOT NULL DEFAULT 'markitdown',
@@ -232,6 +233,24 @@ CREATE TABLE IF NOT EXISTS process (
     PRIMARY KEY (process_id)
 );
 CREATE RULE get_pkey_on_insert AS ON INSERT TO process DO SELECT currval('process_process_id_seq'::text) AS process_id;
+
+CREATE TABLE IF NOT EXISTS company (
+    company_id              serial NOT NULL,
+    company_name            varchar(128) NOT NULL,
+    website_url             varchar(255),
+    hq_city                 varchar(128),
+    hq_state                varchar(128),
+    industry                varchar(128),
+    logo_file               varchar(128),
+    linkedin_url            varchar(255),
+    job_id                  int NOT NULL REFERENCES job (job_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    report_active           boolean NOT NULL DEFAULT true,
+    report_html             text DEFAULT NULL,
+    report_created          timestamp(0) WITHOUT TIME ZONE DEFAULT NULL,
+    company_created         timestamp(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (job_id),
+    PRIMARY KEY (company_id)
+);
 
 
 ALTER TABLE job

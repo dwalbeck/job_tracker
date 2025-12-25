@@ -152,3 +152,94 @@ async def download_export(file_name: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error serving export file: {str(e)}"
         )
+
+
+@router.get("/files/logos/{file_name}")
+async def serve_logo(file_name: str):
+    """
+    Serve a company logo file.
+
+    Args:
+        file_name: Name of the logo file to serve
+
+    Returns:
+        FileResponse with the logo image
+    """
+    try:
+        file_path = os.path.join(settings.logo_dir, file_name)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Logo file not found: {file_name}"
+            )
+
+        # Determine mime type from file extension
+        extension = file_name.split('.')[-1].lower()
+        mime_type_map = {
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'gif': 'image/gif',
+            'svg': 'image/svg+xml',
+            'webp': 'image/webp'
+        }
+        mime_type = mime_type_map.get(extension, 'image/png')
+
+        logger.info(f"Serving logo file", file_name=file_name, mime_type=mime_type)
+
+        return FileResponse(
+            path=file_path,
+            media_type=mime_type
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving logo file",
+                    file_name=file_name,
+                    error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error serving logo file: {str(e)}"
+        )
+
+
+@router.get("/files/reports/{file_name}")
+async def download_report(file_name: str):
+    """
+    Serve a company report file for download.
+
+    Args:
+        file_name: Name of the report file to download
+
+    Returns:
+        FileResponse with the DOCX file
+    """
+    try:
+        file_path = os.path.join(settings.report_dir, file_name)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Report file not found: {file_name}"
+            )
+
+        logger.info(f"Serving report file", file_name=file_name)
+
+        return FileResponse(
+            path=file_path,
+            media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            filename=file_name
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving report file",
+                    file_name=file_name,
+                    error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error serving report file: {str(e)}"
+        )

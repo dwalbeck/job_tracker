@@ -5,10 +5,10 @@ import {formatDateForAPI, formatTimeDisplay, getHours, isBusinessHour} from '../
 import AppointmentModal from './AppointmentModal';
 import './DayView.css';
 
-const DayView = ({currentDate, onDateChange, onReminderClick}) => {
+const DayView = ({currentDate, onDateChange, onReminderClick, refreshTrigger}) => {
     const [appointments, setAppointments] = useState([]);
     const [reminders, setReminders] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState(null);
     const navigate = useNavigate();
 
@@ -18,7 +18,7 @@ const DayView = ({currentDate, onDateChange, onReminderClick}) => {
         fetchAppointments();
         fetchReminders();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentDate]);
+    }, [currentDate, refreshTrigger]);
 
     // Auto-scroll to 8am on component mount and when date changes
     useEffect(() => {

@@ -33,7 +33,9 @@ services:
       - ./backend/.env
     expose:
       - "8000"
+      - "80"
     ports:
+      - "8080:80"
       - "8000:8000"
     depends_on:
       db:

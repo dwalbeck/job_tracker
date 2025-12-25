@@ -174,17 +174,11 @@ const CoverLetter = () => {
                                 Tone: <span className="detail-value">{letter.letter_tone}</span>
                             </div>
                             <div className="letter-card-actions">
-                                <button
-                                    className="letter-action-btn delete-btn"
-                                    onClick={() => handleDelete(letter.cover_id)}
-                                >
+                                <button className="text-link-btn delete-btn" onClick={() => handleDelete(letter.cover_id)}>
                                     <span className="icon">🗑️</span>
                                     <span>Delete</span>
                                 </button>
-                                <button
-                                    className="letter-action-btn download-btn"
-                                    onClick={() => handleDownload(letter.cover_id)}
-                                >
+                                <button className="text-link-btn download-btn" onClick={() => handleDownload(letter.cover_id)}>
                                     <span>Download</span>
                                     <span className="icon">📥</span>
                                 </button>

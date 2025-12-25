@@ -1,8 +1,37 @@
 # Job Tracker Application
 
-A comprehensive job tracking application built with a React frontend, FastAPI backend, and PostgreSQL database. This 
-full-stack application helps you manage job opportunities throughout the hiring process with features for tracking 
-applications, managing contacts, scheduling interviews, and organizing notes.
+A comprehensive job tracking application built with a React frontend, FastAPI Python backend, and PostgreSQL database. 
+This full-stack application helps you manage job opportunities throughout the hiring process with features for tracking 
+applications, managing contacts, scheduling interviews, and organizing notes. It will also parse job descriptions and 
+extract keywords, then modify your resume to include the keywords that you've approved.  Cover letter writing is all 
+automated, with each catered to the job applied for.
+
+This application allows you to configure which language model you want to use for different processes, as well as which 
+conversion library to use for converting your resume (necessary for better interaction with the LLM's).  It also gives you 
+the option to use refined tools for editing, that do require a subscription, or using very basic free methods.  I hope 
+that you find this tool useful and that it helps you in finding your next big adventure with work.
+
+## Features
+- Job posting tracking and organization through 4 universal stages
+- Supports docx, odt, pdf and html file formats
+- Automated configurable rotation of job posting status
+- Contacts available both globally and per Job Posting
+- Generic notes used both globally and per Job Posting
+- Calendar appointment both global and per Job
+- Calendar reminders with notification alerts
+- Each posting and interview can be scored, which is averaged for an overall job score
+- Multiple resume baselines can be defined
+- Job qualifications and keywords extracted and selectable for approval
+- Resume custom modified from baseline and tailored to the Job Posting with reversible edits
+- Automatic cover letter creation specific to Job posting
+- Company research report generation
+- Add data is exportable at any time
+- Wysiwyg editor for making changes to resume or cover letters
+- Selection of LLM models to use for different actions is configurable to your preference
+- Intuitive, clean and easy to read display of information across all pages
+- Dynamic searches that update display per character entered
+- Free stuff animal! ... I mean, you can use it with your favorite stuffed animal
+
 
 ## 🏗️ Architecture Overview
 
@@ -30,10 +59,27 @@ The Job Tracker is built as a **3-tier containerized application**:
 
 ### Prerequisites
 
+Software
 - **Docker** (v20.10+) or **Docker Desktop** (4.43.2)
 - **Docker Compose** (v2.0+)  (Included in Docker Desktop)
 - **Git** (for cloning the repository or you can just download the zip file)
-- **OpenAI Key** (for customizing resume/cover letters)
+
+Service Subscriptions
+- **OpenAI Key** (for customizing resume/cover letters) A fair amount of functionality will require having this key, but 
+    you can sign-up for an account and only put $5 towards it and it will last for well over a month.  Create an account at 
+    [OpenAI website](https://auth.openai.com/create-account/), during which you can also create an API key. If you lost, 
+    skipped or forgot your API key, you can create new ones at [OpenAI API Keys](https://platform.openai.com/api-keys)
+- **ConvertAPI** (optional) is a method for converting between formats.  It is by far the most accurate and best conversion method 
+    from a **docx** source that I've found.  While they claim to convert between a large number of formats, honestly I would 
+    only recommend it for docx files.  Other formats either don't work or are such poor quality conversion that you won't want 
+    to use it. Using docx and this method will produce the best conversions by far.  You can sign-up for a 30-day free trial 
+    at [ConvertApi](https://www.convertapi.com/a/signup) and you can find the API key at [ConvertApi API key](https://www.convertapi.com/a/authentication) 
+    where you can use pre-existing keys made or create a new one - any will work.
+- **TinyMCE** (optional) is a great wysiwyg text editor.  At one point this was free to use, but I guess those days are gone. 
+    You do however get a 30-day free trial to use, which I recommend doing.  Sign-up at [TinyMCE](https://www.tiny.cloud/), after 
+    which you will need to generate a key to use at [Tiny JWT](https://www.tiny.cloud/my-account/jwt/).  If you want to make 
+    small edits to your resume or cover letters, then I highly recommend using this tool.
+
 
 ### Step-by-Step Setup
 
@@ -115,15 +161,20 @@ the domain name **localhost**.
 
 ## 🔄 Usage
 
+This section will quickly cover some key points for operation and functional capabilities for each of the pages.  It would 
+be good to read through the **First Steps** listing and the remaining pages can be read should you have a question on a 
+page, but you could skip reading the rest and still be able to operate things.
+
 ### First Steps
 
 * You should fill in your personal information before doing anything, as that information is used in file naming and for 
-document creation.  This is done by selecting the **Personal** left side navigation option.
+    document creation.  This is done by selecting the **Personal** left side navigation option. Custom configurations and 
+    API keys for various extended features are also configured on this same page.
 * You'll need to upload a baseline resume, which can be formatted as odt, docx, pdf or html, although I strongly suggestion 
-that your format it as docx.  A baseline resume is the starting point, which is modified to cater to a job posting. 
-You can create a baseline resume by selecting the **Resume** menu option in the left side navigation menu.
-* While not required, I recommend editing your converted resume (which will be in markdown formatting) to insure 
-that it is styled the way you want.
+  that your format it as docx.  A baseline resume is the starting point, which is modified to cater to a job posting. 
+  You can create a baseline resume by selecting the **Resume** menu option in the left side navigation menu.
+* While not required, I recommend editing your converted resume (which will be HTML formatted) to insure 
+  that it is styled the way you want.
 
 ### Job Posting
 
@@ -173,7 +224,8 @@ on why I'm the best fit for this job". You can generate or re-generate cover let
 
 The Contacts, Calendar and Notes pages are all pretty self-explanatory and intuitive to use.  On the Calendar pages, 
 there will be a green dot on interviews that you have updated with an outcome score.  This is so you can easily view 
-if you missed scoring an appointment. 
+if you missed scoring an appointment. The Documents page is where your company reports are kept, but are also accessible 
+from the Job Details page.  You can however request a company report for companies that do not have a job posting.
 
 For the sections **Job Posting**, **Contacts**, **Calendar**, **Notes** and **Resume** you have the ability to export 
 all the records from the DB, for whatever reason.  You can do this by clicking on the 3 dot collapsed menu icon on 
@@ -221,6 +273,7 @@ to use for that action.
 2. **API Server**: FastAPI serves endpoints with automatic validation
 3. **ORM Operations**: SQLAlchemy manages database interactions
 4. **File Management**: Creates job-specific directories for documents
+5. **Nginx**: Web server reverse proxy
 
 **API Endpoints:**
 - **Jobs**: CRUD operations for job tracking
@@ -302,6 +355,8 @@ BASE_JOB_FILE_PATH=/app/job_docs
 RESUME_DIR=/app/job_docs/resumes
 COVER_LETTER_DIR=/app/job_docs/cover_letters
 EXPORT_DIR=/app/job_docs/export
+LOGO_DIR=/app/job_docs/logo
+REPORT_DIR=/app/job_docs/report
 
 # Logging Configuration
 LOG_LEVEL=DEBUG
@@ -312,7 +367,6 @@ ALLOWED_ORIGINS=["http://localhost:3000", "http://portal.jobtracknow.com:3000"]
 
 # AI Configuration
 AI_MODEL=gpt-4o-mini
-OPENAI_API_KEY=<open_ai_api_key>
 OPENAI_PROJECT=<open_ai_project_name>
 ```
 

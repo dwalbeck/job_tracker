@@ -24,6 +24,7 @@ const Personal = () => {
         job_extract_llm: 'gpt-4.1-mini',
         rewrite_llm: 'gpt-4.1-mini',
         cover_llm: 'gpt-4.1-mini',
+        company_llm: 'gpt-4.1-mini',
         openai_api_key: '',
         tinymce_api_key: '',
         convertapi_key: '',
@@ -36,9 +37,11 @@ const Personal = () => {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [llmModels, setLlmModels] = useState([]);
+    const [llmLoading, setLlmLoading] = useState(false);
 
-    // Available LLM models
-    const llmModels = [
+    // Fallback LLM models in case API call fails
+    const fallbackLlmModels = [
         "gpt-5.2",
         "gpt-5.2-2025-12-11",
         "gpt-5.2-chat-latest",
@@ -175,6 +178,7 @@ const Personal = () => {
         job_extract_llm: 'Job Extraction LLM',
         rewrite_llm: 'Resume Rewrite LLM',
         cover_llm: 'Cover Letter LLM',
+        company_llm: 'Company Research LLM',
         openai_api_key: 'OpenAI API Key',
         tinymce_api_key: 'TinyMCE API Key',
         convertapi_key: 'ConvertAPI Key',
@@ -216,7 +220,21 @@ const Personal = () => {
 
     useEffect(() => {
         fetchPersonalInfo();
+        fetchLLMModels();
     }, []);
+
+    const fetchLLMModels = async () => {
+        setLlmLoading(true);
+        try {
+            const models = await apiService.getLLMModels();
+            setLlmModels(models || fallbackLlmModels);
+        } catch (err) {
+            console.error('Error fetching LLM models, using fallback:', err);
+            setLlmModels(fallbackLlmModels);
+        } finally {
+            setLlmLoading(false);
+        }
+    };
 
     const fetchPersonalInfo = async () => {
         setLoading(true);
@@ -231,6 +249,7 @@ const Personal = () => {
                 job_extract_llm: data.job_extract_llm || 'gpt-4.1-mini',
                 rewrite_llm: data.rewrite_llm || 'gpt-4.1-mini',
                 cover_llm: data.cover_llm || 'gpt-4.1-mini',
+                company_llm: data.company_llm || 'gpt-4.1-mini',
                 openai_api_key: data.openai_api_key || '',
                 tinymce_api_key: data.tinymce_api_key || '',
                 convertapi_key: data.convertapi_key || '',
@@ -282,7 +301,7 @@ const Personal = () => {
     }
 
     const isLlmField = (fieldName) => {
-        return ['resume_extract_llm', 'job_extract_llm', 'rewrite_llm', 'cover_llm'].includes(fieldName);
+        return ['resume_extract_llm', 'job_extract_llm', 'rewrite_llm', 'cover_llm', 'company_llm'].includes(fieldName);
     };
 
     const isApiKeyField = (fieldName) => {

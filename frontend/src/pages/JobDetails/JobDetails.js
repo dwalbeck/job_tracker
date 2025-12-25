@@ -252,6 +252,12 @@ const JobDetails = () => {
         navigate(`/create-cover-letter?job_id=${id}&resume_id=${job.resume_id}`);
     };
 
+    const handleCompanyReport = () => {
+        navigate(`/company-research?job_id=${id}`, {
+            state: { from: 'job-details' }
+        });
+    };
+
     const handleOptimizeResume = () => {
         if (selectedResumeId) {
             navigate(`/job-analysis/${id}?resume_id=${selectedResumeId}`);
@@ -514,6 +520,10 @@ const JobDetails = () => {
                                 </button>
                             </>
                         )}
+                        <button onClick={handleCompanyReport}
+                                className="url-action-button company-report-button">
+                            Company Report
+                        </button>
                     </div>
                 </div>
 

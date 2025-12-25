@@ -23,6 +23,7 @@ class PersonalBase(BaseModel):
     job_extract_llm: Optional[str] = None
     rewrite_llm: Optional[str] = None
     cover_llm: Optional[str] = None
+    company_llm: Optional[str] = None
     openai_api_key: Optional[str] = None
     tinymce_api_key: Optional[str] = None
     convertapi_key: Optional[str] = None

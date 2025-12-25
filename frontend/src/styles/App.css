@@ -67,6 +67,35 @@
 }
 /* end search box */
 
+
+/* ========================= buttons ================================ */
+.text-link-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.text-link-btn.delete-btn:hover {
+    color: #e74c3c;
+}
+
+.text-link-btn.download-btn:hover {
+    color: #4a90e2;
+}
+
+.text-link-btn .icon {
+    font-size: 14px;
+}
+
+
 .action-button {
     padding: 8px 16px;
     background-color: #3498db;

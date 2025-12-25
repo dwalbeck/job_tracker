@@ -416,6 +416,55 @@ class ApiService {
     async exportResumes() {
         return this.request('/v1/export/resumes');
     }
+
+    // ***** company ***************************************************************************
+    async createCompany(companyData) {
+        return this.request('/v1/company', {
+            method: 'POST',
+            body: JSON.stringify(companyData),
+        });
+    }
+
+    async updateCompany(companyData) {
+        return this.request('/v1/company', {
+            method: 'PUT',
+            body: JSON.stringify(companyData),
+        });
+    }
+
+    async getCompany(companyId) {
+        return this.request(`/v1/company/${companyId}`);
+    }
+
+    async getCompanyByJob(jobId) {
+        return this.request(`/v1/company/job/${jobId}`);
+    }
+
+    async searchCompany(companyId) {
+        return this.request(`/v1/company/search/${companyId}`);
+    }
+
+    async researchCompany(companyId) {
+        return this.request(`/v1/company/research/${companyId}`);
+    }
+
+    async getCompanyList() {
+        return this.request('/v1/company/list');
+    }
+
+    async deleteCompany(companyId) {
+        return this.request(`/v1/company/${companyId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async downloadCompanyReport(companyId) {
+        return this.request(`/v1/company/download/${companyId}`);
+    }
+
+    async getLLMModels() {
+        return this.request('/v1/openai/llm');
+    }
 }
 
 const apiService = new ApiService();

@@ -175,11 +175,18 @@ const CalendarForm = () => {
         setError(null);
 
         try {
+            // Auto-prepend https:// to video_link if protocol is missing
+            let videoLink = formData.video_link.trim();
+            if (videoLink && !videoLink.startsWith('http://') && !videoLink.startsWith('https://')) {
+                videoLink = `https://${videoLink}`;
+            }
+
             const submitData = {
                 ...formData,
                 job_id: parseInt(formData.job_id),
                 participant: formData.participant.filter(p => p.trim() !== ''),
-                outcome_score: formData.outcome_score ? parseInt(formData.outcome_score) : null
+                outcome_score: formData.outcome_score ? parseInt(formData.outcome_score) : null,
+                video_link: videoLink
             };
 
             if (isEdit) {
@@ -460,12 +467,12 @@ const CalendarForm = () => {
                 <div className="form-group">
                     <label htmlFor="video_link">Video Link</label>
                     <input
-                        type="url"
+                        type="text"
                         id="video_link"
                         name="video_link"
                         value={formData.video_link}
                         onChange={handleChange}
-                        placeholder="https://..."
+                        placeholder="https://... (protocol added automatically)"
                     />
                 </div>
 

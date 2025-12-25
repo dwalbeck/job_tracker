@@ -43,6 +43,7 @@ class TestGetPersonalInfo:
         assert data['job_extract_llm'] == 'gpt-4.1-mini'
         assert data['rewrite_llm'] == 'gpt-4.1-mini'
         assert data['cover_llm'] == 'gpt-4.1-mini'
+        assert data['company_llm'] == 'gpt-4.1-mini'
 
     def test_get_personal_info_with_all_fields(self, client, test_db):
         """Test retrieving personal info with all fields populated."""
@@ -66,6 +67,7 @@ class TestGetPersonalInfo:
                 job_extract_llm = 'gpt-4o',
                 rewrite_llm = 'gpt-4o',
                 cover_llm = 'gpt-4o',
+                company_llm = 'gpt-4o',
                 openai_api_key = 'sk-test123',
                 tinymce_api_key = 'tinymce-test',
                 convertapi_key = 'convert-test'
@@ -94,6 +96,7 @@ class TestGetPersonalInfo:
         assert data['job_extract_llm'] == 'gpt-4o'
         assert data['rewrite_llm'] == 'gpt-4o'
         assert data['cover_llm'] == 'gpt-4o'
+        assert data['company_llm'] == 'gpt-4o'
         assert data['openai_api_key'] == 'sk-test123'
         assert data['tinymce_api_key'] == 'tinymce-test'
         assert data['convertapi_key'] == 'convert-test'
@@ -128,6 +131,7 @@ class TestSavePersonalInfo:
             "job_extract_llm": "gpt-4o-mini",
             "rewrite_llm": "gpt-4o-mini",
             "cover_llm": "gpt-4o-mini",
+            "company_llm": "gpt-4o-mini",
             "openai_api_key": "sk-new-key",
             "tinymce_api_key": "tinymce-new",
             "convertapi_key": "convert-new",
@@ -175,6 +179,7 @@ class TestSavePersonalInfo:
             "job_extract_llm": "gpt-4o",
             "rewrite_llm": "gpt-4o",
             "cover_llm": "gpt-4o",
+            "company_llm": "gpt-4o",
             "openai_api_key": "sk-updated",
             "tinymce_api_key": "tinymce-updated",
             "convertapi_key": "convert-updated",
@@ -236,6 +241,7 @@ class TestSavePersonalInfo:
                 "job_extract_llm": "gpt-4.1-mini",
                 "rewrite_llm": "gpt-4.1-mini",
                 "cover_llm": "gpt-4.1-mini",
+                "company_llm": "gpt-4.1-mini",
                 "openai_api_key": "",
                 "tinymce_api_key": "",
                 "convertapi_key": "",
@@ -276,6 +282,7 @@ class TestSavePersonalInfo:
             "job_extract_llm": "gpt-4.1-mini",
             "rewrite_llm": "gpt-4.1-mini",
             "cover_llm": "gpt-4.1-mini",
+            "company_llm": "gpt-4.1-mini",
             "openai_api_key": "",
             "tinymce_api_key": "",
             "convertapi_key": "",
@@ -318,6 +325,7 @@ class TestSavePersonalInfo:
             "job_extract_llm": "gpt-4.1-mini",
             "rewrite_llm": "gpt-4.1-mini",
             "cover_llm": "gpt-4.1-mini",
+            "company_llm": "gpt-4.1-mini",
             "openai_api_key": "",
             "tinymce_api_key": "",
             "convertapi_key": "",

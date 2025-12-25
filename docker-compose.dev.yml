@@ -1,0 +1,37 @@
+# Development override for Docker Compose
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  # Backend with development settings
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DEBUG: "true"
+    volumes:
+      - ./backend:/app
+      - job_docs:/app/job_docs
+    ports:
+      - "8000:8000"
+    command: ["python", "wait-for-db.py"]
+
+  # Frontend with development settings
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    command: ["npm", "start"]
+
+  # Database with exposed port for development
+  db:
+    image: postgres:18
+    ports:
+      - "5432:5432"

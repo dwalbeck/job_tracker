@@ -58,9 +58,13 @@ def test_db(test_engine):
 
     # Insert test personal settings (use INSERT ... ON CONFLICT to handle duplicates)
     session.execute(text("""
-        INSERT INTO personal (first_name, last_name, docx2html, odt2html, pdf2html,
+        INSERT INTO personal (first_name, last_name,
+                            resume_extract_llm, job_extract_llm, rewrite_llm, cover_llm, company_llm,
+                            docx2html, odt2html, pdf2html,
                             html2docx, html2odt, html2pdf)
-        VALUES ('Test', 'User', 'docx-parser-converter', 'pandoc', 'markitdown',
+        VALUES ('Test', 'User',
+                'gpt-4.1-mini', 'gpt-4.1-mini', 'gpt-4.1-mini', 'gpt-4.1-mini', 'gpt-4.1-mini',
+                'docx-parser-converter', 'pandoc', 'markitdown',
                 'html4docx', 'pandoc', 'weasyprint')
         ON CONFLICT (first_name, last_name) DO NOTHING
     """))
