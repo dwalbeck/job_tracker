@@ -22,11 +22,11 @@ that you find this tool useful and that it helps you in finding your next big ad
 - Each posting and interview can be scored, which is averaged for an overall job score
 - Multiple resume baselines can be defined
 - Job qualifications and keywords extracted and selectable for approval
-- Resume custom modified from baseline and tailored to the Job Posting with reversible edits
-- Automatic cover letter creation specific to Job posting
-- Company research report generation
-- Add data is exportable at any time
-- Wysiwyg editor for making changes to resume or cover letters
+- Resume custom modified from baseline by AI and tailored to the Job Posting with reversible edits
+- Automatic AI generated cover letter creation specific to Job posting
+- AI researched company information report generation with interview tips
+- All data is exportable per section
+- Wysiwyg editor for making manual changes and adjustments to resume or cover letters
 - Selection of LLM models to use for different actions is configurable to your preference
 - Intuitive, clean and easy to read display of information across all pages
 - Dynamic searches that update display per character entered

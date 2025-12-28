@@ -271,7 +271,7 @@ const CompanyResearch = () => {
                                 name="linkedin_url"
                                 value={formData.linkedin_url}
                                 onChange={handleInputChange}
-                                placeholder="LinkedIn URL (optional)"
+                                placeholder="https://www.linkedin.com/in/"
                             />
                         </div>
 
@@ -283,7 +283,6 @@ const CompanyResearch = () => {
                                 name="website_url"
                                 value={formData.website_url}
                                 onChange={handleInputChange}
-                                placeholder="Website URL (optional)"
                             />
                         </div>
 
@@ -295,7 +294,6 @@ const CompanyResearch = () => {
                                 name="hq_city"
                                 value={formData.hq_city}
                                 onChange={handleInputChange}
-                                placeholder="City (optional)"
                             />
                         </div>
 
@@ -307,7 +305,6 @@ const CompanyResearch = () => {
                                 name="hq_state"
                                 value={formData.hq_state}
                                 onChange={handleInputChange}
-                                placeholder="State/Province (optional)"
                             />
                         </div>
 
