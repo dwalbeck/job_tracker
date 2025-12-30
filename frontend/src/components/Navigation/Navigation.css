@@ -28,6 +28,12 @@
   object-fit: contain;
 }
 
+.nav-motto-img {
+    width: 160px;
+    margin-top: 16px;
+    object-fit: contain;
+}
+
 .nav-container {
   display: flex;
   flex-direction: column;

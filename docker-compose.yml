@@ -12,6 +12,8 @@ services:
     volumes:
       - /var/lib/postgresql-docker/12/main:/var/lib/postgresql/data
       - ./docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     networks:
       job_tracker_network:
         ipv4_address: 172.20.0.15
@@ -45,6 +47,8 @@ services:
         ipv4_address: 172.20.0.10
     volumes:
       - ./backend/job_docs:/app/job_docs
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s

@@ -26,8 +26,8 @@ const Navigation = () => {
     return (
         <nav className="navigation">
             <div className="nav-logo-container">
-                <img src="/jt_logo-128.png" alt="Job Tracker Logo" className="nav-logo"/>
-                <img src="/job_track_now.png" alt="Job Track Now" className="nav-title-image" width="120" />
+                <img src="/logo.png" alt="Job Track Now" className="nav-title-image" />
+                <img src="/motto.png" alt="Track smarter, land faster" className="nav-motto-img" />
             </div>
             <div className="nav-container">
                 {menuItems.map((item) => (
