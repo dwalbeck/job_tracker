@@ -1,5 +1,5 @@
 from typing import Optional, List
-from datetime import date, datetime
+from datetime import date, datetime, time
 from pydantic import BaseModel, field_validator
 from ..models.models import JobStatus
 
@@ -64,6 +64,10 @@ class Job(JobBase):
     job_created: datetime
     job_directory: Optional[str] = None
     last_activity: Optional[date] = None
+    # Calendar fields from latest appointment
+    calendar_id: Optional[int] = None
+    start_date: Optional[date] = None
+    start_time: Optional[time] = None
 
     class Config:
         from_attributes = True

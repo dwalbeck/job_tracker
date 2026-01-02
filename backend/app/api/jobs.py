@@ -18,15 +18,23 @@ router = APIRouter()
 async def get_all_jobs(db: Session = Depends(get_db)):
     """
     Get all active jobs ordered by last activity (newest first).
+    Includes latest calendar appointment data if available.
     """
     logger.debug("Fetching all active jobs")
 
-    # Use raw SQL to include average_score column
+    # Use raw SQL to include calendar data from most recent appointment
     query = text("""
-        SELECT *
-        FROM job
-        WHERE job_active = true
-        ORDER BY last_activity DESC
+        SELECT c.calendar_id, c.start_date, c.start_time, j.*
+        FROM job j
+            LEFT JOIN LATERAL (
+                SELECT start_date, start_time, calendar_id
+                FROM calendar c_inner
+                WHERE c_inner.job_id=j.job_id
+                ORDER BY start_date DESC
+                LIMIT 1
+            ) AS c ON TRUE
+        WHERE j.job_active = true
+        ORDER BY j.last_activity DESC
     """)
 
     result = db.execute(query).fetchall()

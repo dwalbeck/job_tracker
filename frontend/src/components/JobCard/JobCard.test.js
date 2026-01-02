@@ -318,6 +318,7 @@ describe('JobCard Component', () => {
                 </DnDWrapper>
             );
 
+            expect(document.querySelector('.title-row')).toBeInTheDocument();
             expect(document.querySelector('.job-title')).toBeInTheDocument();
             expect(document.querySelector('.company-name')).toBeInTheDocument();
             expect(document.querySelector('.last-contact')).toBeInTheDocument();
@@ -449,6 +450,175 @@ describe('JobCard Component', () => {
             expect(screen.getByText('Backend Engineer')).toBeInTheDocument();
             expect(screen.getByText('BigCorp')).toBeInTheDocument();
             expect(screen.getByText('Avg Score: 6.5')).toBeInTheDocument();
+        });
+    });
+
+    describe('Appointment Reminder Display', () => {
+        beforeEach(() => {
+            // Mock current date to 2025-03-10 12:00:00
+            jest.useFakeTimers();
+            jest.setSystemTime(new Date('2025-03-10T12:00:00'));
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
+        test('does not display appointment reminder when no start_date', () => {
+            const jobNoAppointment = {
+                ...mockJob,
+                start_date: null,
+                start_time: null,
+            };
+
+            render(
+                <DnDWrapper>
+                    <JobCard job={jobNoAppointment} index={0} onClick={mockOnClick} />
+                </DnDWrapper>
+            );
+
+            expect(screen.queryByText(/appt/)).not.toBeInTheDocument();
+        });
+
+        test('does not display appointment reminder for past dates', () => {
+            const jobPastAppointment = {
+                ...mockJob,
+                start_date: '2025-03-05',
+                start_time: '10:00:00',
+            };
+
+            render(
+                <DnDWrapper>
+                    <JobCard job={jobPastAppointment} index={0} onClick={mockOnClick} />
+                </DnDWrapper>
+            );
+
+            expect(screen.queryByText(/appt/)).not.toBeInTheDocument();
+        });
+
+        test('displays appointment reminder for future dates with month/day format', () => {
+            const jobFutureAppointment = {
+                ...mockJob,
+                start_date: '2025-03-15',
+                start_time: '14:30:00',
+            };
+
+            render(
+                <DnDWrapper>
+                    <JobCard job={jobFutureAppointment} index={0} onClick={mockOnClick} />
+                </DnDWrapper>
+            );
+
+            expect(screen.getByText('appt 3/15')).toBeInTheDocument();
+            expect(screen.getByText('appt 3/15')).toHaveClass('appointment-reminder');
+        });
+
+        test('displays appointment reminder for today with time format when time is in future', () => {
+            const jobTodayFutureAppointment = {
+                ...mockJob,
+                start_date: '2025-03-10',
+                start_time: '15:30:00',
+            };
+
+            render(
+                <DnDWrapper>
+                    <JobCard job={jobTodayFutureAppointment} index={0} onClick={mockOnClick} />
+                </DnDWrapper>
+            );
+
+            expect(screen.getByText('appt at 15:30')).toBeInTheDocument();
+            expect(screen.getByText('appt at 15:30')).toHaveClass('appointment-reminder');
+        });
+
+        test('does not display appointment reminder for today when time has passed', () => {
+            const jobTodayPastAppointment = {
+                ...mockJob,
+                start_date: '2025-03-10',
+                start_time: '10:00:00',
+            };
+
+            render(
+                <DnDWrapper>
+                    <JobCard job={jobTodayPastAppointment} index={0} onClick={mockOnClick} />
+                </DnDWrapper>
+            );
+
+            expect(screen.queryByText(/appt/)).not.toBeInTheDocument();
+        });
+
+        test('displays appointment reminder with correct styling', () => {
+            const jobWithAppointment = {
+                ...mockJob,
+                start_date: '2025-03-20',
+                start_time: '10:00:00',
+            };
+
+            render(
+                <DnDWrapper>
+                    <JobCard job={jobWithAppointment} index={0} onClick={mockOnClick} />
+                </DnDWrapper>
+            );
+
+            const reminder = screen.getByText('appt 3/20');
+            expect(reminder).toHaveClass('appointment-reminder');
+        });
+
+        test('appointment reminder appears in title row alongside job title', () => {
+            const jobWithAppointment = {
+                ...mockJob,
+                start_date: '2025-03-20',
+                start_time: '10:00:00',
+            };
+
+            render(
+                <DnDWrapper>
+                    <JobCard job={jobWithAppointment} index={0} onClick={mockOnClick} />
+                </DnDWrapper>
+            );
+
+            const titleRow = document.querySelector('.title-row');
+            expect(titleRow).toBeInTheDocument();
+
+            const jobTitle = titleRow.querySelector('.job-title');
+            const reminder = titleRow.querySelector('.appointment-reminder');
+
+            expect(jobTitle).toBeInTheDocument();
+            expect(reminder).toBeInTheDocument();
+            expect(reminder).toHaveTextContent('appt 3/20');
+        });
+
+        test('handles appointment on first day of month', () => {
+            const jobFirstDayAppointment = {
+                ...mockJob,
+                start_date: '2025-04-01',
+                start_time: '09:00:00',
+            };
+
+            render(
+                <DnDWrapper>
+                    <JobCard job={jobFirstDayAppointment} index={0} onClick={mockOnClick} />
+                </DnDWrapper>
+            );
+
+            expect(screen.getByText('appt 4/1')).toBeInTheDocument();
+        });
+
+        test('handles appointment at midnight today', () => {
+            jest.setSystemTime(new Date('2025-03-10T00:00:00'));
+
+            const jobMidnightAppointment = {
+                ...mockJob,
+                start_date: '2025-03-10',
+                start_time: '23:59:00',
+            };
+
+            render(
+                <DnDWrapper>
+                    <JobCard job={jobMidnightAppointment} index={0} onClick={mockOnClick} />
+                </DnDWrapper>
+            );
+
+            expect(screen.getByText('appt at 23:59')).toBeInTheDocument();
         });
     });
 });

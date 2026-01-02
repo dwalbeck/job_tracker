@@ -17,11 +17,11 @@ class TestGetAllJobs:
         """Test retrieving multiple active jobs."""
         # Create test jobs
         test_db.execute(text("""
-            INSERT INTO job (company, job_title, job_status, job_active, last_activity, job_directory)
+            INSERT INTO job (company, job_title, job_status, job_active, last_activity, job_directory, average_score, interest_level)
             VALUES
-                ('Google', 'Software Engineer', 'applied', true, '2025-01-10', 'google_software_engineer'),
-                ('Microsoft', 'Senior Developer', 'interviewing', true, '2025-01-15', 'microsoft_senior_developer'),
-                ('Amazon', 'Tech Lead', 'applied', true, '2025-01-05', 'amazon_tech_lead')
+                ('Google', 'Software Engineer', 'applied', true, '2025-01-10', 'google_software_engineer', 5, 5),
+                ('Microsoft', 'Senior Developer', 'interviewing', true, '2025-01-15', 'microsoft_senior_developer', 5, 5),
+                ('Amazon', 'Tech Lead', 'applied', true, '2025-01-05', 'amazon_tech_lead', 5, 5)
         """))
         test_db.commit()
 
@@ -35,15 +35,19 @@ class TestGetAllJobs:
         assert jobs[0]['company'] == 'Microsoft'
         assert jobs[1]['company'] == 'Google'
         assert jobs[2]['company'] == 'Amazon'
+        # Verify calendar fields are present (should be None without appointments)
+        assert 'calendar_id' in jobs[0]
+        assert 'start_date' in jobs[0]
+        assert 'start_time' in jobs[0]
 
     def test_get_all_jobs_excludes_inactive(self, client, test_db):
         """Test that inactive jobs are not returned."""
         # Create active and inactive jobs
         test_db.execute(text("""
-            INSERT INTO job (company, job_title, job_status, job_active, job_directory)
+            INSERT INTO job (company, job_title, job_status, job_active, job_directory, average_score, interest_level)
             VALUES
-                ('Active Co', 'Developer', 'applied', true, 'active_co_developer'),
-                ('Inactive Co', 'Engineer', 'applied', false, 'inactive_co_engineer')
+                ('Active Co', 'Developer', 'applied', true, 'active_co_developer', 5, 5),
+                ('Inactive Co', 'Engineer', 'applied', false, 'inactive_co_engineer', 5, 5)
         """))
         test_db.commit()
 
@@ -54,6 +58,42 @@ class TestGetAllJobs:
 
         assert len(jobs) == 1
         assert jobs[0]['company'] == 'Active Co'
+
+    def test_get_all_jobs_with_calendar_appointments(self, client, test_db):
+        """Test that jobs include latest calendar appointment data."""
+        # Create test jobs
+        test_db.execute(text("""
+            INSERT INTO job (job_id, company, job_title, job_status, job_active, last_activity, job_directory, average_score, interest_level)
+            VALUES
+                (1, 'Job With Appt', 'Engineer', 'interviewing', true, '2025-01-10', 'job_with_appt_engineer', 5, 5),
+                (2, 'Job No Appt', 'Developer', 'applied', true, '2025-01-08', 'job_no_appt_developer', 5, 5)
+        """))
+        # Create calendar appointments for first job
+        test_db.execute(text("""
+            INSERT INTO calendar (job_id, start_date, start_time, calendar_type)
+            VALUES
+                (1, '2025-01-05', '10:00:00', 'interview'),
+                (1, '2025-01-20', '14:30:00', 'interview')
+        """))
+        test_db.commit()
+
+        response = client.get("/v1/jobs")
+
+        assert response.status_code == 200
+        jobs = response.json()
+
+        assert len(jobs) == 2
+        # First job should have calendar data from most recent appointment
+        job_with_appt = next(job for job in jobs if job['company'] == 'Job With Appt')
+        assert job_with_appt['calendar_id'] is not None
+        assert job_with_appt['start_date'] == '2025-01-20'
+        assert job_with_appt['start_time'] == '14:30:00'
+
+        # Second job should have None for calendar fields
+        job_no_appt = next(job for job in jobs if job['company'] == 'Job No Appt')
+        assert job_no_appt['calendar_id'] is None
+        assert job_no_appt['start_date'] is None
+        assert job_no_appt['start_time'] is None
 
 
 class TestDeleteJob:
